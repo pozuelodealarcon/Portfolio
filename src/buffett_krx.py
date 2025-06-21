@@ -602,9 +602,8 @@ tickers = get_tickers(country, limit, sp500)
 
 # block of code that gets rid of preferred stocks
 if country == 'KR':
-    for ticker in tickers:
-        if ticker[5] != '0': 
-            tickers.remove(ticker)
+    tickers = list(filter(lambda t: t[5] == '0', tickers))
+
 
 def get_momentum_batch(tickers, period_days=126):
     # Download 1 year of daily close prices for all tickers at once
@@ -897,19 +896,22 @@ time.sleep(3)
 
 excel_path = f'result_KR_{formattedDate}.xlsx'
 
-recipients = ['chs_3411@naver.com', 'chschj@terpmail.umd.edu', 'eljm2080@gmail.com','hyungsukchoi3411@gmail.com']
+recipients = ['chs_3411@naver.com', 'chschj@terpmail.umd.edu', 'eljm2080@gmail.com', 'hyungsukchoi3411@gmail.com']
 
 msg = EmailMessage()
 msg['Subject'] = f'{formattedDate}일자 퀀트 분석자료'
-msg['From'] = EMAIL
-msg['To'] = ', '.join(recipients)
-msg.set_content(f'시가총액 기준 상위 300개 상장기업의 {formattedDate}일자 퀀트 분석자료를 보내드립니다.')
+msg['From'] = formataddr(('Hyungsuk Choi',EMAIL))
+msg['To'] = ''  # or '' or a single address to satisfy the 'To' header requirement
+msg.set_content(f'안녕하십니까?\n\n{formattedDate}일자 시가총액 기준 상위 300개 상장기업의 퀀트 분석자료를 보내드립니다.
+각 기업의 종합 점수는 ‘B-Score’ 열을 참고해 주시기 바랍니다.\n\n본 자료는 워렌 버핏의 투자 철학에 기반하여 기업의 재무 건전성 평가를 목적으로 작성되었으며, 
+투자 판단 시에는 본 분석 외에도 별도의 정성적 검토가 필요함을 안내드립니다.\n\n감사합니다.')
 
 with open(excel_path, 'rb') as f:
     msg.add_attachment(f.read(), maintype='application',
                        subtype='vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                       filename= excel_path)
+                       filename=excel_path)
 
 with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
     smtp.login(EMAIL, PASSWORD)
-    smtp.send_message(msg)
+    smtp.send_message(msg, to_addrs=recipients)  # send_message's to_addrs param controls actual recipients
+

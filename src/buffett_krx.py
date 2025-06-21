@@ -96,7 +96,7 @@ def get_tickers_by_country(country: str, limit: int = 100, apikey: str = 'your_a
         'limit': limit,
         'type': 'stock',
         'sort': 'marketCap',
-        # 'order': 'desc',
+        'order': 'desc',
         'apikey': apikey,
         'isEtf': False,
         'isFund': False,
@@ -765,10 +765,22 @@ def process_ticker_quantitatives():
             # bvps_growth = bvps_undervalued(info.get('bookValue', None), currentPrice)
             
             icr = get_interest_coverage_ratio(ticker)
+            try:
+                short_momentum = momentum_3m[ticker]
+            except KeyError:
+                short_momentum = None
 
-            short_momentum = momentum_3m[ticker]
-            mid_momentum = momentum_6m[ticker]
-            long_momentum = momentum_12m[ticker]
+            try:
+                mid_momentum = momentum_6m[ticker]
+            except KeyError:
+                mid_momentum = None
+
+            try:
+                long_momentum = momentum_12m[ticker]
+            except KeyError:
+                long_momentum = None
+
+            
 
             cyclicality = 0
             # ACTIVATE THE CODE BELOW TO SCORE CYCLICALITY DEPENDING ON CURRENT MACROECON SITUATION
@@ -821,15 +833,12 @@ def process_ticker_quantitatives():
                 # 'ESG': esg, #works only for US stocks
             }
 
-            with data_lock:
-                if quantitative_buffett_score >= CUTOFF:
+            if quantitative_buffett_score >= CUTOFF:
+                with data_lock:
                     data.append(result)
-                    # with shelve.open("cache/ticker_cache") as cache:
-                    #     cache[ticker] = (name, quantitative_buffett_score)
-                    # with shelve.open("cache/company_cache") as cache:
-                    #     cache[name] = quantitative_buffett_score
 
         except Exception as e:
+            print(f"Error processing {ticker}: {e}")
             if "429" in str(e):
                 print("Too many requests! Waiting 10 seconds...")
                 time.sleep(10)
@@ -867,6 +876,8 @@ for _ in range(NUM_THREADS):
 
 for t in threads:
     t.join()
+
+q.join()
 
 df = pl.DataFrame(data)
 # df.dropna(subset=["D/E", "CR", "P/B", "ROE", "ROA", "PER", "ICR"], inplace = True)

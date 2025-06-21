@@ -57,7 +57,7 @@ lee_kw_list = [ #2025 이재명 정부 수혜주
 
 
 country = 'KR'
-limit=200
+limit=300
 sp500 = True
 
 print('May take up to few minutes...')

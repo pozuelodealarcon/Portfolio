@@ -35,7 +35,7 @@ PASSWORD = os.environ['EMAIL_PASSWORD']
 ################ PREDETERMINED FIELDS ###################
 
 NUM_THREADS = 20 #multithreading 
-CUTOFF = 5
+CUTOFF = 0
 lee_kw_list = [ #2025 이재명 정부 수혜주
     "Semiconductors",
     "Artificial Intelligence",
@@ -886,11 +886,13 @@ time.sleep(3)
 
 excel_path = f'result_KR_{formattedDate}.xlsx'
 
+recipients = ['chs_3411@naver.com', 'chschj@terpmail.umd.edu', 'eljm2080@gmail.com','hyungsukchoi3411@gmail.com']
+
 msg = EmailMessage()
-msg['Subject'] = 'Daily Buffett Excel Report'
+msg['Subject'] = f'{formattedDate}일자 퀀트 분석자료'
 msg['From'] = EMAIL
-msg['To'] = EMAIL
-msg.set_content('Here is your daily Buffett Excel report.')
+msg['To'] = ', '.join(recipients)
+msg.set_content(f'시가총액 기준 상위 300개 상장기업의 {formattedDate}일자 퀀트 분석자료를 보내드립니다.')
 
 with open(excel_path, 'rb') as f:
     msg.add_attachment(f.read(), maintype='application',

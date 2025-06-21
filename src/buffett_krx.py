@@ -54,12 +54,13 @@ lee_kw_list = [ #2025 이재명 정부 수혜주
     "Railroads",
 ]
 
+country = 'KR'
+limit=200
+sp500 = True
+
 #########################################################
 
 
-country = 'KR'
-limit=300
-sp500 = True
 
 print('May take up to few minutes...')
 

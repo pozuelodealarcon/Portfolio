@@ -645,9 +645,9 @@ def get_momentum_batch(tickers, period_days=126):
 
     return momentum_dict
 
-#momentum_3m = get_momentum_batch(tickers, 63)
-#momentum_6m = get_momentum_batch(tickers, 126)
-#momentum_12m = get_momentum_batch(tickers, 240)
+momentum_3m = get_momentum_batch(tickers, 63)
+momentum_6m = get_momentum_batch(tickers, 126)
+momentum_12m = get_momentum_batch(tickers, 240)
 
 def momentum_score(short, mid, long):
    
@@ -782,7 +782,7 @@ def process_ticker_quantitatives():
             # bvps_growth = bvps_undervalued(info.get('bookValue', None), currentPrice)
             
             icr = get_interest_coverage_ratio(ticker)
-            '''
+            
             try:
                 short_momentum = momentum_3m[ticker]
             except KeyError:
@@ -797,7 +797,7 @@ def process_ticker_quantitatives():
                 long_momentum = momentum_12m[ticker]
             except KeyError:
                 long_momentum = None
-            '''
+            
 
             
 
@@ -818,8 +818,8 @@ def process_ticker_quantitatives():
                         if any(kw.lower() in sub_industry.lower() for kw in lee_kw_list):
                             cyclicality +=1
 
-            #quantitative_buffett_score = buffett_score(debtToEquity, currentRatio, pbr, per, industry_per, roe, industry_roe, roa, industry_roa, eps_growth, div_growth, icr) + momentum_score(short_momentum, mid_momentum, long_momentum) + cyclicality
-            quantitative_buffett_score = buffett_score(debtToEquity, currentRatio, pbr, per, industry_per, roe, industry_roe, roa, industry_roa, eps_growth, div_growth, icr) + cyclicality
+            quantitative_buffett_score = buffett_score(debtToEquity, currentRatio, pbr, per, industry_per, roe, industry_roe, roa, industry_roa, eps_growth, div_growth, icr) + momentum_score(short_momentum, mid_momentum, long_momentum) + cyclicality
+            # quantitative_buffett_score = buffett_score(debtToEquity, currentRatio, pbr, per, industry_per, roe, industry_roe, roa, industry_roa, eps_growth, div_growth, icr) + cyclicality
 
             rec = info.get('recommendationKey', None)
             if country is None:
@@ -849,7 +849,7 @@ def process_ticker_quantitatives():
                 "DIV CAGR": f"{div_growth:.2%}" if div_growth is not None else None,
                 "B-Score": round(quantitative_buffett_score, 1),
                 # 'Analyst Forecast': rec + '(' + upside + ')',
-                #'Momentum': "/".join(f"{m:.1%}" if m is not None else "None" for m in (short_momentum, mid_momentum, long_momentum)),
+                'Momentum': "/".join(f"{m:.1%}" if m is not None else "None" for m in (short_momentum, mid_momentum, long_momentum)),
                 # 'ESG': esg, #works only for US stocks
             }
 

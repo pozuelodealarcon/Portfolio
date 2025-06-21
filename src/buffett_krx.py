@@ -20,6 +20,7 @@ from bs4 import BeautifulSoup
 from urllib.request import urlopen
 import smtplib
 from email.message import EmailMessage
+from email.headerregistry import Address
 
 EMAIL = os.environ['EMAIL_ADDRESS']
 PASSWORD = os.environ['EMAIL_PASSWORD']
@@ -900,7 +901,7 @@ recipients = ['chs_3411@naver.com', 'chschj@terpmail.umd.edu', 'eljm2080@gmail.c
 
 msg = EmailMessage()
 msg['Subject'] = f'{formattedDate}일자 퀀트 분석자료'
-msg['From'] = formataddr(('Hyungsuk Choi',EMAIL))
+msg['From'] = Address(display_name='Hyungsuk Choi', addr_spec=EMAIL)
 msg['To'] = ''  # or '' or a single address to satisfy the 'To' header requirement
 msg.set_content(f'안녕하십니까?\n\n{formattedDate}일자 시가총액 기준 상위 300개 상장기업의 퀀트 분석자료를 보내드립니다.각 기업의 종합 점수는 ‘B-Score’ 열을 참고해 주시기 바랍니다.\n\n본 자료는 워렌 버핏의 투자 철학에 기반하여 기업의 재무 건전성 평가를 목적으로 작성되었으며, 투자 판단 시에는 본 분석 외에도 별도의 정성적 검토가 필요함을 안내드립니다.\n\n감사합니다.')
 

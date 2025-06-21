@@ -714,9 +714,9 @@ q = Queue()
 for ticker in tickers:
     q.put(ticker)
 
-with shelve.open("cache/ticker_cache") as cache:
-    # Clear all the cache entries by deleting the keys
-    cache.clear()
+# with shelve.open("cache/ticker_cache") as cache:
+#     # Clear all the cache entries by deleting the keys
+#     cache.clear()
 
 def process_ticker_quantitatives():
     while not q.empty():
@@ -824,10 +824,10 @@ def process_ticker_quantitatives():
             with data_lock:
                 if quantitative_buffett_score >= CUTOFF:
                     data.append(result)
-                    with shelve.open("cache/ticker_cache") as cache:
-                        cache[ticker] = (name, quantitative_buffett_score)
-                    with shelve.open("cache/company_cache") as cache:
-                        cache[name] = quantitative_buffett_score
+                    # with shelve.open("cache/ticker_cache") as cache:
+                    #     cache[ticker] = (name, quantitative_buffett_score)
+                    # with shelve.open("cache/company_cache") as cache:
+                    #     cache[name] = quantitative_buffett_score
 
         except Exception as e:
             if "429" in str(e):

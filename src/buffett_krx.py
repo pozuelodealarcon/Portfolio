@@ -192,8 +192,6 @@ def getFs (item, ticker):
 def get_per_krx(ticker):
     url = f"https://finance.naver.com/item/main.nhn?code={ticker[:6]}"
     headers = {
-    'X-Naver-Client-Id': 'AdbJq1zNcJKekW7OEgIY',
-    'X-Naver-Client-Secret': 'xgnPiDe6Yi',
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
                   'AppleWebKit/537.36 (KHTML, like Gecko) '
                   'Chrome/114.0.0.0 Safari/537.36',

@@ -1,0 +1,30 @@
+name: Send Buffett Excel at 5PM KST
+
+on:
+  schedule:
+    - cron: '0 8 * * *' # 5 PM KST = 8 AM UTC
+  workflow_dispatch:
+
+jobs:
+  send-daily-excel:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12.1'
+
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+
+    - name: Run Buffett script and email
+      env:
+        EMAIL_ADDRESS: ${{ secrets.EMAIL_ADDRESS }}
+        EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+      run: python src/buffett_krx.py
+

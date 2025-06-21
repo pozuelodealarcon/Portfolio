@@ -874,17 +874,17 @@ df = pl.DataFrame(data)
 df_sorted = df.sort("B-Score", descending = True)
 
 if country: 
-    df_sorted.to_pandas().to_excel(f"results/result_{country}_{formattedDate}.xlsx", index=False)
+    df_sorted.to_pandas().to_excel(f"../results/result_{country}_{formattedDate}.xlsx", index=False)
 
 elif sp500:
-    df_sorted.to_pandas().to_excel(f"results/sp500_{formattedDate}.xlsx", index=False)
+    df_sorted.to_pandas().to_excel(f"../results/sp500_{formattedDate}.xlsx", index=False)
 else:
-    df_sorted.to_pandas().to_excel(f"results/nasdaq100_{formattedDate}.xlsx", index=False)
+    df_sorted.to_pandas().to_excel(f"../results/nasdaq100_{formattedDate}.xlsx", index=False)
 
 ##########################################################################################################
 time.sleep(3)
 
-excel_path = f'results/result_KR_{formattedDate}.xlsx'
+excel_path = f'../results/result_KR_{formattedDate}.xlsx'
 
 msg = EmailMessage()
 msg['Subject'] = 'Daily Buffett Excel Report'
@@ -895,7 +895,7 @@ msg.set_content('Here is your daily Buffett Excel report.')
 with open(excel_path, 'rb') as f:
     msg.add_attachment(f.read(), maintype='application',
                        subtype='vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                       filename=excel_path)
+                       filename= f'result_KR_{formattedDate}.xlsx')
 
 with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
     smtp.login(EMAIL, PASSWORD)

@@ -190,7 +190,14 @@ def getFs (item, ticker):
     
 def get_per_krx(ticker):
     url = f"https://finance.naver.com/item/main.nhn?code={ticker[:6]}"
-    headers = {'User-Agent': 'Mozilla/5.0'}
+    headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                  'AppleWebKit/537.36 (KHTML, like Gecko) '
+                  'Chrome/114.0.0.0 Safari/537.36',
+    'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
+    'Referer': 'https://finance.naver.com/'
+    }
+
     res = requests.get(url, headers=headers)
     soup = BeautifulSoup(res.text, 'html.parser')
 
@@ -206,18 +213,28 @@ def get_per_krx(ticker):
         for row in rows:
             if 'PBR' in row.text:
                 per_text = row.select_one('td em').text
-                PBR = float(per_text.replace(',', ''))
-                data['PBR'] =  PBR
+                if 'N/A' not in per_text:
+                    PBR = float(per_text.replace(',', ''))
+                    data['PBR'] =  PBR
+                else:
+                    data['PBR'] =  None
+
 
             if '동일업종 PER' in row.text:
                 per_text = row.select_one('td em').text
-                IND_PER = float(per_text.replace(',', ''))
-                data['IND_PER'] =  IND_PER
+                if 'N/A' not in per_text:
+                    IND_PER = float(per_text.replace(',', ''))
+                    data['IND_PER'] =  IND_PER
+                else:
+                    data['IND_PER'] =  None
 
             if 'PER' in row.text and 'EPS' in row.text and '추정PER' not in row.text:
                 per_text = row.select_one('td em').text
-                PER = float(per_text.replace(',', ''))
-                data['PER'] =  PER
+                if 'N/A' not in per_text:
+                    PER = float(per_text.replace(',', ''))
+                    data['PER'] =  PER
+                else:
+                    data['PER'] =  None
 
     return data
 
@@ -605,9 +622,6 @@ tickers = get_tickers(country, limit, sp500)
 if country == 'KR':
     tickers = list(filter(lambda t: t[5] == '0', tickers))
 
-print(len(tickers))
-
-
 def get_momentum_batch(tickers, period_days=126):
     # Download 1 year of daily close prices for all tickers at once
     try:
@@ -902,10 +916,10 @@ excel_path = f'result_KR_{formattedDate}.xlsx'
 recipients = ['chs_3411@naver.com', 'chschj@terpmail.umd.edu', 'eljm2080@gmail.com', 'hyungsukchoi3411@gmail.com']
 
 msg = EmailMessage()
-msg['Subject'] = f'{formattedDate}일자 퀀트 분석자료'
+msg['Subject'] = f'{formattedDate} 퀀트 분석자료'
 msg['From'] = Address(display_name='Hyungsuk Choi', addr_spec=EMAIL)
 msg['To'] = ''  # or '' or a single address to satisfy the 'To' header requirement
-msg.set_content(f'안녕하십니까?\n\n{formattedDate}일자 시가총액 상위 300개 상장기업의 퀀트 분석자료를 보내드립니다. 각 기업의 종합 점수는 ‘B-Score’ 열을 참고해 주시기 바랍니다.\n\n본 자료는 워렌 버핏의 투자 철학에 기반하여 기업의 재무 건전성 평가를 목적으로 작성되었으며, 투자 판단 시에는 본 분석 외에도 별도의 정성적 검토가 필요함을 안내드립니다.\n\n감사합니다.')
+msg.set_content(f'안녕하십니까?\n\n{formattedDate}기준 시가총액 상위 {limit}개 상장기업의 퀀트 분석자료를 보내드립니다. 각 기업의 종합 점수는 ‘B-Score’ 열을 참고해 주시기 바랍니다.\n\n본 자료는 워렌 버핏의 투자 철학에 기반하여 기업의 재무 건전성 평가를 목적으로 작성되었으며, 투자 판단 시에는 본 분석 외에도 별도의 정성적 검토가 필요함을 안내드립니다.\n\n감사합니다.')
 
 with open(excel_path, 'rb') as f:
     msg.add_attachment(f.read(), maintype='application',

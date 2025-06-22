@@ -23,73 +23,85 @@ import pandas as pd
 import requests
 from io import StringIO
 from datetime import datetime
-
-# 예시용 날짜 정규화 함수
-def get_date_str(col):
-    try:
-        return datetime.strptime(col.strip(), "%Y/%m").strftime("%Y-%m")
-    except:
-        return col.strip()
-
-import pandas as pd
 import requests
-from io import StringIO
-import re
+from bs4 import BeautifulSoup
+import requests
+from bs4 import BeautifulSoup
 
-def get_finstate_naver(code, fin_type="0", freq_type="Y"):
-    """
-    code: 종목 코드 (6자리, 예: "005930")
-    fin_type: 재무제표 종류 ("0": 주재무제표, "4": IFRS 연결 등)
-    freq_type: "Y" 연간, "Q" 분기
-    """
-    url = (
-        "https://companyinfo.stock.naver.com/v1/company/ajax/cF1001.aspx"
-        f"?cmp_cd={code}&fin_typ={fin_type}&freq_typ={freq_type}"
-    )
+import requests
+from bs4 import BeautifulSoup
+import requests
+from bs4 import BeautifulSoup
+import requests
+from bs4 import BeautifulSoup
+
+import requests
+from bs4 import BeautifulSoup
+
+import requests
+from bs4 import BeautifulSoup
+
+import requests
+from bs4 import BeautifulSoup
+
+def get_industry_comparison_roe(ticker):
+    url = f"https://finance.naver.com/item/main.naver?code={ticker}"
     headers = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                  "AppleWebKit/537.36 (KHTML, like Gecko) "
-                  "Chrome/114.0.0.0 Safari/537.36"  
+        'User-Agent': 'Mozilla/5.0',
+        'Referer': 'https://finance.naver.com/'
     }
 
-    
-    resp = requests.get(url, headers=headers)
-    resp.encoding = resp.apparent_encoding
+    res = requests.get(url, headers=headers)
+    res.raise_for_status()
+    soup = BeautifulSoup(res.text, 'html.parser')
 
-    html = resp.text
-    if "해당 데이터가 존재하지 않습니다" in html:
+    # 동일업종 비교 테이블은 div.section.inner_sub > table.class="compare" 내부에 위치
+    compare_table = soup.select_one('div.section.trade_compare table')
+
+    if not compare_table:
+        print("동일업종 비교 테이블을 찾을 수 없습니다.")
         return None
 
-    # 불필요한 header 제거
-    html = re.sub(r'<th[^>]*>연간</th>', '', html)
-    html = re.sub(r"<span class='span-sub'>\([^)]*\)</span>", "", html)
+    roe = None
+    ind_roe = None
+
+    rows = compare_table.select('tr')
+    for row in rows:
+        th = row.find('th')
+        if th and 'ROE' in th.text:
+            tds = row.find_all('td')
+            result = [td.text.strip().replace('%', '') for td in tds]
+
+            # Try to parse company ROE
+            try:
+                roe = float(result[0]) if result[0] != '' else None
+            except ValueError:
+                roe = None
+
+            # Process industry ROE values
+            raw_industry_values = result[1:]
+            cleaned_values = []
+
+            for item in raw_industry_values:
+                if item != '':
+                    try:
+                        cleaned_values.append(float(item))
+                    except ValueError:
+                        continue  # Skip invalid entries
+
+            if cleaned_values:
+                ind_roe = sum(cleaned_values) / len(cleaned_values)
+            else:
+                ind_roe = None
+
+    return(roe, ind_roe)
+
+
     
-    try:
-        df = pd.read_html(StringIO(html))[0]
-    except ValueError:
-        return None
 
-    # 컬럼 첫줄 삭제(멀티컬럼 제거)
-    if isinstance(df.columns, pd.MultiIndex):
-        df.columns = df.columns.get_level_values(1)
+# 사용 예시
+ticker = "012450"
+roe_list = get_industry_comparison_roe(ticker)
 
-    df = df.iloc[1:]  # 제목행 제외
-    df = df.set_index(df.columns[0])
-    df.index.name = "account"
-    df.columns = df.columns.str.extract(r'(\d{4})')[0]  # '2025/12'→'2025'
-    
-    dft = df.T
-    dft.index = pd.to_datetime(dft.index + "-12-31", errors='coerce')
-    dft = dft.dropna(axis=0, how='all')
-    
-    # 컬럼명 리네임
-    dft.rename(columns={
-        '유보율': '자본유보율',
-        '현금배당성향': '현금배당성향(%)'
-    }, inplace=True)
+print(roe_list)
 
-    return dft.astype(float)
-
-
-df = get_finstate_naver("005930", fin_type="0", freq_type="Y")
-print(df.head())

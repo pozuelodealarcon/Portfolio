@@ -37,20 +37,19 @@ PASSWORD = os.environ['EMAIL_PASSWORD']
 
 NUM_THREADS = 5 #multithreading 
 CUTOFF = 0
-lee_kw_list = [ #2025 이재명 정부 수혜주
-    "Semiconductors",
-    "Artificial Intelligence",
-    "AI",
-    "Data Center",
-    "Renewable",
+lee_kw_list = [ #2025 이재명 정부 예상 수혜주 
+    "Semiconductor",
+    "Software", #AI
+    "Information", #AI
+    "Resorts",
+    "Casinos",
     "Energy",
+    "Solar",
+    "Wind",
     "Plant",
     "Construction",
     "Aerospace & Defense",
     "Biotechnology",
-    "Entertainment",
-    "Media",
-    "Agricultural",
     "Railroads",
 ]
 
@@ -138,13 +137,16 @@ def buffett_score (de, cr, pbr, per, ind_per, roe, ind_roe, roa, ind_roa, eps, d
                 score +=1
 
     # 고배당주 수혜 예상
-    if div is not None: #cagr = +4~6-10%
-        if div >= 0.1:
-            score +=1.0
-        elif div >= 0.08:
-            score +=0.75
-        elif div >= 0.06:
-            score +=0.5
+    # if div is not None: #cagr = +4~6-10%
+    #     if div >= 0.1:
+    #         score +=1.0
+    #     elif div >= 0.08:
+    #         score +=0.75
+    #     elif div >= 0.06:
+    #         score +=0.5
+    if div is not None:
+        if div:
+            score +=1
 
     if eps is True:
         score += 1
@@ -168,7 +170,7 @@ def buffett_score (de, cr, pbr, per, ind_per, roe, ind_roe, roa, ind_roa, eps, d
     if None not in {div, eps}:
         #  3. 고배당 + 고EPS 성장률 전략 (배당 성장주 전략)
         # 아이디어: 고배당이면서 실적 성장세가 뚜렷한 기업
-        if div >= 0.3 and eps >= 0.3:
+        if div and eps >= 0.3:
             score +=1
 
 
@@ -210,7 +212,7 @@ def get_per_krx(ticker):
         return None
 
     soup = BeautifulSoup(res.text, 'html.parser')
-    data = {'PBR': None, 'IND_PER': None, 'PER': None}
+    data = {'PBR': None, 'IND_PER': None, 'PER': None, 'DPS YoY': None, 'ROE': None, "IND_ROE": None}
 
     aside = soup.select_one('div.aside_invest_info')
     if aside:
@@ -231,6 +233,65 @@ def get_per_krx(ticker):
 
                 elif 'PER' in text and 'EPS' in text and '추정PER' not in text:
                     data['PER'] = float(per_text.replace(',', '')) if 'N/A' not in per_text else None
+    
+    ##############################################################
+    table = soup.select_one('div.section.cop_analysis table')
+    if table:
+        dividend = []
+        # '주당배당금' 행 찾기
+        rows = table.select('tbody tr')
+        for row in rows:
+            th = row.find('th')
+            if th and '주당배당금' in th.text:
+                tds = row.select('td')
+                for td in tds:
+                    val = td.text.strip().replace(',', '').replace('원', '')
+                    try:
+                        dividend.append(float(val))
+                    except (ValueError, TypeError):
+                        dividend.append(None)
+                break
+
+        # Get first 3 non-None items safely
+        first_three = dividend[:3]
+
+        if len(first_three) >= 2:
+            # Check if the dividends are non-decreasing YoY
+            data['DPS YoY'] = all(earlier <= later for earlier, later in zip(first_three, first_three[1:]))
+
+    ########################
+
+    # 동일업종 비교 테이블은 div.section.inner_sub > table.class="compare" 내부에 위치
+    compare_table = soup.select_one('div.section.trade_compare table')
+
+    if compare_table:
+        rows = compare_table.select('tr')
+        for row in rows:
+            th = row.find('th')
+            if th and 'ROE' in th.text:
+                tds = row.find_all('td')
+                result = [td.text.strip().replace('%', '') for td in tds]
+
+                # Try to parse company ROE
+                try:
+                    data['ROE'] = float(result[0]) if result[0] != '' else None
+                except ValueError:
+                    pass
+
+                # Process industry ROE values
+                raw_industry_values = result[1:]
+                cleaned_values = []
+
+                for item in raw_industry_values:
+                    if item != '':
+                        try:
+                            cleaned_values.append(float(item))
+                        except ValueError:
+                            continue  # Skip invalid entries
+
+                if cleaned_values:
+                    ind_roe = sum(cleaned_values) / len(cleaned_values)
+                    data['IND_ROE'] = ind_roe
 
     return data
 
@@ -285,6 +346,47 @@ def has_stable_dividend_growth_cagr(ticker):
         cagr = ((div_end / div_start) ** (1/len(last_10_divs))) - 1
         return cagr
     
+
+def get_annual_dividend_per_share(ticker):
+    url = f"https://finance.naver.com/item/main.naver?code={ticker[:6]}"
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                      'AppleWebKit/537.36 (KHTML, like Gecko) '
+                      'Chrome/114.0.0.0 Safari/537.36',
+        'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7'
+    }
+
+    res = requests.get(url, headers=headers)
+    res.raise_for_status()
+    soup = BeautifulSoup(res.text, 'html.parser')
+
+    table = soup.select_one('div.section.cop_analysis table')
+    if not table:
+        return []
+
+    dividend =[]
+    # '주당배당금' 행 찾기
+    rows = table.select('tbody tr')
+    for row in rows:
+        if row.find('th') and '주당배당금' in row.find('th').text:
+            tds = row.select('td')
+            for td in tds:
+                val = td.text.strip().replace(',', '').replace('원', '')
+                try:
+                    dividend.append(float(val))
+                except ValueError:
+                    dividend.append(None)
+            break
+
+    # Return only first 3 items
+    first_three = dividend[:3]
+    first_three = list(filter(lambda t: t is not None,first_three ))
+    if not first_three:
+        return False
+    else:
+        return all(earlier <= later for earlier, later in zip(first_three, first_three[1:]))
+    
+
 # def has_stable_eps_growth(ticker):
 #     ticker = yf.Ticker(ticker)
 
@@ -809,17 +911,17 @@ def process_ticker_quantitatives():
                                                                        # 저per -> 수익성 높거나 주가가 싸다 고pbr -> 자산은 적은데 시장에서 비싸게 봐준다
             industry_per = krx_per['IND_PER'] 
             industry_per = round(industry_per) if industry_per is not None else industry_per
-            industry_roe = get_industry_roe(industry)
+            industry_roe = krx_per['IND_ROE']
             industry_roa = get_industry_roa(industry)
 
-            roe = info.get('returnOnEquity', None) # 수익성 높은 기업 선별. 고roe + 저pbr 조합은 가장 유명한 퀀트 전략. > 8% (0.08) 주주 입장에서 수익성
+            roe = krx_per['ROE'] # 수익성 높은 기업 선별. 고roe + 저pbr 조합은 가장 유명한 퀀트 전략. > 8% (0.08) 주주 입장에서 수익성
             roa = info.get('returnOnAssets', None) # > 6% (0.06), 기업 전체 효율성
             #ROE가 높고 ROA는 낮다면? → 부채를 많이 이용해 수익을 낸 기업일 수 있음. ROE와 ROA 모두 높다면? → 자산과 자본 모두 효율적으로 잘 운용하고 있다는 의미.
             #A = L + E
             
             eps_growth = has_stable_eps_growth_cagr(ticker) # earnings per share, the higher the better, buffett looks for stable EPS growth
             # eps_growth_quart = has_stable_eps_growth_quarterly(ticker) 
-            div_growth = has_stable_dividend_growth_cagr(ticker) # buffett looks for stable dividend growth for at least 10 years
+            div_growth = krx_per['DPS YoY'] # buffett looks for stable dividend growth for at least 10 years
             # bvps_growth = bvps_undervalued(info.get('bookValue', None), currentPrice)
             
             icr = get_interest_coverage_ratio(ticker)

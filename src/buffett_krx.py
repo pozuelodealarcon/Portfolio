@@ -202,9 +202,13 @@ def get_per_krx(ticker):
         'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
         'Referer': 'https://finance.naver.com/'
     }
+    session = requests.Session()
+    session.headers.update(headers)
 
     try:
-        res = requests.get(url, headers=headers)
+        # 첫 요청으로 쿠키 확보 (홈페이지 접속)
+        session.get("https://finance.naver.com/", timeout=3)
+        res = session.get(url, timeout=3)
     except Exception as e:
         print('Naver error:', e)
         return None

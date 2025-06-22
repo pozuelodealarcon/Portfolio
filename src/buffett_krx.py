@@ -879,7 +879,8 @@ def process_ticker_quantitatives():
             pbr = krx_per['PBR'] # 주가가 그 기업의 자산가치에 비해 과대/과소평가되어 있다는 의미. 낮으면 자산활용력 부족
             per = krx_per['PER'] # high per expects future growth but could be overvalued(=버블). 
                                                                        # low per could be undervalued or company in trouble, IT, 바이오 등 성장산업은 자연스레 per이 높게 형성
-                                                                       # 저per -> 수익성 높거나 주가가 싸다 고pbr -> 자산은 적은데 시장에서 비싸게 봐준다
+            if per is None:
+                per = info.get('trailingPE', None)                                                           # 저per -> 수익성 높거나 주가가 싸다 고pbr -> 자산은 적은데 시장에서 비싸게 봐준다
             industry_per = krx_per['IND_PER'] 
             industry_per = round(industry_per) if industry_per is not None else industry_per
 

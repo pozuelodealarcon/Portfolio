@@ -38,7 +38,6 @@ PASSWORD = os.environ['EMAIL_PASSWORD']
 NUM_THREADS = 5 #multithreading 
 CUTOFF = 0
 lee_kw_list = [ #2025 이재명 정부 예상 수혜주 
-    "Semiconductor",
     "Software", #AI
     "Information", #AI
     "Resorts",
@@ -240,17 +239,19 @@ def get_per_krx(ticker):
         dividend = []
         # '주당배당금' 행 찾기
         rows = table.select('tbody tr')
-        for row in rows:
-            th = row.find('th')
-            if th and '주당배당금' in th.text:
-                tds = row.select('td')
-                for td in tds:
-                    val = td.text.strip().replace(',', '').replace('원', '')
-                    try:
-                        dividend.append(float(val))
-                    except (ValueError, TypeError):
-                        dividend.append(None)
-                break
+        if rows:
+            for row in rows:
+                th = row.find('th')
+                if th and '주당배당금' in th.text:
+                    tds = row.select('td')
+                    if tds:
+                        for td in tds:
+                            val = td.text.strip().replace(',', '').replace('원', '')
+                            try:
+                                dividend.append(float(val))
+                            except (ValueError, TypeError):
+                                dividend.append(None)
+                        break
 
         # Get first 3 non-None items safely
         first_three = dividend[:3]
@@ -266,32 +267,39 @@ def get_per_krx(ticker):
 
     if compare_table:
         rows = compare_table.select('tr')
-        for row in rows:
-            th = row.find('th')
-            if th and 'ROE' in th.text:
-                tds = row.find_all('td')
-                result = [td.text.strip().replace('%', '') for td in tds]
+        if rows:
+            for row in rows:
+                th = row.find('th')
+                if th and 'ROE' in th.text:
+                    tds = row.find_all('td')
+                    if not tds:
+                        continue  # Skip if no <td> found
 
-                # Try to parse company ROE
-                try:
-                    data['ROE'] = float(result[0]) if result[0] != '' else None
-                except ValueError:
-                    pass
+                    # Extract text from <td> elements and clean %
+                    result = [td.text.strip().replace('%', '') for td in tds]
+                    
+                    # Parse company ROE safely
+                    try:
+                        if result and result[0] != '':
+                            data['ROE'] = float(result[0])
+                    except (ValueError, IndexError):
+                        pass  # Leave as None
 
-                # Process industry ROE values
-                raw_industry_values = result[1:]
-                cleaned_values = []
+                    # Process industry ROE values
+                    raw_industry_values = result[1:]  # Everything after the first value
+                    cleaned_values = []
 
-                for item in raw_industry_values:
-                    if item != '':
-                        try:
-                            cleaned_values.append(float(item))
-                        except ValueError:
-                            continue  # Skip invalid entries
+                    for item in raw_industry_values:
+                        if item != '':
+                            try:
+                                cleaned_values.append(float(item))
+                            except ValueError:
+                                continue
 
-                if cleaned_values:
-                    ind_roe = sum(cleaned_values) / len(cleaned_values)
-                    data['IND_ROE'] = ind_roe
+                    if cleaned_values:
+                        data['IND_ROE'] = sum(cleaned_values) / len(cleaned_values)
+
+                    break
 
     return data
 
@@ -320,6 +328,7 @@ def get_per_krx(ticker):
 #     return all(earlier * tolerance <= later for earlier, later in zip(last_10_divs, last_10_divs[1:])) # zip returns [(2015div, 2016div), (2016div, 2017div), ..., (2024div, 2025div)]
     
 def has_stable_dividend_growth_cagr(ticker):
+
     stock = yf.Ticker(ticker)
     divs = stock.dividends
     # Ensure we have at least 10 years of data

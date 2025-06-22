@@ -800,7 +800,9 @@ def process_ticker_quantitatives():
             debtToEquity = debtToEquity/100 if debtToEquity is not None else None
             currentRatio = info.get('currentRatio', None) # 초점: 회사의 단기 유동성, > 1.5 && < 2.5
             if country == 'KR':
-                krx_per = get_per_krx(ticker[:6])
+                # krx_per = get_per_krx(ticker[:6])
+                krx_per = {'PBR':None, 'PER':None, 'IND_PER':None}
+
 
             pbr = info.get('priceToBook', None) # 초점: 자산가치, 저pbr종목은 저평가된 자산 가치주로 간주. 장기 수익률 설명력 높음 < 1.5 (=being traded at 1.5 times its book value (asset-liab))
             if not pbr and country == 'KR': pbr = krx_per['PBR'] # 주가가 그 기업의 자산가치에 비해 과대/과소평가되어 있다는 의미. 낮으면 자산활용력 부족
@@ -1001,23 +1003,23 @@ if country:
         yellow_fill = workbook.add_format({'bg_color': '#FFEB9C'})
         green_fill = workbook.add_format({'bg_color': '#C6EFCE'})
         
-        for row_num in range(start_row, end_row + 1):
+        for row_num in range(start_row + 1, end_row + 1):
             excel_row = row_num + 1
             formula = f"${bscore_col_letter}{excel_row}"
             
             worksheet.conditional_format(f"{xl_col(start_col)}{excel_row}:{xl_col(end_col)}{excel_row}", {
                 'type': 'formula',
-                'criteria': f"{formula} < 5",
+                'criteria': f"{formula} < 4",
                 'format': red_fill
             })
             worksheet.conditional_format(f"{xl_col(start_col)}{excel_row}:{xl_col(end_col)}{excel_row}", {
                 'type': 'formula',
-                'criteria': f"AND({formula} >= 5, {formula} < 8)",
+                'criteria': f"AND({formula} >= 4, {formula} < 6)",
                 'format': yellow_fill
             })
             worksheet.conditional_format(f"{xl_col(start_col)}{excel_row}:{xl_col(end_col)}{excel_row}", {
                 'type': 'formula',
-                'criteria': f"{formula} >= 8",
+                'criteria': f"{formula} >= 6",
                 'format': green_fill
             })
 

@@ -204,105 +204,110 @@ def get_per_krx(ticker):
         'Referer': 'https://finance.naver.com/'
     }
 
+    # Default structure
+    data = {
+        'PBR': None, 'IND_PER': None, 'PER': None,
+        'DPS YoY': None, 'ROE': None, 'IND_ROE': None
+    }
+
     try:
-        res = requests.get(url, headers=headers)
+        res = requests.get(url, headers=headers, timeout=10)
+        res.raise_for_status()
     except Exception as e:
-        print('Naver error:', e)
-        return None
+        print(f'[ERROR] Request failed for {ticker}: {e}')
+        return data
 
     soup = BeautifulSoup(res.text, 'html.parser')
-    data = {'PBR': None, 'IND_PER': None, 'PER': None, 'DPS YoY': None, 'ROE': None, "IND_ROE": None}
 
+    # Parse PBR, PER, IND_PER
     aside = soup.select_one('div.aside_invest_info')
     if aside:
         rows = aside.select('table tr')
-        if rows:
-            for row in rows:
-                text = row.text
-                em = row.select_one('td em')
-                if em is None:
-                    continue
-                per_text = em.text.strip()
+        for row in rows:
+            text = row.text
+            em = row.select_one('td em')
+            if not em:
+                continue
+            per_text = em.text.strip()
 
-                if 'PBR' in text:
+            if 'PBR' in text:
+                try:
                     data['PBR'] = float(per_text.replace(',', '')) if 'N/A' not in per_text else None
+                except ValueError:
+                    pass
 
-                elif '동일업종 PER' in text:
+            elif '동일업종 PER' in text:
+                try:
                     data['IND_PER'] = float(per_text.replace(',', '')) if 'N/A' not in per_text else None
+                except ValueError:
+                    pass
 
-                elif 'PER' in text and 'EPS' in text and '추정PER' not in text:
+            elif 'PER' in text and 'EPS' in text and '추정PER' not in text:
+                try:
                     data['PER'] = float(per_text.replace(',', '')) if 'N/A' not in per_text else None
-    
-    ##############################################################
+                except ValueError:
+                    pass
+
+    # Parse DPS YoY
     table = soup.select_one('div.section.cop_analysis table')
     if table:
         dividend = []
         rows = table.select('tbody tr')
-        if rows:
-            for row in rows:
-                th = row.find('th')
-                if th and '주당배당금' in th.text:
-                    tds = row.select('td')
-                    if tds:
-                        for td in tds:
-                            val = td.text.strip().replace(',', '').replace('원', '')
-                            try:
-                                dividend.append(float(val))
-                            except (ValueError, TypeError):
-                                dividend.append(None)
-                        break  # Found and processed the DPS row
+        for row in rows:
+            th = row.find('th')
+            if th and '주당배당금' in th.text:
+                tds = row.select('td')
+                if not tds:
+                    continue
+                for td in tds:
+                    val = td.text.strip().replace(',', '').replace('원', '')
+                    try:
+                        dividend.append(float(val))
+                    except (ValueError, TypeError):
+                        dividend.append(None)
+                break  # only process the first matching row
 
-        # Filter out None values and take first 3
-        first_three = dividend[:3]
-        first_three = list(filter(lambda x: x is not None, first_three))
-
-        # Only compare if we have at least 2 values
+        # Filter and compare first 3 valid dividend values
+        first_three = list(filter(lambda x: x is not None, dividend))[:3]
         if len(first_three) >= 2:
             data['DPS YoY'] = all(
                 earlier <= later for earlier, later in zip(first_three, first_three[1:])
             )
 
-    ########################
-
-    # 동일업종 비교 테이블은 div.section.inner_sub > table.class="compare" 내부에 위치
+    # Parse ROE and industry ROE
     compare_table = soup.select_one('div.section.trade_compare table')
-
     if compare_table:
         rows = compare_table.select('tr')
-        if rows:
-            for row in rows:
-                th = row.find('th')
-                if th and 'ROE' in th.text:
-                    tds = row.find_all('td')
-                    if not tds:
-                        break  # No data to process
+        for row in rows:
+            th = row.find('th')
+            if th and 'ROE' in th.text:
+                tds = row.find_all('td')
+                if not tds:
+                    break
 
-                    # Extract text and clean %
-                    result = [td.text.strip().replace('%', '') for td in tds]
+                # Extract and clean values
+                result = [td.text.strip().replace('%', '') for td in tds]
 
-                    # Parse company ROE
+                # Company ROE
+                try:
+                    if result and result[0] != '':
+                        data['ROE'] = float(result[0])
+                except (ValueError, IndexError):
+                    pass
+
+                # Industry ROE
+                raw_industry_values = result[1:]
+                cleaned_values = []
+                for item in raw_industry_values:
                     try:
-                        if result and result[0] != '':
-                            data['ROE'] = float(result[0])
-                    except (ValueError, IndexError):
-                        data['ROE'] = None  # Redundant due to default, but explicit
+                        if item != '':
+                            cleaned_values.append(float(item))
+                    except ValueError:
+                        continue
 
-                    # Parse industry ROE values
-                    raw_industry_values = result[1:] if len(result) > 1 else []
-                    cleaned_values = []
-
-                    for item in raw_industry_values:
-                        try:
-                            if item != '':
-                                cleaned_values.append(float(item))
-                        except ValueError:
-                            continue
-
-                    if cleaned_values:
-                        data['IND_ROE'] = sum(cleaned_values) / len(cleaned_values)
-
-                    break  # Only process the first ROE row
-
+                if cleaned_values:
+                    data['IND_ROE'] = sum(cleaned_values) / len(cleaned_values)
+                break  # Process only the first ROE row
 
     return data
 
@@ -330,6 +335,7 @@ def get_per_krx(ticker):
 #     tolerance = 0.85 # tolerance band to account for crises and minor dividend cuts
 #     return all(earlier * tolerance <= later for earlier, later in zip(last_10_divs, last_10_divs[1:])) # zip returns [(2015div, 2016div), (2016div, 2017div), ..., (2024div, 2025div)]
     
+'''
 def has_stable_dividend_growth_cagr(ticker):
 
     stock = yf.Ticker(ticker)
@@ -357,47 +363,7 @@ def has_stable_dividend_growth_cagr(ticker):
     else:
         cagr = ((div_end / div_start) ** (1/len(last_10_divs))) - 1
         return cagr
-    
-
-def get_annual_dividend_per_share(ticker):
-    url = f"https://finance.naver.com/item/main.naver?code={ticker[:6]}"
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-                      'AppleWebKit/537.36 (KHTML, like Gecko) '
-                      'Chrome/114.0.0.0 Safari/537.36',
-        'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7'
-    }
-
-    res = requests.get(url, headers=headers)
-    res.raise_for_status()
-    soup = BeautifulSoup(res.text, 'html.parser')
-
-    table = soup.select_one('div.section.cop_analysis table')
-    if not table:
-        return []
-
-    dividend =[]
-    # '주당배당금' 행 찾기
-    rows = table.select('tbody tr')
-    for row in rows:
-        if row.find('th') and '주당배당금' in row.find('th').text:
-            tds = row.select('td')
-            for td in tds:
-                val = td.text.strip().replace(',', '').replace('원', '')
-                try:
-                    dividend.append(float(val))
-                except ValueError:
-                    dividend.append(None)
-            break
-
-    # Return only first 3 items
-    first_three = dividend[:3]
-    first_three = list(filter(lambda t: t is not None,first_three ))
-    if not first_three:
-        return False
-    else:
-        return all(earlier <= later for earlier, later in zip(first_three, first_three[1:]))
-    
+'''
 
 # def has_stable_eps_growth(ticker):
 #     ticker = yf.Ticker(ticker)

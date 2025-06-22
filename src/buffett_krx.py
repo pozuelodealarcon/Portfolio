@@ -195,54 +195,42 @@ def buffett_score (de, cr, pbr, per, ind_per, roe, ind_roe, roa, ind_roa, eps, d
 def get_per_krx(ticker):
     url = f"https://finance.naver.com/item/main.nhn?code={ticker[:6]}"
     headers = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-                  'AppleWebKit/537.36 (KHTML, like Gecko) '
-                  'Chrome/114.0.0.0 Safari/537.36',
-    'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
-    'Referer': 'https://finance.naver.com/'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                      'AppleWebKit/537.36 (KHTML, like Gecko) '
+                      'Chrome/114.0.0.0 Safari/537.36',
+        'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
+        'Referer': 'https://finance.naver.com/'
     }
+
     try:
         res = requests.get(url, headers=headers)
     except Exception as e:
-        print('FMP error:', e)
+        print('Naver error:', e)
         return None
+
     soup = BeautifulSoup(res.text, 'html.parser')
+    data = {'PBR': None, 'IND_PER': None, 'PER': None}
 
-    data = {}
-    PBR = None
-    IND_PER = None
-    PER = None
-
-    # 동일업종 PER이 들어있는 박스 찾기
     aside = soup.select_one('div.aside_invest_info')
     if aside:
         rows = aside.select('table tr')
         if rows:
             for row in rows:
-                if 'PBR' in row.text:
-                    per_text = row.select_one('td em').text
-                    if 'N/A' not in per_text:
-                        PBR = float(per_text.replace(',', ''))
-                        data['PBR'] =  PBR
-                    else:
-                        data['PBR'] =  None
+                text = row.text
+                em = row.select_one('td em')
+                if em is None:
+                    continue
+                per_text = em.text.strip()
 
+                if 'PBR' in text:
+                    data['PBR'] = float(per_text.replace(',', '')) if 'N/A' not in per_text else None
 
-                if '동일업종 PER' in row.text:
-                    per_text = row.select_one('td em').text
-                    if 'N/A' not in per_text:
-                        IND_PER = float(per_text.replace(',', ''))
-                        data['IND_PER'] =  IND_PER
-                    else:
-                        data['IND_PER'] =  None
+                elif '동일업종 PER' in text:
+                    data['IND_PER'] = float(per_text.replace(',', '')) if 'N/A' not in per_text else None
 
-                if 'PER' in row.text and 'EPS' in row.text and '추정PER' not in row.text:
-                    per_text = row.select_one('td em').text
-                    if 'N/A' not in per_text:
-                        PER = float(per_text.replace(',', ''))
-                        data['PER'] =  PER
-                    else:
-                        data['PER'] =  None
+                elif 'PER' in text and 'EPS' in text and '추정PER' not in text:
+                    data['PER'] = float(per_text.replace(',', '')) if 'N/A' not in per_text else None
+
     return data
 
 # def has_stable_dividend_growth(ticker):
@@ -632,51 +620,51 @@ def get_industry_roa(ind):
 
 
 ######## LOAD TICKERS ###########
-# raw_tickers = get_tickers(country, limit, sp500)
+raw_tickers = get_tickers(country, limit, sp500)
 
-# filtered = list(filter(lambda x: isinstance(x, str), raw_tickers))
-
-
-# # block of code that gets rid of preferred stocks
-# prohibited = {'008560.KS', '003550.KS', '048260.KQ', '000060.KS', '091990.KQ', '066970.KQ', '022100.KQ', '010145.KS', '003410.KS'}
-# def keep_ticker(t):
-#     return len(t) > 5 and t[5] == '0' and t not in prohibited
-
-# tickers = list(filter(keep_ticker, filtered))
+filtered = list(filter(lambda x: isinstance(x, str), raw_tickers))
 
 
-tickers = [
-    '005930.KS',  # Samsung Electronics
-    '000660.KS',  # SK Hynix
-    '035420.KS',  # Naver
-    '207940.KQ',  # Samsung Biologics
-    '051910.KS',  # LG Chem
-    '068270.KS',  # Celltrion
-    '005380.KS',  # Hyundai Motor
-    '035720.KQ',  # Kakao
-    '055550.KS',  # Shinhan Financial Group
-    '012330.KS',  # Hyundai Mobis
-    '105560.KS',  # KB Financial Group
-    '036570.KS',  # NCSoft
-    '017670.KS',  # SK Telecom
-    '015760.KS',  # Korean Electric Power
-    '096770.KS',  # SK Innovation
-    '000270.KS',  # Kia Corporation
-    '003550.KS',  # LG
-    '033780.KS',  # KT&G
-    '006400.KS',  # Samsung SDI
-    '010130.KS',  # Samsung Electronics Engineering
-    '000810.KS',  # Samsung C&T
-    '091990.KQ',  # Celltrion Healthcare
-    '014680.KS',  # S-Oil
-    '004020.KS',  # Hyundai Heavy Industries
-    '035250.KQ',  # Kakao Games
-    '010950.KS',  # S-Oil
-    '041510.KS',  # LG Household & Health Care
-    '034020.KS',  # LG Display
-    '015020.KS',  # POSCO
-    '011170.KS'   # Lotte Chemical
-]
+# block of code that gets rid of preferred stocks
+prohibited = {'008560.KS', '003550.KS', '048260.KQ', '000060.KS', '091990.KQ', '066970.KQ', '022100.KQ', '010145.KS', '003410.KS'}
+def keep_ticker(t):
+    return len(t) > 5 and t[5] == '0' and t not in prohibited
+
+tickers = list(filter(keep_ticker, filtered))
+
+
+# tickers = [
+#     '005930.KS',  # Samsung Electronics
+#     '000660.KS',  # SK Hynix
+#     '035420.KS',  # Naver
+#     '207940.KQ',  # Samsung Biologics
+#     '051910.KS',  # LG Chem
+#     '068270.KS',  # Celltrion
+#     '005380.KS',  # Hyundai Motor
+#     '035720.KQ',  # Kakao
+#     '055550.KS',  # Shinhan Financial Group
+#     '012330.KS',  # Hyundai Mobis
+#     '105560.KS',  # KB Financial Group
+#     '036570.KS',  # NCSoft
+#     '017670.KS',  # SK Telecom
+#     '015760.KS',  # Korean Electric Power
+#     '096770.KS',  # SK Innovation
+#     '000270.KS',  # Kia Corporation
+#     '003550.KS',  # LG
+#     '033780.KS',  # KT&G
+#     '006400.KS',  # Samsung SDI
+#     '010130.KS',  # Samsung Electronics Engineering
+#     '000810.KS',  # Samsung C&T
+#     '091990.KQ',  # Celltrion Healthcare
+#     '014680.KS',  # S-Oil
+#     '004020.KS',  # Hyundai Heavy Industries
+#     '035250.KQ',  # Kakao Games
+#     '010950.KS',  # S-Oil
+#     '041510.KS',  # LG Household & Health Care
+#     '034020.KS',  # LG Display
+#     '015020.KS',  # POSCO
+#     '011170.KS'   # Lotte Chemical
+# ]
 def get_momentum_batch(tickers, period_days=126):
     # Download 1 year of daily close prices for all tickers at once
     try:
@@ -958,14 +946,14 @@ if country:
     filename = f"result_{country}_{formattedDate}.xlsx"
 
     with pd.ExcelWriter(filename, engine='xlsxwriter') as writer:
-        df.to_excel(writer, index=False, header = False, sheet_name='Sheet1')
+        df.to_excel(writer, index=False, header = True, sheet_name='Sheet1')
         
         workbook  = writer.book
         worksheet = writer.sheets['Sheet1']
         
         bscore_col_idx = df.columns.get_loc('B-Score')
         
-        start_row = 1  # data starts after header row 1
+        start_row = 2  # data starts after header row 1
         end_row = len(df)
         start_col = 0
         end_col = len(df.columns) - 1

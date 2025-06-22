@@ -1039,7 +1039,8 @@ if country:
             '업종': 30,
             '주가(전날대비)': 15,
             '모멘텀': 21,
-            '배당안전성': 5,
+            'EPS성장률': 8,
+            '배당안전성': 8,
         }
 
         # Set widths for specified columns

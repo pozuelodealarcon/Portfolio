@@ -34,15 +34,7 @@ import requests
 from bs4 import BeautifulSoup
 import requests
 from bs4 import BeautifulSoup
-
-import requests
-from bs4 import BeautifulSoup
-
-import requests
-from bs4 import BeautifulSoup
-
-import requests
-from bs4 import BeautifulSoup
+    
 def get_per_krx(ticker):
     url = f"https://finance.naver.com/item/main.nhn?code={ticker[:6]}"
     headers = {
@@ -86,26 +78,32 @@ def get_per_krx(ticker):
     table = soup.select_one('div.section.cop_analysis table')
     if table:
         dividend = []
-        # '주당배당금' 행 찾기
         rows = table.select('tbody tr')
-        for row in rows:
-            th = row.find('th')
-            if th and '주당배당금' in th.text:
-                tds = row.select('td')
-                for td in tds:
-                    val = td.text.strip().replace(',', '').replace('원', '')
-                    try:
-                        dividend.append(float(val))
-                    except (ValueError, TypeError):
-                        dividend.append(None)
-                break
+        if rows:
+            for row in rows:
+                th = row.find('th')
+                if th and '주당배당금' in th.text:
+                    tds = row.select('td')
+                    if tds is None:
+                        continue
+                    else:
+                        for td in tds:
+                            val = td.text.strip().replace(',', '').replace('원', '')
+                            try:
+                                dividend.append(float(val))
+                            except (ValueError, TypeError):
+                                dividend.append(None)
+                        break  # Found and processed the DPS row
 
-        # Get first 3 non-None items safely
+        # Filter out None values and take first 3
         first_three = dividend[:3]
+        first_three = list(filter(lambda x: x is not None, first_three))
 
+        # Only compare if we have at least 2 values
         if len(first_three) >= 2:
-            # Check if the dividends are non-decreasing YoY
-            data['DPS YoY'] = all(earlier <= later for earlier, later in zip(first_three, first_three[1:]))
+            data['DPS YoY'] = all(
+                earlier <= later for earlier, later in zip(first_three, first_three[1:])
+            )
 
     ########################
 
@@ -114,38 +112,45 @@ def get_per_krx(ticker):
 
     if compare_table:
         rows = compare_table.select('tr')
-        for row in rows:
-            th = row.find('th')
-            if th and 'ROE' in th.text:
-                tds = row.find_all('td')
-                result = [td.text.strip().replace('%', '') for td in tds]
+        if rows:
+            for row in rows:
+                th = row.find('th')
+                if th and 'ROE' in th.text:
+                    tds = row.find_all('td')
+                    if tds is None:
+                        break  # No data to process
 
-                # Try to parse company ROE
-                try:
-                    data['ROE'] = float(result[0]) if result[0] != '' else None
-                except ValueError:
-                    pass
+                    # Extract text and clean %
+                    result = [td.text.strip().replace('%', '') for td in tds]
 
-                # Process industry ROE values
-                raw_industry_values = result[1:]
-                cleaned_values = []
+                    # Parse company ROE
+                    try:
+                        if result and result[0] != '':
+                            data['ROE'] = float(result[0])
+                    except (ValueError, IndexError):
+                        data['ROE'] = None  # Redundant due to default, but explicit
 
-                for item in raw_industry_values:
-                    if item != '':
+                    # Parse industry ROE values
+                    raw_industry_values = result[1:] if len(result) > 1 else []
+                    cleaned_values = []
+
+                    for item in raw_industry_values:
                         try:
-                            cleaned_values.append(float(item))
+                            if item != '':
+                                cleaned_values.append(float(item))
                         except ValueError:
-                            continue  # Skip invalid entries
+                            continue
 
-                if cleaned_values:
-                    ind_roe = sum(cleaned_values) / len(cleaned_values)
-                    data['IND_ROE'] = ind_roe
+                    if cleaned_values:
+                        data['IND_ROE'] = sum(cleaned_values) / len(cleaned_values)
+
+                    break  # Only process the first ROE row
+
 
     return data
-    
 
 # 사용 예시
-ticker = "012450"
+ticker = "005930.KS"
 roe_list = get_per_krx(ticker)
 
 print(roe_list)

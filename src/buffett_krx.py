@@ -112,7 +112,7 @@ def get_tickers_by_country(country: str, limit: int = 100, apikey: str = 'your_a
         # 'exchange' : nyse | nasdaq | amex | euronext | tsx | etf | mutual_fund
     }
     try:
-        response = requests.get(url, params=params)
+        response = requests.get(url, params=params, headers=headers)
     except Exception as e:
         print('FMP error:', e)
         return []
@@ -217,57 +217,57 @@ def get_per_krx(ticker):
     aside = soup.select_one('div.aside_invest_info')
     if aside:
         rows = aside.select('table tr')
-        for row in rows:
-            if 'PBR' in row.text:
-                per_text = row.select_one('td em').text
-                if 'N/A' not in per_text:
-                    PBR = float(per_text.replace(',', ''))
-                    data['PBR'] =  PBR
-                else:
-                    data['PBR'] =  None
+        if rows:
+            for row in rows:
+                if 'PBR' in row.text:
+                    per_text = row.select_one('td em').text
+                    if 'N/A' not in per_text:
+                        PBR = float(per_text.replace(',', ''))
+                        data['PBR'] =  PBR
+                    else:
+                        data['PBR'] =  None
 
 
-            if '동일업종 PER' in row.text:
-                per_text = row.select_one('td em').text
-                if 'N/A' not in per_text:
-                    IND_PER = float(per_text.replace(',', ''))
-                    data['IND_PER'] =  IND_PER
-                else:
-                    data['IND_PER'] =  None
+                if '동일업종 PER' in row.text:
+                    per_text = row.select_one('td em').text
+                    if 'N/A' not in per_text:
+                        IND_PER = float(per_text.replace(',', ''))
+                        data['IND_PER'] =  IND_PER
+                    else:
+                        data['IND_PER'] =  None
 
-            if 'PER' in row.text and 'EPS' in row.text and '추정PER' not in row.text:
-                per_text = row.select_one('td em').text
-                if 'N/A' not in per_text:
-                    PER = float(per_text.replace(',', ''))
-                    data['PER'] =  PER
-                else:
-                    data['PER'] =  None
-
+                if 'PER' in row.text and 'EPS' in row.text and '추정PER' not in row.text:
+                    per_text = row.select_one('td em').text
+                    if 'N/A' not in per_text:
+                        PER = float(per_text.replace(',', ''))
+                        data['PER'] =  PER
+                    else:
+                        data['PER'] =  None
     return data
 
-def has_stable_dividend_growth(ticker):
-    stock = yf.Ticker(ticker)
-    divs = stock.dividends
-    # Ensure we have at least 10 years of data
-    if divs.empty:
-        return False
+# def has_stable_dividend_growth(ticker):
+#     stock = yf.Ticker(ticker)
+#     divs = stock.dividends
+#     # Ensure we have at least 10 years of data
+#     if divs.empty:
+#         return False
 
-    # Get annual total dividends for the past 10 years
-    annual_divs = divs.groupby(divs.index.year).sum()
-    if len(annual_divs) < 10:
-        return False
+#     # Get annual total dividends for the past 10 years
+#     annual_divs = divs.groupby(divs.index.year).sum()
+#     if len(annual_divs) < 10:
+#         return False
     
-    recent_years = sorted(annual_divs.index)[-11:-1] # returns [last year - 9 = 2015, 2016, ..., last year = 2024], # use -11 to start around 10 years ago from now
+#     recent_years = sorted(annual_divs.index)[-11:-1] # returns [last year - 9 = 2015, 2016, ..., last year = 2024], # use -11 to start around 10 years ago from now
 
-    if recent_years[0] < dt.datetime.today().year - 12: # sift out old data
-        return False
+#     if recent_years[0] < dt.datetime.today().year - 12: # sift out old data
+#         return False
 
-    last_10_divs = [annual_divs[year] for year in recent_years]
-    # print(last_10_divs)
+#     last_10_divs = [annual_divs[year] for year in recent_years]
+#     # print(last_10_divs)
 
-    # Check for stable or increasing dividends
-    tolerance = 0.85 # tolerance band to account for crises and minor dividend cuts
-    return all(earlier * tolerance <= later for earlier, later in zip(last_10_divs, last_10_divs[1:])) # zip returns [(2015div, 2016div), (2016div, 2017div), ..., (2024div, 2025div)]
+#     # Check for stable or increasing dividends
+#     tolerance = 0.85 # tolerance band to account for crises and minor dividend cuts
+#     return all(earlier * tolerance <= later for earlier, later in zip(last_10_divs, last_10_divs[1:])) # zip returns [(2015div, 2016div), (2016div, 2017div), ..., (2024div, 2025div)]
     
 def has_stable_dividend_growth_cagr(ticker):
     stock = yf.Ticker(ticker)
@@ -296,44 +296,44 @@ def has_stable_dividend_growth_cagr(ticker):
         cagr = ((div_end / div_start) ** (1/len(last_10_divs))) - 1
         return cagr
     
-def has_stable_eps_growth(ticker):
-    ticker = yf.Ticker(ticker)
+# def has_stable_eps_growth(ticker):
+#     ticker = yf.Ticker(ticker)
 
-    # Get annual income statement
-    income_stmt = ticker.financials # Annual by default
+#     # Get annual income statement
+#     income_stmt = ticker.financials # Annual by default
 
-    # Make sure EPS is in the statement
-    if "Diluted EPS" in income_stmt.index:
-        eps_series = income_stmt.loc["Diluted EPS"]
-        if dt.datetime.today().year - 6 in eps_series.index.year:
-            return False
-        eps_list = eps_series.sort_index().dropna().tolist() # Sorted from oldest to newest
-        tolerance = 0.9
-        return all(earlier * tolerance <= later for earlier, later in zip(eps_list, eps_list[1:]))
-    else:
-        return False
+#     # Make sure EPS is in the statement
+#     if "Diluted EPS" in income_stmt.index:
+#         eps_series = income_stmt.loc["Diluted EPS"]
+#         if dt.datetime.today().year - 6 in eps_series.index.year:
+#             return False
+#         eps_list = eps_series.sort_index().dropna().tolist() # Sorted from oldest to newest
+#         tolerance = 0.9
+#         return all(earlier * tolerance <= later for earlier, later in zip(eps_list, eps_list[1:]))
+#     else:
+#         return False
 
 
-def has_stable_eps_growth_quarterly(ticker):
-    ticker = yf.Ticker(ticker)
+# def has_stable_eps_growth_quarterly(ticker):
+#     ticker = yf.Ticker(ticker)
 
-    # Get quarterly earnings data (contains actual EPS in 'Earnings' column)
-    quarterly_eps = ticker.quarterly_earnings
+#     # Get quarterly earnings data (contains actual EPS in 'Earnings' column)
+#     quarterly_eps = ticker.quarterly_earnings
 
-    # Make sure there is enough data
-    if quarterly_eps is None or quarterly_eps.empty or len(quarterly_eps) < 8:
-        return False
+#     # Make sure there is enough data
+#     if quarterly_eps is None or quarterly_eps.empty or len(quarterly_eps) < 8:
+#         return False
 
-    # Sort by date ascending (oldest first)
-    quarterly_eps = quarterly_eps.sort_index()
+#     # Sort by date ascending (oldest first)
+#     quarterly_eps = quarterly_eps.sort_index()
 
-    eps_list = quarterly_eps['Earnings'].dropna().tolist()
+#     eps_list = quarterly_eps['Earnings'].dropna().tolist()
 
-    # Define tolerance for stable growth (e.g., each quarter at least 90% of previous)
-    tolerance = 0.9
+#     # Define tolerance for stable growth (e.g., each quarter at least 90% of previous)
+#     tolerance = 0.9
 
-    # Check stable growth: every EPS >= 90% of previous EPS
-    return all(earlier * tolerance <= later for earlier, later in zip(eps_list, eps_list[1:]))
+#     # Check stable growth: every EPS >= 90% of previous EPS
+#     return all(earlier * tolerance <= later for earlier, later in zip(eps_list, eps_list[1:]))
 
 def has_stable_eps_growth_cagr(ticker):
     ticker = yf.Ticker(ticker)
@@ -369,73 +369,76 @@ def has_stable_eps_growth_cagr(ticker):
 def get_interest_coverage_ratio(ticker):
     financials = yf.Ticker(ticker).financials # Annual financials, columns = dates (most recent first)
     ratio = None
-    for date in financials.columns:
-        if date.year < dt.datetime.today().year - 5: # sift out old data
-            return None
+    if financials.columns:
+        for date in financials.columns:
+            if date.year < dt.datetime.today().year - 5: # sift out old data
+                return None
 
-        try:
-            ebit = financials.loc["Operating Income", date]
-            interest_expense = financials.loc["Interest Expense", date]
-            if math.isnan(interest_expense) or math.isnan(ebit) or not interest_expense or ebit is None or interest_expense is None:
-                continue # Avoid division by zero
-            else:
-                ratio = round((ebit / abs(interest_expense)), 2)
-                break
-        except KeyError:
-            continue
-    return ratio
-
-def bvps_undervalued(bvps, current):
-    if not bvps:
-        return False
-    if bvps > current:
-        return True #undervalued
-    else:
-        return False
-
-def has_stable_book_value_growth(ticker, sector: str):
-    ticker = yf.Ticker(ticker)
-
-    # Get annual balance sheet
-    balance_sheet = ticker.balance_sheet # Columns are by period (most recent first)
-
-    # Reverse columns to go oldest → newest
-    balance_sheet = balance_sheet.iloc[:, ::-1]
-    book_values = []
-
-    for date in balance_sheet.columns:
-        if date.year < dt.datetime.today().year - 6: # sift out old data
-            return False
-        
-        try:
-            book_value = balance_sheet.loc["Common Stock Equity", date]
-            outstanding_shares = balance_sheet.loc["Ordinary Shares Number", date]
-            if math.isnan(book_value) or math.isnan(outstanding_shares) or not outstanding_shares:
+            try:
+                ebit = financials.loc["Operating Income", date]
+                interest_expense = financials.loc["Interest Expense", date]
+                if math.isnan(interest_expense) or math.isnan(ebit) or not interest_expense or ebit is None or interest_expense is None:
+                    continue # Avoid division by zero
+                else:
+                    ratio = round((ebit / abs(interest_expense)), 2)
+                    break
+            except KeyError:
                 continue
-            else:
-                bvps = book_value / outstanding_shares 
-                book_values.append(round(bvps, 2))
-        except Exception as e:
-            continue
-            
-    if len(book_values) < 2:
-        return False
-    
-    tolerance = 0.85 if sector in {'Industrials', 'Technology', 'Energy', 'Consumer Cyclical', 'Basic Materials'} else 0.9 #set is faster than list in checking O(1) avg
-    return all(earlier * tolerance <= later for earlier, later in zip(book_values, book_values[1:]))
+        return ratio
+    else:
+        return None
 
-def get_esg_score(ticker):
-    ans = ''
-    ticker = yf.Ticker(ticker)
-    esg = ticker.sustainability
-    try:
-        sust = esg.loc['totalEsg', 'esgScores']
-        rateY = esg.loc['esgPerformance', 'esgScores']
-        ans = str(sust) + ', ' + str(rateY)
-    except Exception:
-        return ans
-    finally:
-        return ans
+# def bvps_undervalued(bvps, current):
+#     if not bvps:
+#         return False
+#     if bvps > current:
+#         return True #undervalued
+#     else:
+#         return False
+
+# def has_stable_book_value_growth(ticker, sector: str):
+#     ticker = yf.Ticker(ticker)
+
+#     # Get annual balance sheet
+#     balance_sheet = ticker.balance_sheet # Columns are by period (most recent first)
+
+#     # Reverse columns to go oldest → newest
+#     balance_sheet = balance_sheet.iloc[:, ::-1]
+#     book_values = []
+
+#     for date in balance_sheet.columns:
+#         if date.year < dt.datetime.today().year - 6: # sift out old data
+#             return False
+        
+#         try:
+#             book_value = balance_sheet.loc["Common Stock Equity", date]
+#             outstanding_shares = balance_sheet.loc["Ordinary Shares Number", date]
+#             if math.isnan(book_value) or math.isnan(outstanding_shares) or not outstanding_shares:
+#                 continue
+#             else:
+#                 bvps = book_value / outstanding_shares 
+#                 book_values.append(round(bvps, 2))
+#         except Exception as e:
+#             continue
+            
+#     if len(book_values) < 2:
+#         return False
+    
+#     tolerance = 0.85 if sector in {'Industrials', 'Technology', 'Energy', 'Consumer Cyclical', 'Basic Materials'} else 0.9 #set is faster than list in checking O(1) avg
+#     return all(earlier * tolerance <= later for earlier, later in zip(book_values, book_values[1:]))
+
+# def get_esg_score(ticker):
+#     ans = ''
+#     ticker = yf.Ticker(ticker)
+#     esg = ticker.sustainability
+#     try:
+#         sust = esg.loc['totalEsg', 'esgScores']
+#         rateY = esg.loc['esgPerformance', 'esgScores']
+#         ans = str(sust) + ', ' + str(rateY)
+#     except Exception:
+#         return ans
+#     finally:
+#         return ans
 
 def get_percentage_change(ticker):
     ticker = yf.Ticker(ticker)
@@ -826,10 +829,9 @@ def process_ticker_quantitatives():
             # elif classification == 'cyclical':
             #     cyclicality -=0.
             
-            if country == 'KR':
-                if industry is not None:
-                    if any(kw.lower() in industry.lower() for kw in lee_kw_list):
-                        cyclicality += 1
+            if industry is not None:
+                if any(kw.lower() in industry.lower() for kw in lee_kw_list):
+                    cyclicality += 1
 
 
             quantitative_buffett_score = buffett_score(debtToEquity, currentRatio, pbr, per, industry_per, roe, industry_roe, roa, industry_roa, eps_growth, div_growth, icr) + momentum_score(short_momentum, mid_momentum, long_momentum) + cyclicality
@@ -925,7 +927,7 @@ if country:
     filename = f"result_{country}_{formattedDate}.xlsx"
 
     with pd.ExcelWriter(filename, engine='xlsxwriter') as writer:
-        df.to_excel(writer, index=False, sheet_name='Sheet1')
+        df.to_excel(writer, index=False, header = False, sheet_name='Sheet1')
         
         workbook  = writer.book
         worksheet = writer.sheets['Sheet1']
@@ -957,7 +959,7 @@ if country:
         # 1) Add Excel table for the data
         worksheet.add_table(data_range, {
             'columns': [{'header': col} for col in df.columns],
-            'style': 'Table Style Medium 9'  # You can choose different table styles
+            'style': 'Table Style Medium 1'  # You can choose different table styles
         })
         
         # 2) Gradient on B-Score column (dynamic min/max)

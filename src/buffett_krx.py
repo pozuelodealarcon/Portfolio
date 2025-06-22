@@ -55,7 +55,7 @@ lee_kw_list = [ #2025 이재명 정부 수혜주
 ]
 
 country = 'KR'
-limit=100 # 250/day
+limit=200 # 250 requests/day
 sp500 = True
 
 #########################################################
@@ -869,22 +869,22 @@ def process_ticker_quantitatives():
             # regulatory advantage(gov protection), patients(Pfizer, Intel)
 
             result = {
-                "Ticker": ticker[:6] if country == 'KR' else ticker,
-                "Name": name,
-                "Industry": industry,
-                "Price": f"{currentPrice:,.0f}" + percentage_change if country == 'KR' or country == 'JP' else f"{currentPrice:,.2f}" + percentage_change,
-                "D/E": round(debtToEquity, 2) if debtToEquity is not None else None,
-                "CR": round(currentRatio, 2) if currentRatio is not None else None,
+                "티커": ticker[:6] if country == 'KR' else ticker,
+                "종목": name,
+                "산업": industry,
+                "주가(전날 대비)": f"{currentPrice:,.0f}" + percentage_change if country == 'KR' or country == 'JP' else f"{currentPrice:,.2f}" + percentage_change,
+                "부채비율": round(debtToEquity, 2) if debtToEquity is not None else None,
+                "유동비율": round(currentRatio, 2) if currentRatio is not None else None,
                 "PBR": round(pbr,2) if pbr is not None else None,
                 "PER": f'{round(per,2)} ({industry_per})' if per is not None else None,
                 "ROE": str(round(roe*100,2)) + '%' if roe is not None else None,
                 "ROA": str(round(roa*100,2)) + '%' if roa is not None else None,
                 "ICR": icr,
                 "EPS CAGR": eps_growth if isinstance(eps_growth, bool) else (f"{eps_growth:.2%}" if eps_growth is not None else None), #use this instead of operating income incrs for quart/annual 
-                "DIV CAGR": f"{div_growth:.2%}" if div_growth is not None else None,
+                "배당 성장률": f"{div_growth:.2%}" if div_growth is not None else None,
                 "B-Score": round(quantitative_buffett_score, 1),
                 # 'Analyst Forecast': rec + '(' + upside + ')',
-                'Momentum': "/".join(f"{m:.1%}" if m is not None else "None" for m in (short_momentum, mid_momentum, long_momentum)),
+                '모멘텀': "/".join(f"{m:.1%}" if m is not None else "None" for m in (short_momentum, mid_momentum, long_momentum)),
                 # 'ESG': esg, #works only for US stocks
             }
 
@@ -950,6 +950,22 @@ if country:
         
         workbook  = writer.book
         worksheet = writer.sheets['Sheet1']
+
+        # Define column widths you want (by column name)
+        col_widths = {
+            '종목': 30,
+            '산업': 25,
+            '주가': 15,
+            '모멘텀': 20,
+            # add more as needed
+        }
+
+        # Set widths for specified columns
+        for col_name, width in col_widths.items():
+            if col_name in df.columns:
+                col_idx = df.columns.get_loc(col_name)
+                worksheet.set_column(col_idx, col_idx, width)
+
         
         bscore_col_idx = df.columns.get_loc('B-Score')
         
@@ -978,7 +994,7 @@ if country:
         # 1) Add Excel table for the data
         worksheet.add_table(data_range, {
             'columns': [{'header': col} for col in df.columns],
-            'style': 'Table Style Medium 1'  # You can choose different table styles
+            'style': 'Table Style Medium 9'  # You can choose different table styles
         })
         
         # 2) Gradient on B-Score column (dynamic min/max)
@@ -996,7 +1012,7 @@ if country:
         })
         
         # 3) Row fills based on B-Score ranges
-        red_fill = workbook.add_format({'bg_color': '#FFC7CE'})
+        red_fill = workbook.add_format({'bg_color': '#FFB347'})
         yellow_fill = workbook.add_format({'bg_color': '#FFEB9C'})
         green_fill = workbook.add_format({'bg_color': '#C6EFCE'})
         
@@ -1036,7 +1052,7 @@ msg = EmailMessage()
 msg['Subject'] = f'{formattedDate} 퀀트 분석자료'
 msg['From'] = Address(display_name='Hyungsuk Choi', addr_spec=EMAIL)
 msg['To'] = ''  # or '' or a single address to satisfy the 'To' header requirement
-msg.set_content(f'안녕하십니까?\n\n{formattedDate}기준 시가총액 상위 {limit}개 상장기업의 퀀트 분석자료를 보내드립니다. 각 기업의 종합 점수는 ‘B-Score’ 열을 참고해 주시기 바랍니다.\n\n본 자료는 워렌 버핏의 투자 철학에 기반하여 기업의 재무 건전성 평가를 목적으로 작성되었으며, 투자 판단 시에는 본 분석 외에도 별도의 정성적 검토가 필요함을 안내드립니다.\n\n감사합니다.')
+msg.set_content(f'안녕하십니까?\n\n{formattedDate}기준 시가총액 상위 {limit}개 상장기업의 퀀트 분석자료를 보내드립니다. 각 기업의 종합 점수는 ‘B-Score’ 열을 참고해 주시기 바라며, 0점 미만의 기업은 제외되었습니다.\n\n본 자료는 워렌 버핏의 투자 철학에 기반하여 기업의 재무 건전성을 평가하기 위해 작성되었으며, 투자 판단 시에는 본 분석 외에도 별도의 면밀한 정성적 검토를 권장합니다.\n\n이용해주셔서 감사합니다.')
 
 with open(excel_path, 'rb') as f:
     msg.add_attachment(f.read(), maintype='application',

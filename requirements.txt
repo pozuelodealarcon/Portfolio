@@ -12,5 +12,6 @@ pyarrow == 20.0.0
 PublicDataReader == 1.1.1
 finvizfinance == 1.1.0
 scipy == 1.15.3
+XlsxWriter == 3.2.5
 # pip install -r requirements.txt
 

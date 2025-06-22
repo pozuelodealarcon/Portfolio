@@ -946,7 +946,7 @@ if country:
     filename = f"result_{country}_{formattedDate}.xlsx"
 
     with pd.ExcelWriter(filename, engine='xlsxwriter') as writer:
-        df.to_excel(writer, index=False, header = True, sheet_name='Sheet1')
+        df.to_excel(writer, index=False, header = False, sheet_name='Sheet1')
         
         workbook  = writer.book
         worksheet = writer.sheets['Sheet1']

@@ -237,7 +237,6 @@ def get_per_krx(ticker):
     table = soup.select_one('div.section.cop_analysis table')
     if table:
         dividend = []
-        # '주당배당금' 행 찾기
         rows = table.select('tbody tr')
         if rows:
             for row in rows:
@@ -251,14 +250,17 @@ def get_per_krx(ticker):
                                 dividend.append(float(val))
                             except (ValueError, TypeError):
                                 dividend.append(None)
-                        break
+                        break  # Found and processed the DPS row
 
-        # Get first 3 non-None items safely
+        # Filter out None values and take first 3
         first_three = dividend[:3]
+        first_three = list(filter(lambda x: x is not None, first_three))
 
-        if not first_three and None not in first_three and len(first_three) >= 2:
-            # Check if the dividends are non-decreasing YoY
-            data['DPS YoY'] = all(earlier <= later for earlier, later in zip(first_three, first_three[1:]))
+        # Only compare if we have at least 2 values
+        if len(first_three) >= 2:
+            data['DPS YoY'] = all(
+                earlier <= later for earlier, later in zip(first_three, first_three[1:])
+            )
 
     ########################
 
@@ -984,7 +986,7 @@ def process_ticker_quantitatives():
             result = {
                 "티커": ticker[:6] if country == 'KR' else ticker,
                 "종목": name,
-                "산업": industry,
+                "업종": industry,
                 "주가(전날대비)": f"{currentPrice:,.0f}" + percentage_change if country == 'KR' or country == 'JP' else f"{currentPrice:,.2f}" + percentage_change,
                 "부채비율": round(debtToEquity, 2) if debtToEquity is not None else None,
                 "유동비율": round(currentRatio, 2) if currentRatio is not None else None,
@@ -993,9 +995,9 @@ def process_ticker_quantitatives():
                 "ROE": str(round(roe,2)) + '%' if roe is not None else None,
                 "ROA": str(round(roa*100,2)) + '%' if roa is not None else None,
                 "ICR": icr,
-                "EPS CAGR": eps_growth if isinstance(eps_growth, bool) else (f"{eps_growth:.2%}" if eps_growth is not None else None), #use this instead of operating income incrs for quart/annual 
+                "EPS성장률": eps_growth if isinstance(eps_growth, bool) else (f"{eps_growth:.2%}" if eps_growth is not None else None), #use this instead of operating income incrs for quart/annual 
                 # "배당 성장률": f"{div_growth:.2%}" if div_growth is not None else None,
-                "배당 성장률": div_growth,
+                "배당안정성": div_growth,
                 "B-Score": round(quantitative_buffett_score, 1),
                 # 'Analyst Forecast': rec + '(' + upside + ')',
                 '모멘텀': "/".join(f"{m:.1%}" if m is not None else "None" for m in (short_momentum, mid_momentum, long_momentum)),
@@ -1068,9 +1070,10 @@ if country:
         # Define column widths you want (by column name)
         col_widths = {
             '종목': 35,
-            '산업': 30,
+            '업종': 30,
             '주가(전날대비)': 15,
             '모멘텀': 21,
+            '배당안전성': 10,
         }
 
         # Set widths for specified columns

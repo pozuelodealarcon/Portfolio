@@ -25,6 +25,8 @@ from email.headerregistry import Address
 
 EMAIL = os.environ['EMAIL_ADDRESS']
 PASSWORD = os.environ['EMAIL_PASSWORD']
+# Get the API key
+fmp_key = os.environ['FMP_API_KEY']
 
 
 ################ DEPENDENCIES ###########################
@@ -75,8 +77,6 @@ data_lock = threading.Lock()
 # Load environment variables from .env file
 #load_dotenv()
 
-# Get the API key
-fmp_key = os.getenv("FMP_API_KEY")
 
 def get_tickers(country: str, limit: int, sp500: bool):
     if country is not None:

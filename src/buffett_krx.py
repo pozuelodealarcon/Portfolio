@@ -872,7 +872,7 @@ def process_ticker_quantitatives():
                 "티커": ticker[:6] if country == 'KR' else ticker,
                 "종목": name,
                 "산업": industry,
-                "주가(전날 대비)": f"{currentPrice:,.0f}" + percentage_change if country == 'KR' or country == 'JP' else f"{currentPrice:,.2f}" + percentage_change,
+                "주가(전날대비)": f"{currentPrice:,.0f}" + percentage_change if country == 'KR' or country == 'JP' else f"{currentPrice:,.2f}" + percentage_change,
                 "부채비율": round(debtToEquity, 2) if debtToEquity is not None else None,
                 "유동비율": round(currentRatio, 2) if currentRatio is not None else None,
                 "PBR": round(pbr,2) if pbr is not None else None,
@@ -953,11 +953,10 @@ if country:
 
         # Define column widths you want (by column name)
         col_widths = {
-            '종목': 30,
-            '산업': 25,
-            '주가': 15,
-            '모멘텀': 20,
-            # add more as needed
+            '종목': 35,
+            '산업': 30,
+            '주가(전날대비)': 15,
+            '모멘텀': 21,
         }
 
         # Set widths for specified columns

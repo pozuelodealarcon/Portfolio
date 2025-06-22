@@ -54,7 +54,7 @@ lee_kw_list = [ #2025 이재명 정부 예상 수혜주
 ]
 
 country = 'KR'
-limit=200 # 250 requests/day
+limit=100 # 250 requests/day
 sp500 = True
 
 #########################################################
@@ -255,7 +255,7 @@ def get_per_krx(ticker):
         # Get first 3 non-None items safely
         first_three = dividend[:3]
 
-        if len(first_three) >= 2:
+        if None not in first_three and len(first_three) >= 2:
             # Check if the dividends are non-decreasing YoY
             data['DPS YoY'] = all(earlier <= later for earlier, later in zip(first_three, first_three[1:]))
 
@@ -911,6 +911,7 @@ def process_ticker_quantitatives():
                                                                        # 저per -> 수익성 높거나 주가가 싸다 고pbr -> 자산은 적은데 시장에서 비싸게 봐준다
             industry_per = krx_per['IND_PER'] 
             industry_per = round(industry_per) if industry_per is not None else industry_per
+
             industry_roe = krx_per['IND_ROE']
             industry_roa = get_industry_roa(industry)
 
@@ -979,11 +980,12 @@ def process_ticker_quantitatives():
                 "유동비율": round(currentRatio, 2) if currentRatio is not None else None,
                 "PBR": round(pbr,2) if pbr is not None else None,
                 "PER": f'{round(per,2)} ({industry_per})' if per is not None else None,
-                "ROE": str(round(roe*100,2)) + '%' if roe is not None else None,
+                "ROE": str(round(roe,2)) + '%' if roe is not None else None,
                 "ROA": str(round(roa*100,2)) + '%' if roa is not None else None,
                 "ICR": icr,
                 "EPS CAGR": eps_growth if isinstance(eps_growth, bool) else (f"{eps_growth:.2%}" if eps_growth is not None else None), #use this instead of operating income incrs for quart/annual 
-                "배당 성장률": f"{div_growth:.2%}" if div_growth is not None else None,
+                # "배당 성장률": f"{div_growth:.2%}" if div_growth is not None else None,
+                "배당 성장률": div_growth,
                 "B-Score": round(quantitative_buffett_score, 1),
                 # 'Analyst Forecast': rec + '(' + upside + ')',
                 '모멘텀': "/".join(f"{m:.1%}" if m is not None else "None" for m in (short_momentum, mid_momentum, long_momentum)),

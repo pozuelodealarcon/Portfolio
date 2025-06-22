@@ -36,7 +36,7 @@ import requests
 from bs4 import BeautifulSoup
     
 def get_per_krx(ticker):
-    url = f"https://finance.naver.com/item/main.nhn?code={ticker[:6]}"
+    url = f"https://finance.naver.com/item/main.naver?code={ticker[:6]}"
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
                       'AppleWebKit/537.36 (KHTML, like Gecko) '

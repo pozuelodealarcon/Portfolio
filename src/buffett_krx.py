@@ -7,7 +7,7 @@ import pandas as pd
 #from dotenv import load_dotenv
 import os
 import requests
-from pykrx import stock
+#from pykrx import stock
 import datetime as dt
 import openpyxl
 import math

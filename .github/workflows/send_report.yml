@@ -26,6 +26,6 @@ jobs:
       env:
         EMAIL_ADDRESS: ${{ secrets.EMAIL_ADDRESS }}
         EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
-        API_KEY: ${{ secrets.FMP_API_KEY }}
+        FMP_API_KEY: ${{ secrets.FMP_API_KEY }}
       run: python src/buffett_krx.py
 

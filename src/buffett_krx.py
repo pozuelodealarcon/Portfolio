@@ -35,7 +35,7 @@ PASSWORD = os.environ['EMAIL_PASSWORD']
 
 ################ PREDETERMINED FIELDS ###################
 
-NUM_THREADS = 5 #multithreading 
+NUM_THREADS = 3 #multithreading 
 CUTOFF = 0
 lee_kw_list = [ #2025 이재명 정부 예상 수혜주 
     "Software", #AI

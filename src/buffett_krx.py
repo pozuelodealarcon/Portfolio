@@ -4,18 +4,19 @@
 
 import yfinance as yf
 import pandas as pd
-from dotenv import load_dotenv
+#from dotenv import load_dotenv
 import os
 import requests
-from pykrx import stock
+#from pykrx import stock
 import datetime as dt
 import openpyxl
 import math
+import random
 from queue import Queue
 import threading
 import time
 import polars as pl
-import shelve
+#import shelve
 from bs4 import BeautifulSoup
 from urllib.request import urlopen
 import smtplib
@@ -24,6 +25,8 @@ from email.headerregistry import Address
 
 EMAIL = os.environ['EMAIL_ADDRESS']
 PASSWORD = os.environ['EMAIL_PASSWORD']
+# Get the API key
+fmp_key = os.environ['FMP_API_KEY']
 
 
 ################ DEPENDENCIES ###########################
@@ -72,10 +75,8 @@ data = []
 data_lock = threading.Lock()
 
 # Load environment variables from .env file
-load_dotenv()
+#load_dotenv()
 
-# Get the API key
-fmp_key = os.getenv("FMP_API_KEY")
 
 def get_tickers(country: str, limit: int, sp500: bool):
     if country is not None:
@@ -194,7 +195,7 @@ def buffett_score (de, cr, pbr, per, ind_per, roe, ind_roe, roa, ind_roa, eps, d
     return score
     
 def get_per_krx(ticker):
-    url = f"https://finance.naver.com/item/main.nhn?code={ticker[:6]}"
+    url = f"https://finance.naver.com/item/main.naver?code={ticker[:6]}"
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
                       'AppleWebKit/537.36 (KHTML, like Gecko) '
@@ -205,13 +206,20 @@ def get_per_krx(ticker):
     session = requests.Session()
     session.headers.update(headers)
 
+    
     try:
         # 첫 요청으로 쿠키 확보 (홈페이지 접속)
         session.get("https://finance.naver.com/", timeout=3)
         res = session.get(url, timeout=3)
-    except Exception as e:
-        print('Naver error:', e)
-        return None
+        # Sleep for a random time to mimic human behavior
+        res.raise_for_status()  # Optional: raises an error for HTTP issues
+    except requests.exceptions.HTTPError as e:
+        if res.status_code == 401:
+            print("Unauthorized (401) - You might need to log in or use a valid token.")
+        else:
+            print(f"HTTP error occurred: {e} (Status Code: {res.status_code})")
+    except requests.RequestException as e:
+        print(f"Request failed: {e}")
 
     soup = BeautifulSoup(res.text, 'html.parser')
     data = {'PBR': None, 'IND_PER': None, 'PER': None, 'DPS YoY': None, 'ROE': None, "IND_ROE": None}
@@ -223,7 +231,7 @@ def get_per_krx(ticker):
             for row in rows:
                 text = row.text
                 em = row.select_one('td em')
-                if em is None:
+                if not em:
                     continue
                 per_text = em.text.strip()
 

@@ -369,7 +369,7 @@ def has_stable_eps_growth_cagr(ticker):
 def get_interest_coverage_ratio(ticker):
     financials = yf.Ticker(ticker).financials # Annual financials, columns = dates (most recent first)
     ratio = None
-    if financials.columns:
+    if not financials.columns.empty:
         for date in financials.columns:
             if date.year < dt.datetime.today().year - 5: # sift out old data
                 return None
@@ -632,20 +632,51 @@ def get_industry_roa(ind):
 
 
 ######## LOAD TICKERS ###########
-raw_tickers = get_tickers(country, limit, sp500)
+# raw_tickers = get_tickers(country, limit, sp500)
 
-filtered = list(filter(lambda x: isinstance(x, str), raw_tickers))
-
-
-# block of code that gets rid of preferred stocks
-prohibited = {'008560.KS', '003550.KS', '048260.KQ', '000060.KS', '091990.KQ', '066970.KQ', '022100.KQ', '010145.KS', '003410.KS'}
-def keep_ticker(t):
-    return len(t) > 5 and t[5] == '0' and t not in prohibited
-
-tickers = list(filter(keep_ticker, filtered))
+# filtered = list(filter(lambda x: isinstance(x, str), raw_tickers))
 
 
+# # block of code that gets rid of preferred stocks
+# prohibited = {'008560.KS', '003550.KS', '048260.KQ', '000060.KS', '091990.KQ', '066970.KQ', '022100.KQ', '010145.KS', '003410.KS'}
+# def keep_ticker(t):
+#     return len(t) > 5 and t[5] == '0' and t not in prohibited
 
+# tickers = list(filter(keep_ticker, filtered))
+
+
+tickers = [
+    '005930.KS',  # Samsung Electronics
+    '000660.KS',  # SK Hynix
+    '035420.KS',  # Naver
+    '207940.KQ',  # Samsung Biologics
+    '051910.KS',  # LG Chem
+    '068270.KS',  # Celltrion
+    '005380.KS',  # Hyundai Motor
+    '035720.KQ',  # Kakao
+    '055550.KS',  # Shinhan Financial Group
+    '012330.KS',  # Hyundai Mobis
+    '105560.KS',  # KB Financial Group
+    '036570.KS',  # NCSoft
+    '017670.KS',  # SK Telecom
+    '015760.KS',  # Korean Electric Power
+    '096770.KS',  # SK Innovation
+    '000270.KS',  # Kia Corporation
+    '003550.KS',  # LG
+    '033780.KS',  # KT&G
+    '006400.KS',  # Samsung SDI
+    '010130.KS',  # Samsung Electronics Engineering
+    '000810.KS',  # Samsung C&T
+    '091990.KQ',  # Celltrion Healthcare
+    '014680.KS',  # S-Oil
+    '004020.KS',  # Hyundai Heavy Industries
+    '035250.KQ',  # Kakao Games
+    '010950.KS',  # S-Oil
+    '041510.KS',  # LG Household & Health Care
+    '034020.KS',  # LG Display
+    '015020.KS',  # POSCO
+    '011170.KS'   # Lotte Chemical
+]
 def get_momentum_batch(tickers, period_days=126):
     # Download 1 year of daily close prices for all tickers at once
     try:

@@ -35,7 +35,7 @@ PASSWORD = os.environ['EMAIL_PASSWORD']
 
 ################ PREDETERMINED FIELDS ###################
 
-NUM_THREADS = 1 #multithreading 
+NUM_THREADS = 5 #multithreading 
 CUTOFF = 0
 lee_kw_list = [ #2025 이재명 정부 예상 수혜주 
     "Software", #AI
@@ -876,10 +876,8 @@ def process_ticker_quantitatives():
             currentRatio = info.get('currentRatio', None) # 초점: 회사의 단기 유동성, > 1.5 && < 2.5
             krx_per = get_per_krx(ticker[:6])
 
-            pbr = info.get('priceToBook', None) # 초점: 자산가치, 저pbr종목은 저평가된 자산 가치주로 간주. 장기 수익률 설명력 높음 < 1.5 (=being traded at 1.5 times its book value (asset-liab))
-            if not pbr and country == 'KR': pbr = krx_per['PBR'] # 주가가 그 기업의 자산가치에 비해 과대/과소평가되어 있다는 의미. 낮으면 자산활용력 부족
-            per = info.get('trailingPE', None) # 초점: 수익성, over/undervalue? 저per 종목 선별, 10-20전후(혹은 산업평균)로 낮고 높음 구분. 주가가 그 기업의 이익에 비해 과대/과소평가되어 있다는 의미
-            if not per and country == 'KR': per = krx_per['PER'] # high per expects future growth but could be overvalued(=버블). 
+            pbr = krx_per['PBR'] # 주가가 그 기업의 자산가치에 비해 과대/과소평가되어 있다는 의미. 낮으면 자산활용력 부족
+            per = krx_per['PER'] # high per expects future growth but could be overvalued(=버블). 
                                                                        # low per could be undervalued or company in trouble, IT, 바이오 등 성장산업은 자연스레 per이 높게 형성
                                                                        # 저per -> 수익성 높거나 주가가 싸다 고pbr -> 자산은 적은데 시장에서 비싸게 봐준다
             industry_per = krx_per['IND_PER'] 
@@ -889,6 +887,8 @@ def process_ticker_quantitatives():
             industry_roa = get_industry_roa(industry)
 
             roe = krx_per['ROE'] # 수익성 높은 기업 선별. 고roe + 저pbr 조합은 가장 유명한 퀀트 전략. > 8% (0.08) 주주 입장에서 수익성
+            if roe is None:
+                roe = info.get('returnOnEquity', None)
             roa = info.get('returnOnAssets', None) # > 6% (0.06), 기업 전체 효율성
             #ROE가 높고 ROA는 낮다면? → 부채를 많이 이용해 수익을 낸 기업일 수 있음. ROE와 ROA 모두 높다면? → 자산과 자본 모두 효율적으로 잘 운용하고 있다는 의미.
             #A = L + E
@@ -1033,8 +1033,8 @@ if country:
             '종목': 35,
             '업종': 30,
             '주가(전날대비)': 15,
-            'EPS성장률': 9,
-            '배당안정성': 9,
+            'EPS성장률': 10,
+            '배당안정성': 10,
             '모멘텀': 21,
         }
 

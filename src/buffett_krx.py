@@ -105,6 +105,7 @@ def get_tickers_by_country(country: str, limit: int = 100, apikey: str = 'your_a
         'limit': limit,
         'type': 'stock',
         'sort': 'marketCap',
+        'order': 'desc',
         'apikey': apikey,
         'isEtf': False,
         'isFund': False,
@@ -946,14 +947,14 @@ if country:
     filename = f"result_{country}_{formattedDate}.xlsx"
 
     with pd.ExcelWriter(filename, engine='xlsxwriter') as writer:
-        df.to_excel(writer, index=False, header = False, sheet_name='Sheet1')
+        df.to_excel(writer, index=False, sheet_name='Sheet1')
         
         workbook  = writer.book
         worksheet = writer.sheets['Sheet1']
         
         bscore_col_idx = df.columns.get_loc('B-Score')
         
-        start_row = 2  # data starts after header row 1
+        start_row = 0  # data starts after header row 1
         end_row = len(df)
         start_col = 0
         end_col = len(df.columns) - 1

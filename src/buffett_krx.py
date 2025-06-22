@@ -256,7 +256,7 @@ def get_per_krx(ticker):
         # Get first 3 non-None items safely
         first_three = dividend[:3]
 
-        if None not in first_three and len(first_three) >= 2:
+        if not first_three and None not in first_three and len(first_three) >= 2:
             # Check if the dividends are non-decreasing YoY
             data['DPS YoY'] = all(earlier <= later for earlier, later in zip(first_three, first_three[1:]))
 
@@ -273,33 +273,34 @@ def get_per_krx(ticker):
                 if th and 'ROE' in th.text:
                     tds = row.find_all('td')
                     if not tds:
-                        continue  # Skip if no <td> found
+                        break  # No data to process
 
-                    # Extract text from <td> elements and clean %
+                    # Extract text and clean %
                     result = [td.text.strip().replace('%', '') for td in tds]
-                    
-                    # Parse company ROE safely
+
+                    # Parse company ROE
                     try:
                         if result and result[0] != '':
                             data['ROE'] = float(result[0])
                     except (ValueError, IndexError):
-                        pass  # Leave as None
+                        data['ROE'] = None  # Redundant due to default, but explicit
 
-                    # Process industry ROE values
-                    raw_industry_values = result[1:]  # Everything after the first value
+                    # Parse industry ROE values
+                    raw_industry_values = result[1:] if len(result) > 1 else []
                     cleaned_values = []
 
                     for item in raw_industry_values:
-                        if item != '':
-                            try:
+                        try:
+                            if item != '':
                                 cleaned_values.append(float(item))
-                            except ValueError:
-                                continue
+                        except ValueError:
+                            continue
 
                     if cleaned_values:
                         data['IND_ROE'] = sum(cleaned_values) / len(cleaned_values)
 
-                    break
+                    break  # Only process the first ROE row
+
 
     return data
 

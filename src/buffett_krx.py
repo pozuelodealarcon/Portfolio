@@ -920,7 +920,6 @@ df_sorted = df.sort("B-Score", descending = True)
 
 if country: 
 
-    # Your DataFrame (replace with your actual one)
     df = df_sorted.to_pandas()
 
     filename = f"result_{country}_{formattedDate}.xlsx"
@@ -931,17 +930,13 @@ if country:
         workbook  = writer.book
         worksheet = writer.sheets['Sheet1']
         
-        # Locate "B-Score" column index (0-based)
         bscore_col_idx = df.columns.get_loc('B-Score')
         
-        # Define data range positions (Excel is 1-based)
-        start_row = 1  # first data row after header
-        end_row = len(df)  # last data row
-        
+        start_row = 1  # data starts after header row 1
+        end_row = len(df)
         start_col = 0
         end_col = len(df.columns) - 1
         
-        # Helper: Convert zero-based column index to Excel letter (e.g. 0 -> A)
         def xl_col(col_idx):
             div = col_idx + 1
             string = ""
@@ -953,41 +948,33 @@ if country:
                 string = chr(64 + mod) + string
             return string
         
-        # Full data range, e.g. "A2:F100"
         first_cell = f"{xl_col(start_col)}{start_row + 1}"
         last_cell = f"{xl_col(end_col)}{end_row + 1}"
         data_range = f"{first_cell}:{last_cell}"
         
-        # B-Score column letter (e.g. "B")
         bscore_col_letter = xl_col(bscore_col_idx)
         
-        # Apply a 3-color scale **to the entire data range**,
-        # but coloring based on the **B-Score** values in the same row.
-        #
-        # Excel conditional formatting cannot apply color gradients to
-        # a cell based on *another* cell’s value with color scales.
-        #
-        # So instead, apply the gradient directly on B-Score column,
-        # and for entire rows apply solid fills via formulas.
-        #
-        # 1) Gradient on B-Score column for smooth color scaling:
+        # 1) Add Excel table for the data
+        worksheet.add_table(data_range, {
+            'columns': [{'header': col} for col in df.columns],
+            'style': 'Table Style Medium 9'  # You can choose different table styles
+        })
         
+        # 2) Gradient on B-Score column (dynamic min/max)
         bscore_range = f"{bscore_col_letter}{start_row + 1}:{bscore_col_letter}{end_row + 1}"
         
         worksheet.conditional_format(bscore_range, {
             'type': '3_color_scale',
-            'min_type': 'min',    # dynamic min value in Excel
+            'min_type': 'min',
             'mid_type': 'percentile',
             'mid_value': 50,
-            'max_type': 'max',    # dynamic max value in Excel
-            'min_color': "#FF0000",  # red
-            'mid_color': "#FFFF00",  # yellow
-            'max_color': "#00FF00"   # green
+            'max_type': 'max',
+            'min_color': "#FF0000",
+            'mid_color': "#FFFF00",
+            'max_color': "#00FF00"
         })
         
-        # 2) Optional: color entire rows with solid fills based on B-Score thresholds:
-        #    (adjust ranges to your needs)
-        
+        # 3) Row fills based on B-Score ranges
         red_fill = workbook.add_format({'bg_color': '#FFC7CE'})
         yellow_fill = workbook.add_format({'bg_color': '#FFEB9C'})
         green_fill = workbook.add_format({'bg_color': '#C6EFCE'})
@@ -996,27 +983,21 @@ if country:
             excel_row = row_num + 1
             formula = f"${bscore_col_letter}{excel_row}"
             
-            # Red fill < 40
             worksheet.conditional_format(f"{xl_col(start_col)}{excel_row}:{xl_col(end_col)}{excel_row}", {
                 'type': 'formula',
-                'criteria': f"{formula} < 40",
+                'criteria': f"{formula} < 5",
                 'format': red_fill
             })
-            # Yellow fill 40 <= B-Score < 70
             worksheet.conditional_format(f"{xl_col(start_col)}{excel_row}:{xl_col(end_col)}{excel_row}", {
                 'type': 'formula',
-                'criteria': f"AND({formula} >= 40, {formula} < 70)",
+                'criteria': f"AND({formula} >= 5, {formula} < 8)",
                 'format': yellow_fill
             })
-            # Green fill >= 70
             worksheet.conditional_format(f"{xl_col(start_col)}{excel_row}:{xl_col(end_col)}{excel_row}", {
                 'type': 'formula',
-                'criteria': f"{formula} >= 70",
+                'criteria': f"{formula} >= 8",
                 'format': green_fill
             })
-
-    # Done — saved file with auto-adjusting gradient and row highlights!
-
 
 elif sp500:
     df_sorted.to_pandas().to_excel(f"s&p500_{formattedDate}.xlsx", index=False)

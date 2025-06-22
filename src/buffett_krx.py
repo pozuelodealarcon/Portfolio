@@ -11,6 +11,7 @@ from pykrx import stock
 import datetime as dt
 import openpyxl
 import math
+import random
 from queue import Queue
 import threading
 import time
@@ -203,11 +204,19 @@ def get_per_krx(ticker):
         'Referer': 'https://finance.naver.com/'
     }
 
+    
     try:
+        # Sleep for a random time to mimic human behavior
+        time.sleep(random.uniform(0.5, 2.0))  # sleep between 1.5 and 4 seconds
         res = requests.get(url, headers=headers)
-    except Exception as e:
-        print('Naver error:', e)
-        return None
+        res.raise_for_status()  # Optional: raises an error for HTTP issues
+    except requests.exceptions.HTTPError as e:
+        if res.status_code == 401:
+            print("Unauthorized (401) - You might need to log in or use a valid token.")
+        else:
+            print(f"HTTP error occurred: {e} (Status Code: {res.status_code})")
+    except requests.RequestException as e:
+        print(f"Request failed: {e}")
 
     soup = BeautifulSoup(res.text, 'html.parser')
     data = {'PBR': None, 'IND_PER': None, 'PER': None, 'DPS YoY': None, 'ROE': None, "IND_ROE": None}
@@ -219,7 +228,7 @@ def get_per_krx(ticker):
             for row in rows:
                 text = row.text
                 em = row.select_one('td em')
-                if em is None:
+                if not em:
                     continue
                 per_text = em.text.strip()
 

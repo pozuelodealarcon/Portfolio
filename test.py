@@ -27,129 +27,35 @@ import requests
 from bs4 import BeautifulSoup
 import requests
 from bs4 import BeautifulSoup
+import requests
+import os
 
-import requests
-from bs4 import BeautifulSoup
-import requests
-from bs4 import BeautifulSoup
-import requests
-from bs4 import BeautifulSoup
+# Set your API key (use .env in production)
+FMP_API_KEY ='60ZVxqQtumzWp4LVs4PmJOjiNSnbGThu'
+
+def get_dcf(ticker):
+    url = f"https://financialmodelingprep.com/api/v3/discounted-cash-flow/{ticker}?apikey={FMP_API_KEY}"
     
-def get_per_krx(ticker):
-    url = f"https://finance.naver.com/item/main.naver?code={ticker[:6]}"
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-                      'AppleWebKit/537.36 (KHTML, like Gecko) '
-                      'Chrome/114.0.0.0 Safari/537.36',
-        'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
-        'Referer': 'https://finance.naver.com/'
-    }
-
     try:
-        res = requests.get(url, headers=headers)
-    except Exception as e:
-        print('Naver error:', e)
+        response = requests.get(url)
+        response.raise_for_status()
+
+        data = response.json()
+        if not data:
+            print(f"No DCF data found for {ticker}")
+            return None
+        
+        dcf_data = data[0]  # API returns a list
+        print(f"Symbol: {dcf_data['symbol']}")
+        print(f"DCF Value: {dcf_data['dcf']}")
+        print(f"Stock Price: {dcf_data['Stock Price']}")
+        return dcf_data
+
+    except requests.exceptions.RequestException as e:
+        print(f"Request failed: {e}")
         return None
 
-    soup = BeautifulSoup(res.text, 'html.parser')
-    data = {'PBR': None, 'IND_PER': None, 'PER': None, 'DPS YoY': None, 'ROE': None, "IND_ROE": None}
-
-    aside = soup.select_one('div.aside_invest_info')
-    if aside:
-        rows = aside.select('table tr')
-        if rows:
-            for row in rows:
-                text = row.text
-                em = row.select_one('td em')
-                if em is None:
-                    continue
-                per_text = em.text.strip()
-
-                if 'PBR' in text:
-                    data['PBR'] = float(per_text.replace(',', '')) if 'N/A' not in per_text else None
-
-                elif '동일업종 PER' in text:
-                    data['IND_PER'] = float(per_text.replace(',', '')) if 'N/A' not in per_text else None
-
-                elif 'PER' in text and 'EPS' in text and '추정PER' not in text:
-                    data['PER'] = float(per_text.replace(',', '')) if 'N/A' not in per_text else None
-    
-    ##############################################################
-    table = soup.select_one('div.section.cop_analysis table')
-    if table:
-        dividend = []
-        rows = table.select('tbody tr')
-        if rows:
-            for row in rows:
-                th = row.find('th')
-                if th and '주당배당금' in th.text:
-                    tds = row.select('td')
-                    if tds is None:
-                        continue
-                    else:
-                        for td in tds:
-                            val = td.text.strip().replace(',', '').replace('원', '')
-                            try:
-                                dividend.append(float(val))
-                            except (ValueError, TypeError):
-                                dividend.append(None)
-                        break  # Found and processed the DPS row
-
-        # Filter out None values and take first 3
-        first_three = dividend[:3]
-        first_three = list(filter(lambda x: x is not None, first_three))
-
-        # Only compare if we have at least 2 values
-        if len(first_three) >= 2:
-            data['DPS YoY'] = all(
-                earlier <= later for earlier, later in zip(first_three, first_three[1:])
-            )
-
-    ########################
-
-    # 동일업종 비교 테이블은 div.section.inner_sub > table.class="compare" 내부에 위치
-    compare_table = soup.select_one('div.section.trade_compare table')
-
-    if compare_table:
-        rows = compare_table.select('tr')
-        if rows:
-            for row in rows:
-                th = row.find('th')
-                if th and 'ROE' in th.text:
-                    tds = row.find_all('td')
-                    if tds is None:
-                        break  # No data to process
-
-                    # Extract text and clean %
-                    result = [td.text.strip().replace('%', '') for td in tds]
-
-                    # Parse company ROE
-                    try:
-                        if result and result[0] != '':
-                            data['ROE'] = float(result[0])
-                    except (ValueError, IndexError):
-                        data['ROE'] = None  # Redundant due to default, but explicit
-
-                    # Parse industry ROE values
-                    raw_industry_values = result[1:] if len(result) > 1 else []
-                    cleaned_values = []
-
-                    for item in raw_industry_values:
-                        try:
-                            if item != '':
-                                cleaned_values.append(float(item))
-                        except ValueError:
-                            continue
-
-                    if cleaned_values:
-                        data['IND_ROE'] = sum(cleaned_values) / len(cleaned_values)
-
-                    break  # Only process the first ROE row
-
-
-    return data
-
-# 사용 예시
-ticker = "443060.KS"
-roe_list = get_per_krx(ticker)
-print(roe_list)
+# Example usage
+if __name__ == "__main__":
+    ticker = "AAPL"  # You can change this
+    get_dcf(ticker)

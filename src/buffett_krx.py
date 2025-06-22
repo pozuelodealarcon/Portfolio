@@ -56,7 +56,7 @@ lee_kw_list = [ #2025 이재명 정부 예상 수혜주
 ]
 
 country = 'KR'
-limit=100 # 250 requests/day
+limit=200 # 250 requests/day
 sp500 = True
 
 #########################################################

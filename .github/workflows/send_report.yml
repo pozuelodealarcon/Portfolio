@@ -8,6 +8,8 @@ on:
 jobs:
   send-daily-excel:
     runs-on: ubuntu-latest
+    env:
+      API_KEY: ${{ secrets.FMP_API_KEY }}
 
     steps:
     - name: Checkout repo

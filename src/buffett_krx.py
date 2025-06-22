@@ -4,7 +4,7 @@
 
 import yfinance as yf
 import pandas as pd
-from dotenv import load_dotenv
+#from dotenv import load_dotenv
 import os
 import requests
 from pykrx import stock
@@ -16,7 +16,7 @@ from queue import Queue
 import threading
 import time
 import polars as pl
-import shelve
+#import shelve
 from bs4 import BeautifulSoup
 from urllib.request import urlopen
 import smtplib
@@ -73,7 +73,7 @@ data = []
 data_lock = threading.Lock()
 
 # Load environment variables from .env file
-load_dotenv()
+#load_dotenv()
 
 # Get the API key
 fmp_key = os.getenv("FMP_API_KEY")

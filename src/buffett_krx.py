@@ -35,7 +35,7 @@ PASSWORD = os.environ['EMAIL_PASSWORD']
 
 ################ PREDETERMINED FIELDS ###################
 
-NUM_THREADS = 5 #multithreading 
+NUM_THREADS = 1 #multithreading 
 CUTOFF = 0
 lee_kw_list = [ #2025 이재명 정부 예상 수혜주 
     "Software", #AI
@@ -143,9 +143,8 @@ def buffett_score (de, cr, pbr, per, ind_per, roe, ind_roe, roa, ind_roa, eps, d
     #         score +=0.75
     #     elif div >= 0.06:
     #         score +=0.5
-    if div is not None:
-        if div:
-            score +=1
+    if div:
+        score +=1
 
     if eps is True:
         score += 1
@@ -166,7 +165,7 @@ def buffett_score (de, cr, pbr, per, ind_per, roe, ind_roe, roa, ind_roa, eps, d
         score +=1
 
     #my quant ideas 
-    if None not in {div, eps}:
+    if eps is not None:
         #  3. 고배당 + 고EPS 성장률 전략 (배당 성장주 전략)
         # 아이디어: 고배당이면서 실적 성장세가 뚜렷한 기업
         if div and eps >= 0.3:
@@ -233,6 +232,7 @@ def get_per_krx(ticker):
                 elif 'PER' in text and 'EPS' in text and '추정PER' not in text:
                     data['PER'] = float(per_text.replace(',', '')) if 'N/A' not in per_text else None
     
+    # DPS 계산
     ##############################################################
     table = soup.select_one('div.section.cop_analysis table')
     if table:
@@ -243,16 +243,15 @@ def get_per_krx(ticker):
                 th = row.find('th')
                 if th and '주당배당금' in th.text:
                     tds = row.select('td')
-                    if tds is None:
+                    if not tds:
                         continue
-                    else:
-                        for td in tds:
-                            val = td.text.strip().replace(',', '').replace('원', '')
-                            try:
-                                dividend.append(float(val))
-                            except (ValueError, TypeError):
-                                dividend.append(None)
-                        break  # Found and processed the DPS row
+                    for td in tds:
+                        val = td.text.strip().replace(',', '').replace('원', '')
+                        try:
+                            dividend.append(float(val))
+                        except (ValueError, TypeError):
+                            dividend.append(None)
+                    break  # Found and processed the DPS row
 
         # Filter out None values and take first 3
         first_three = dividend[:3]

@@ -19,47 +19,77 @@ import smtplib
 from email.message import EmailMessage
 from email.headerregistry import Address
 
-def get_per_krx(ticker):
-    url = f"https://finance.naver.com/item/main.nhn?code={ticker[:6]}"
-    headers = {'User-Agent': 'Mozilla/5.0'}
-    res = requests.get(url, headers=headers)
-    soup = BeautifulSoup(res.text, 'html.parser')
+import pandas as pd
+import requests
+from io import StringIO
+from datetime import datetime
 
-    data = {}
-    PBR = None
-    IND_PER = None
-    PER = None
+# 예시용 날짜 정규화 함수
+def get_date_str(col):
+    try:
+        return datetime.strptime(col.strip(), "%Y/%m").strftime("%Y-%m")
+    except:
+        return col.strip()
 
-    # 동일업종 PER이 들어있는 박스 찾기
-    aside = soup.select_one('div.aside_invest_info')
-    if aside:
-        rows = aside.select('table tr')
-        for row in rows:
-            if 'PBR' in row.text:
-                per_text = row.select_one('td em').text
-                if 'N/A' not in per_text:
-                    PBR = float(per_text.replace(',', ''))
-                    data['PBR'] =  PBR
-                else:
-                    data['PBR'] =  None
+import pandas as pd
+import requests
+from io import StringIO
+import re
+
+def get_finstate_naver(code, fin_type="0", freq_type="Y"):
+    """
+    code: 종목 코드 (6자리, 예: "005930")
+    fin_type: 재무제표 종류 ("0": 주재무제표, "4": IFRS 연결 등)
+    freq_type: "Y" 연간, "Q" 분기
+    """
+    url = (
+        "https://companyinfo.stock.naver.com/v1/company/ajax/cF1001.aspx"
+        f"?cmp_cd={code}&fin_typ={fin_type}&freq_typ={freq_type}"
+    )
+    headers = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                  "AppleWebKit/537.36 (KHTML, like Gecko) "
+                  "Chrome/114.0.0.0 Safari/537.36"  
+    }
+
+    
+    resp = requests.get(url, headers=headers)
+    resp.encoding = resp.apparent_encoding
+
+    html = resp.text
+    if "해당 데이터가 존재하지 않습니다" in html:
+        return None
+
+    # 불필요한 header 제거
+    html = re.sub(r'<th[^>]*>연간</th>', '', html)
+    html = re.sub(r"<span class='span-sub'>\([^)]*\)</span>", "", html)
+    
+    try:
+        df = pd.read_html(StringIO(html))[0]
+    except ValueError:
+        return None
+
+    # 컬럼 첫줄 삭제(멀티컬럼 제거)
+    if isinstance(df.columns, pd.MultiIndex):
+        df.columns = df.columns.get_level_values(1)
+
+    df = df.iloc[1:]  # 제목행 제외
+    df = df.set_index(df.columns[0])
+    df.index.name = "account"
+    df.columns = df.columns.str.extract(r'(\d{4})')[0]  # '2025/12'→'2025'
+    
+    dft = df.T
+    dft.index = pd.to_datetime(dft.index + "-12-31", errors='coerce')
+    dft = dft.dropna(axis=0, how='all')
+    
+    # 컬럼명 리네임
+    dft.rename(columns={
+        '유보율': '자본유보율',
+        '현금배당성향': '현금배당성향(%)'
+    }, inplace=True)
+
+    return dft.astype(float)
 
 
-            if '동일업종 PER' in row.text:
-                per_text = row.select_one('td em').text
-                if 'N/A' not in per_text:
-                    IND_PER = float(per_text.replace(',', ''))
-                    data['IND_PER'] =  IND_PER
-                else:
-                    data['IND_PER'] =  None
-
-            if 'PER' in row.text and 'EPS' in row.text and '추정PER' not in row.text:
-                per_text = row.select_one('td em').text
-                if 'N/A' not in per_text:
-                    PER = float(per_text.replace(',', ''))
-                    data['PER'] =  PER
-                else:
-                    data['PER'] =  None
-
-    return data
-
-print(get_per_krx('064760'))
+df = get_finstate_naver("005930", fin_type="0", freq_type="Y")
+print(df.head())

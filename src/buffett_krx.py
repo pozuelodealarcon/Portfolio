@@ -55,7 +55,7 @@ lee_kw_list = [ #2025 이재명 정부 수혜주
 ]
 
 country = 'KR'
-limit=200
+limit=200 # 250/day
 sp500 = True
 
 #########################################################
@@ -93,19 +93,29 @@ def get_tickers(country: str, limit: int, sp500: bool):
 
 def get_tickers_by_country(country: str, limit: int = 100, apikey: str = 'your_api_key'):
     url = 'https://financialmodelingprep.com/api/v3/stock-screener'
+    headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                  'AppleWebKit/537.36 (KHTML, like Gecko) '
+                  'Chrome/114.0.0.0 Safari/537.36',
+    'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
+    'apikey': apikey,
+    }
     params = {
         'country': country,
         'limit': limit,
         'type': 'stock',
         'sort': 'marketCap',
-        'order': 'desc',
         'apikey': apikey,
         'isEtf': False,
         'isFund': False,
         # 'sector' : Consumer Cyclical | Energy | Technology | Industrials | Financial Services | Basic Materials | Communication Services | Consumer Defensive | Healthcare | Real Estate | Utilities | Industrial Goods | Financial | Services | Conglomerates
         # 'exchange' : nyse | nasdaq | amex | euronext | tsx | etf | mutual_fund
     }
-    response = requests.get(url, params=params)
+    try:
+        response = requests.get(url, params=params)
+    except Exception as e:
+        print('FMP error:', e)
+        return []
     data = response.json()
     return [item['symbol'] for item in data]
 
@@ -181,13 +191,6 @@ def buffett_score (de, cr, pbr, per, ind_per, roe, ind_roe, roa, ind_roa, eps, d
                     score += 0.25
          
     return score
-
-def getFs (item, ticker):
-    # for country == 'KR' only
-    try:
-        return dfKospi.loc[ticker[:6], item] 
-    except:
-        return None
     
 def get_per_krx(ticker):
     url = f"https://finance.naver.com/item/main.nhn?code={ticker[:6]}"
@@ -198,8 +201,11 @@ def get_per_krx(ticker):
     'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
     'Referer': 'https://finance.naver.com/'
     }
-
-    res = requests.get(url, headers=headers)
+    try:
+        res = requests.get(url, headers=headers)
+    except Exception as e:
+        print('FMP error:', e)
+        return None
     soup = BeautifulSoup(res.text, 'html.parser')
 
     data = {}
@@ -453,175 +459,189 @@ def get_percentage_change(ticker):
     else:
         return ' ()'
 
-# FullRatio의 산업별 PER 페이지 URL
-url = 'https://fullratio.com/pe-ratio-by-industry'
-headers = {'User-Agent': 'Mozilla/5.0'}
+# # FullRatio의 산업별 PER 페이지 URL
+# url = 'https://fullratio.com/pe-ratio-by-industry'
+# headers = {'User-Agent': 'Mozilla/5.0'}
 
-response = requests.get(url, headers=headers)
-soup = BeautifulSoup(response.text, 'html.parser')
+# response = requests.get(url, headers=headers)
+# soup = BeautifulSoup(response.text, 'html.parser')
 
-# 테이블 찾기 (이때 table이 None인지 체크)
-table = soup.find('table')
-if table is None:
-    raise Exception("테이블을 찾을 수 없습니다. 구조가 바뀌었거나 JS로 로딩될 수 있습니다.")
+# # 테이블 찾기 (이때 table이 None인지 체크)
+# table = soup.find('table')
+# if table is None:
+#     raise Exception("테이블을 찾을 수 없습니다. 구조가 바뀌었거나 JS로 로딩될 수 있습니다.")
 
-# tbody가 있는 경우
-tbody = table.find('tbody')
-if tbody:
-    rows = tbody.find_all('tr')
-else:
-    rows = table.find_all('tr')[1:] # 헤더 제외
+# # tbody가 있는 경우
+# tbody = table.find('tbody')
+# if tbody:
+#     rows = tbody.find_all('tr')
+# else:
+#     rows = table.find_all('tr')[1:] # 헤더 제외
 
-# 각 행에서 데이터 추출
-per_data = []
-for row in rows:
-    cols = row.find_all('td')
-    if len(cols) >= 2:
-        industry = cols[0].text.strip()
-        pe_ratio = cols[1].text.strip()
-        per_data.append({'Industry': industry, 'P/E Ratio': pe_ratio})
+# # 각 행에서 데이터 추출
+# per_data = []
+# for row in rows:
+#     cols = row.find_all('td')
+#     if len(cols) >= 2:
+#         industry = cols[0].text.strip()
+#         pe_ratio = cols[1].text.strip()
+#         per_data.append({'Industry': industry, 'P/E Ratio': pe_ratio})
 
-# 결과 출력
-df_per = pl.DataFrame(per_data)
+# # 결과 출력
+# df_per = pl.DataFrame(per_data)
 
-url_roe = 'https://fullratio.com/roe-by-industry'
-headers_roe = {'User-Agent': 'Mozilla/5.0'}
+# url_roe = 'https://fullratio.com/roe-by-industry'
+# headers_roe = {'User-Agent': 'Mozilla/5.0'}
 
-response_roe = requests.get(url_roe, headers=headers_roe)
-soup_roe = BeautifulSoup(response_roe.text, 'html.parser')
+# response_roe = requests.get(url_roe, headers=headers_roe)
+# soup_roe = BeautifulSoup(response_roe.text, 'html.parser')
 
-# 테이블 찾기 (이때 table이 None인지 체크)
-table_roe = soup_roe.find('table')
-if table_roe is None:
-    raise Exception("테이블을 찾을 수 없습니다. 구조가 바뀌었거나 JS로 로딩될 수 있습니다.")
+# # 테이블 찾기 (이때 table이 None인지 체크)
+# table_roe = soup_roe.find('table')
+# if table_roe is None:
+#     raise Exception("테이블을 찾을 수 없습니다. 구조가 바뀌었거나 JS로 로딩될 수 있습니다.")
 
-# tbody가 있는 경우
-tbody_roe = table_roe.find('tbody')
-if tbody_roe:
-    rows_roe = tbody_roe.find_all('tr')
-else:
-    rows_roe = table_roe.find_all('tr')[1:] # 헤더 제외
+# # tbody가 있는 경우
+# tbody_roe = table_roe.find('tbody')
+# if tbody_roe:
+#     rows_roe = tbody_roe.find_all('tr')
+# else:
+#     rows_roe = table_roe.find_all('tr')[1:] # 헤더 제외
 
-# 각 행에서 데이터 추출
-roe_data = []
-for row in rows_roe:
-    cols_roe = row.find_all('td')
-    if len(cols_roe) >= 2:
-        industry_roe = cols_roe[0].text.strip()
-        roe_num = cols_roe[1].text.strip()
-        roe_data.append({'Industry': industry_roe, 'ROE': roe_num})
+# # 각 행에서 데이터 추출
+# roe_data = []
+# for row in rows_roe:
+#     cols_roe = row.find_all('td')
+#     if len(cols_roe) >= 2:
+#         industry_roe = cols_roe[0].text.strip()
+#         roe_num = cols_roe[1].text.strip()
+#         roe_data.append({'Industry': industry_roe, 'ROE': roe_num})
 
-# 결과 출력
-df_roe = pl.DataFrame(roe_data)
-#
-#
-url_roa = 'https://fullratio.com/roa-by-industry'
-headers_roa = {'User-Agent': 'Mozilla/5.0'}
+# # 결과 출력
+# df_roe = pl.DataFrame(roe_data)
+# #
+# #
+# url_roa = 'https://fullratio.com/roa-by-industry'
+# headers_roa = {'User-Agent': 'Mozilla/5.0'}
 
-response_roa = requests.get(url_roa, headers=headers_roa)
-soup_roa = BeautifulSoup(response_roa.text, 'html.parser')
+# response_roa = requests.get(url_roa, headers=headers_roa)
+# soup_roa = BeautifulSoup(response_roa.text, 'html.parser')
 
-# 테이블 찾기 (이때 table이 None인지 체크)
-table_roa = soup_roa.find('table')
-if table_roa is None:
-    raise Exception("테이블을 찾을 수 없습니다. 구조가 바뀌었거나 JS로 로딩될 수 있습니다.")
+# # 테이블 찾기 (이때 table이 None인지 체크)
+# table_roa = soup_roa.find('table')
+# if table_roa is None:
+#     raise Exception("테이블을 찾을 수 없습니다. 구조가 바뀌었거나 JS로 로딩될 수 있습니다.")
 
-# tbody가 있는 경우
-tbody_roa = table_roa.find('tbody')
-if tbody_roa:
-    rows_roa = tbody_roa.find_all('tr')
-else:
-    rows_roa = table_roa.find_all('tr')[1:] # 헤더 제외
+# # tbody가 있는 경우
+# tbody_roa = table_roa.find('tbody')
+# if tbody_roa:
+#     rows_roa = tbody_roa.find_all('tr')
+# else:
+#     rows_roa = table_roa.find_all('tr')[1:] # 헤더 제외
 
-# 각 행에서 데이터 추출
-roa_data = []
-for row in rows_roa:
-    cols_roa = row.find_all('td')
-    if len(cols_roa) >= 2:
-        industry_roa = cols_roa[0].text.strip()
-        roa_num = cols_roa[1].text.strip()
-        roa_data.append({'Industry': industry_roa, 'ROA': roa_num})
+# # 각 행에서 데이터 추출
+# roa_data = []
+# for row in rows_roa:
+#     cols_roa = row.find_all('td')
+#     if len(cols_roa) >= 2:
+#         industry_roa = cols_roa[0].text.strip()
+#         roa_num = cols_roa[1].text.strip()
+#         roa_data.append({'Industry': industry_roa, 'ROA': roa_num})
 
-df_roa = pl.DataFrame(roa_data)
-#
+# df_roa = pl.DataFrame(roa_data)
+# #
 
 def get_industry_roe(ind):
-    if country is None:
-        try:
-            if ind is not None:
-                ans = float(df_roe.filter(pl.col('Industry') == ind).select("ROE").item())
-                return ans/100.0
-            else:
-                return 0.08
-        except Exception:
-            return 0.08 
-    else:
-        return 0.1
+    return 0.1
+    # if country is None:
+    #     try:
+    #         if ind is not None:
+    #             ans = float(df_roe.filter(pl.col('Industry') == ind).select("ROE").item())
+    #             return ans/100.0
+    #         else:
+    #             return 0.08
+    #     except Exception:
+    #         return 0.08 
+    # else:
+    #     return 0.1
 
 def get_industry_roa(ind):
-    if country is None:
-        try:
-            if ind is not None:
-                ans = float(df_roa.filter(pl.col('Industry') == ind).select("ROA").item())
-                return ans/100.0
-            return 0.06
-        except Exception:
-            return 0.06
-    elif country == 'KR' and any(kw in ind for kw in ['Insurance', 'Bank']):
+    if any(kw in ind for kw in ['Insurance', 'Bank']):
         return 0.01
     else:
         return 0.05
+    # if country is None:
+    #     try:
+    #         if ind is not None:
+    #             ans = float(df_roa.filter(pl.col('Industry') == ind).select("ROA").item())
+    #             return ans/100.0
+    #         return 0.06
+    #     except Exception:
+    #         return 0.06
+    # elif country == 'KR' and any(kw in ind for kw in ['Insurance', 'Bank']):
+    #     return 0.01
+    # else:
+    #     return 0.05
 
     
 
-def get_industry_per(ind, ticker):
-    if country is None: #country == US
-        spy = yf.Ticker('SPY')
-        spy_info = spy.info
-        per = spy_info.get('trailingPE')
-        try: 
-            if ind is not None:
-                ans = float(df_per.filter(pl.col('Industry') == ind).select("P/E Ratio").item())
-                return ans
-            return per
-        except Exception:
-            return per
-    elif country == 'KR':
-        try:
-            url = f"https://finance.naver.com/item/main.nhn?code={ticker[:6]}"
-            headers = {'User-Agent': 'Mozilla/5.0'}
-            res = requests.get(url, headers=headers)
-            soup = BeautifulSoup(res.text, 'html.parser')
+# def get_industry_per(ind, ticker):
+#     if country is None: #country == US
+#         spy = yf.Ticker('SPY')
+#         spy_info = spy.info
+#         per = spy_info.get('trailingPE')
+#         try: 
+#             if ind is not None:
+#                 ans = float(df_per.filter(pl.col('Industry') == ind).select("P/E Ratio").item())
+#                 return ans
+#             return per
+#         except Exception:
+#             return per
+#     elif country == 'KR':
+#         try:
+#             url = f"https://finance.naver.com/item/main.nhn?code={ticker[:6]}"
+#             headers = {'User-Agent': 'Mozilla/5.0'}
+#             res = requests.get(url, headers=headers)
+#             soup = BeautifulSoup(res.text, 'html.parser')
 
-            # 동일업종 PER이 들어있는 박스 찾기
-            aside = soup.select_one('div.aside_invest_info')
-            if aside:
-                rows = aside.select('table tr')
-                for row in rows:
-                    if '동일업종 PER' in row.text:
-                        per_text = row.select_one('td em').text
-                        return float(per_text.replace(',', ''))
-            return None
-        except Exception:
-            return None
+#             # 동일업종 PER이 들어있는 박스 찾기
+#             aside = soup.select_one('div.aside_invest_info')
+#             if aside:
+#                 rows = aside.select('table tr')
+#                 for row in rows:
+#                     if '동일업종 PER' in row.text:
+#                         per_text = row.select_one('td em').text
+#                         return float(per_text.replace(',', ''))
+#             return None
+#         except Exception:
+#             return None
 
-    elif country == 'JP':
-        ewj = yf.Ticker('EWJ')
-        info = ewj.info
-        per = info.get('trailingPE')
-        return per
-    else:
-        vt = yf.Ticker('VT')
-        info = vt.info
-        per = info.get('trailingPE')
-        return per
+#     elif country == 'JP':
+#         ewj = yf.Ticker('EWJ')
+#         info = ewj.info
+#         per = info.get('trailingPE')
+#         return per
+#     else:
+#         vt = yf.Ticker('VT')
+#         info = vt.info
+#         per = info.get('trailingPE')
+#         return per
 
 
-tickers = get_tickers(country, limit, sp500)
+######## LOAD TICKERS ###########
+raw_tickers = get_tickers(country, limit, sp500)
+
+filtered = list(filter(lambda x: isinstance(x, str), raw_tickers))
+
 
 # block of code that gets rid of preferred stocks
-if country == 'KR':
-    tickers = list(filter(lambda t: t[5] == '0', tickers))
+prohibited = {'008560.KS', '003550.KS', '048260.KQ', '000060.KS', '091990.KQ', '066970.KQ', '022100.KQ', '010145.KS', '003410.KS'}
+def keep_ticker(t):
+    return len(t) > 5 and t[5] == '0' and t not in prohibited
+
+tickers = list(filter(keep_ticker, filtered))
+
+
 
 def get_momentum_batch(tickers, period_days=126):
     # Download 1 year of daily close prices for all tickers at once
@@ -744,15 +764,14 @@ def process_ticker_quantitatives():
             name = info.get("longName") or info.get("shortName", ticker)
             # sector = info.get("sector", None)
             industry = info.get("industry", None)
-            sub_industry = info.get('subIndustry', None)
             currentPrice = info.get("currentPrice", None)
             percentage_change = get_percentage_change(ticker)
-            target_mean = info.get('targetMeanPrice', 0)
-            if target_mean != 0 and currentPrice != 0 and currentPrice is not None and target_mean is not None:
-                target_incr = ((target_mean - currentPrice) / currentPrice) * 100
-                upside = str(round(target_incr)) + '%' if target_incr < 0 else '+' + str(round(target_incr)) + '%'
-            else: 
-                upside = 'N/A'
+            # target_mean = info.get('targetMeanPrice', 0)
+            # if target_mean != 0 and currentPrice != 0 and currentPrice is not None and target_mean is not None:
+            #     target_incr = ((target_mean - currentPrice) / currentPrice) * 100
+            #     upside = str(round(target_incr)) + '%' if target_incr < 0 else '+' + str(round(target_incr)) + '%'
+            # else: 
+            #     upside = 'N/A'
             
             debtToEquity = info.get('debtToEquity', None) # < 0.5
             debtToEquity = debtToEquity/100 if debtToEquity is not None else None
@@ -766,7 +785,7 @@ def process_ticker_quantitatives():
             if not per and country == 'KR': per = krx_per['PER'] # high per expects future growth but could be overvalued(=버블). 
                                                                        # low per could be undervalued or company in trouble, IT, 바이오 등 성장산업은 자연스레 per이 높게 형성
                                                                        # 저per -> 수익성 높거나 주가가 싸다 고pbr -> 자산은 적은데 시장에서 비싸게 봐준다
-            industry_per = krx_per['IND_PER'] if country == 'KR' else get_industry_per(industry, ticker)
+            industry_per = krx_per['IND_PER'] 
             industry_per = round(industry_per) if industry_per is not None else industry_per
             industry_roe = get_industry_roe(industry)
             industry_roa = get_industry_roa(industry)
@@ -799,8 +818,6 @@ def process_ticker_quantitatives():
                 long_momentum = None
             
 
-            
-
             cyclicality = 0
             # ACTIVATE THE CODE BELOW TO SCORE CYCLICALITY DEPENDING ON CURRENT MACROECON SITUATION
             # classification = classify_cyclicality(industry)
@@ -813,19 +830,16 @@ def process_ticker_quantitatives():
                 if industry is not None:
                     if any(kw.lower() in industry.lower() for kw in lee_kw_list):
                         cyclicality += 1
-                if cyclicality == 0:
-                    if sub_industry is not None:
-                        if any(kw.lower() in sub_industry.lower() for kw in lee_kw_list):
-                            cyclicality +=1
+
 
             quantitative_buffett_score = buffett_score(debtToEquity, currentRatio, pbr, per, industry_per, roe, industry_roe, roa, industry_roa, eps_growth, div_growth, icr) + momentum_score(short_momentum, mid_momentum, long_momentum) + cyclicality
             # quantitative_buffett_score = buffett_score(debtToEquity, currentRatio, pbr, per, industry_per, roe, industry_roe, roa, industry_roa, eps_growth, div_growth, icr) + cyclicality
 
-            rec = info.get('recommendationKey', None)
-            if country is None:
-                esg = get_esg_score(ticker)
-            else:
-                esg = ''
+            # rec = info.get('recommendationKey', None)
+            # if country is None:
+            #     esg = get_esg_score(ticker)
+            # else:
+            #     esg = ''
 
             ## FOR extra 10 score:::
             # MOAT -> sustainable competitive advantage that protects a company from its competitors, little to no competition, dominant market share, customer loyalty 
@@ -905,7 +919,104 @@ df = pl.DataFrame(data)
 df_sorted = df.sort("B-Score", descending = True)
 
 if country: 
-    df_sorted.to_pandas().to_excel(f"result_{country}_{formattedDate}.xlsx", index=False)
+
+    # Your DataFrame (replace with your actual one)
+    df = df_sorted.to_pandas()
+
+    filename = f"result_{country}_{formattedDate}.xlsx"
+
+    with pd.ExcelWriter(filename, engine='xlsxwriter') as writer:
+        df.to_excel(writer, index=False, sheet_name='Sheet1')
+        
+        workbook  = writer.book
+        worksheet = writer.sheets['Sheet1']
+        
+        # Locate "B-Score" column index (0-based)
+        bscore_col_idx = df.columns.get_loc('B-Score')
+        
+        # Define data range positions (Excel is 1-based)
+        start_row = 1  # first data row after header
+        end_row = len(df)  # last data row
+        
+        start_col = 0
+        end_col = len(df.columns) - 1
+        
+        # Helper: Convert zero-based column index to Excel letter (e.g. 0 -> A)
+        def xl_col(col_idx):
+            div = col_idx + 1
+            string = ""
+            while div > 0:
+                div, mod = div // 26, div % 26
+                if mod == 0:
+                    mod = 26
+                    div -= 1
+                string = chr(64 + mod) + string
+            return string
+        
+        # Full data range, e.g. "A2:F100"
+        first_cell = f"{xl_col(start_col)}{start_row + 1}"
+        last_cell = f"{xl_col(end_col)}{end_row + 1}"
+        data_range = f"{first_cell}:{last_cell}"
+        
+        # B-Score column letter (e.g. "B")
+        bscore_col_letter = xl_col(bscore_col_idx)
+        
+        # Apply a 3-color scale **to the entire data range**,
+        # but coloring based on the **B-Score** values in the same row.
+        #
+        # Excel conditional formatting cannot apply color gradients to
+        # a cell based on *another* cell’s value with color scales.
+        #
+        # So instead, apply the gradient directly on B-Score column,
+        # and for entire rows apply solid fills via formulas.
+        #
+        # 1) Gradient on B-Score column for smooth color scaling:
+        
+        bscore_range = f"{bscore_col_letter}{start_row + 1}:{bscore_col_letter}{end_row + 1}"
+        
+        worksheet.conditional_format(bscore_range, {
+            'type': '3_color_scale',
+            'min_type': 'min',    # dynamic min value in Excel
+            'mid_type': 'percentile',
+            'mid_value': 50,
+            'max_type': 'max',    # dynamic max value in Excel
+            'min_color': "#FF0000",  # red
+            'mid_color': "#FFFF00",  # yellow
+            'max_color': "#00FF00"   # green
+        })
+        
+        # 2) Optional: color entire rows with solid fills based on B-Score thresholds:
+        #    (adjust ranges to your needs)
+        
+        red_fill = workbook.add_format({'bg_color': '#FFC7CE'})
+        yellow_fill = workbook.add_format({'bg_color': '#FFEB9C'})
+        green_fill = workbook.add_format({'bg_color': '#C6EFCE'})
+        
+        for row_num in range(start_row, end_row + 1):
+            excel_row = row_num + 1
+            formula = f"${bscore_col_letter}{excel_row}"
+            
+            # Red fill < 40
+            worksheet.conditional_format(f"{xl_col(start_col)}{excel_row}:{xl_col(end_col)}{excel_row}", {
+                'type': 'formula',
+                'criteria': f"{formula} < 40",
+                'format': red_fill
+            })
+            # Yellow fill 40 <= B-Score < 70
+            worksheet.conditional_format(f"{xl_col(start_col)}{excel_row}:{xl_col(end_col)}{excel_row}", {
+                'type': 'formula',
+                'criteria': f"AND({formula} >= 40, {formula} < 70)",
+                'format': yellow_fill
+            })
+            # Green fill >= 70
+            worksheet.conditional_format(f"{xl_col(start_col)}{excel_row}:{xl_col(end_col)}{excel_row}", {
+                'type': 'formula',
+                'criteria': f"{formula} >= 70",
+                'format': green_fill
+            })
+
+    # Done — saved file with auto-adjusting gradient and row highlights!
+
 
 elif sp500:
     df_sorted.to_pandas().to_excel(f"s&p500_{formattedDate}.xlsx", index=False)

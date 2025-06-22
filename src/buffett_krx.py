@@ -35,7 +35,7 @@ PASSWORD = os.environ['EMAIL_PASSWORD']
 
 ################ PREDETERMINED FIELDS ###################
 
-NUM_THREADS = 20 #multithreading 
+NUM_THREADS = 5 #multithreading 
 CUTOFF = 0
 lee_kw_list = [ #2025 이재명 정부 수혜주
     "Semiconductors",
@@ -799,10 +799,7 @@ def process_ticker_quantitatives():
             debtToEquity = info.get('debtToEquity', None) # < 0.5
             debtToEquity = debtToEquity/100 if debtToEquity is not None else None
             currentRatio = info.get('currentRatio', None) # 초점: 회사의 단기 유동성, > 1.5 && < 2.5
-            if country == 'KR':
-                # krx_per = get_per_krx(ticker[:6])
-                krx_per = {'PBR':None, 'PER':None, 'IND_PER':None}
-
+            krx_per = get_per_krx(ticker[:6])
 
             pbr = info.get('priceToBook', None) # 초점: 자산가치, 저pbr종목은 저평가된 자산 가치주로 간주. 장기 수익률 설명력 높음 < 1.5 (=being traded at 1.5 times its book value (asset-liab))
             if not pbr and country == 'KR': pbr = krx_per['PBR'] # 주가가 그 기업의 자산가치에 비해 과대/과소평가되어 있다는 의미. 낮으면 자산활용력 부족

@@ -8,6 +8,7 @@ from pykrx import stock
 import datetime as dt
 import openpyxl
 import math
+import random
 from queue import Queue
 import threading
 import time
@@ -80,18 +81,161 @@ def get_per_krx(ticker):
             )
     return data
 
-import yfinance as yf
+  
+def get_per_krx(ticker):
+    url = f"https://finance.naver.com/item/main.naver?code={ticker[:6]}"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+        "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Referer": "https://finance.naver.com/",
+        "Connection": "keep-alive"
+    }
+    session = requests.Session()
+    session.headers.update(headers)
 
-def get_recent_quarter_roa(ticker):
-    stock = yf.Ticker(ticker)
     
-    # Try to get ROA from info dict (may or may not exist)
-    roa = stock.info.get('returnOnAssetsQuarterly')
-    if roa is not None:
-        return roa * 100  # convert to percentage
-    
+    try:
+        # 첫 요청으로 쿠키 확보 (홈페이지 접속)
+        session.get("https://finance.naver.com/", timeout=3)
+        res = session.get(url, timeout=3)
+        time.sleep(random.uniform(0.7, 1.8)) # 딜레이 필수
+        # Sleep for a random time to mimic human behavior
+        res.raise_for_status()  # Optional: raises an error for HTTP issues
+    except requests.exceptions.HTTPError as e:
+        if res.status_code == 401:
+            print("Unauthorized (401) - You might need to log in or use a valid token.")
+        else:
+            print(f"HTTP error occurred: {e} (Status Code: {res.status_code})")
+    except requests.RequestException as e:
+        print(f"Request failed: {e}")
 
-# Example:
-ticker = 'AAPL'
-roa = get_recent_quarter_roa(ticker)
-print(f"Recent quarterly ROA for {ticker}: {roa}%")
+    soup = BeautifulSoup(res.text, 'html.parser')
+    data = {'PBR': None, 'IND_PER': None, 'PER': None, 'DPS YoY': None, 'ROE': None, "IND_ROE": None, "OpInc": None}
+
+    aside = soup.select_one('div.aside_invest_info')
+    if aside:
+        rows = aside.select('table tr')
+        if rows:
+            for row in rows:
+                text = row.text
+                em = row.select_one('td em')
+                if not em:
+                    continue
+                per_text = em.text.strip()
+
+                if 'PBR' in text:
+                    data['PBR'] = float(per_text.replace(',', '')) if 'N/A' not in per_text else None
+
+                elif '동일업종 PER' in text:
+                    data['IND_PER'] = float(per_text.replace(',', '')) if 'N/A' not in per_text else None
+
+                elif 'PER' in text and 'EPS' in text and '추정PER' not in text:
+                    data['PER'] = float(per_text.replace(',', '')) if 'N/A' not in per_text else None
+    
+    # DPS 계산
+    ##############################################################
+    table = soup.select_one('div.section.cop_analysis table')
+    if table:
+        dividend = []
+        rows = table.select('tbody tr')
+        if rows:
+            for row in rows:
+                th = row.find('th')
+                if th and '주당배당금' in th.text:
+                    tds = row.select('td')
+                    if not tds:
+                        continue
+                    for td in tds:
+                        val = td.text.strip().replace(',', '').replace('원', '')
+                        try:
+                            dividend.append(float(val))
+                        except (ValueError, TypeError):
+                            dividend.append(None)
+                    break  # Found and processed the DPS row
+
+        # Filter out None values and take first 3
+        first_three = dividend[:3]
+        first_three = list(filter(lambda x: x is not None, first_three))
+
+        # Only compare if we have at least 2 values
+        if len(first_three) >= 2:
+            data['DPS YoY'] = all(
+                earlier <= later for earlier, later in zip(first_three, first_three[1:])
+            )
+    #Operating Income YoY
+    ##############################################################
+    table = soup.select_one('div.section.cop_analysis table')
+    if table:
+        opinc = []
+        rows = table.select('tbody tr')
+        if rows:
+            for row in rows:
+                th = row.find('th')
+                if th and '영업이익률' in th.text:
+                    tds = row.select('td')
+                    if not tds:
+                        continue
+                    for td in tds:
+                        val = td.text.strip().replace(',', '').replace('원', '')
+                        try:
+                            opinc.append(float(val))
+                        except (ValueError, TypeError):
+                            opinc.append(None)
+                    break  # Found and processed the DPS row
+
+        # Filter out None values and take first 3
+        first_three = opinc[:3]
+        first_three = list(filter(lambda x: x is not None, first_three))
+
+        # Only compare if we have at least 2 values
+        if len(first_three) >= 2:
+            data['OpInc'] = all(
+                earlier <= later for earlier, later in zip(first_three, first_three[1:])
+            )
+    ########################
+
+    # 동일업종 비교 테이블은 div.section.inner_sub > table.class="compare" 내부에 위치
+    compare_table = soup.select_one('div.section.trade_compare table')
+
+    if compare_table:
+        rows = compare_table.select('tr')
+        if rows:
+            for row in rows:
+                th = row.find('th')
+                if th and 'ROE' in th.text:
+                    tds = row.find_all('td')
+                    if not tds:
+                        continue  # No data to process
+
+                    # Extract text and clean %
+                    result = [td.text.strip().replace('%', '') for td in tds]
+
+                    # Parse company ROE
+                    try:
+                        if result and result[0] != '':
+                            data['ROE'] = float(result[0])
+                    except (ValueError, IndexError):
+                        data['ROE'] = None  # Redundant due to default, but explicit
+
+                    # Parse industry ROE values
+                    raw_industry_values = result[1:] if len(result) > 1 else []
+                    cleaned_values = []
+
+                    for item in raw_industry_values:
+                        try:
+                            if item != '':
+                                cleaned_values.append(float(item))
+                        except ValueError:
+                            continue
+
+                    cleaned_values = list(filter(lambda x: x >= -20, cleaned_values)) #clean outliers
+
+                    if cleaned_values:
+                        data['IND_ROE'] = sum(cleaned_values) / len(cleaned_values)
+
+                    break  # Only process the first ROE row
+
+    return data
+
+print(get_per_krx('064350')['OpInc'])

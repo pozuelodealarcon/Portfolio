@@ -1008,6 +1008,7 @@ def process_ticker_quantitatives():
                 "EPS성장률": eps_growth if isinstance(eps_growth, bool) else (f"{eps_growth:.2%}" if eps_growth is not None else None), #use this instead of operating income incrs for quart/annual 
                 # "배당 성장률": f"{div_growth:.2%}" if div_growth is not None else None,
                 "배당안정성": div_growth,
+                "영업이익률": operating_income_yoy,
                 "B-Score": round(quantitative_buffett_score, 1),
                 # 'Analyst Forecast': rec + '(' + upside + ')',
                 '모멘텀': "/".join(f"{m:.1%}" if m is not None else "None" for m in (short_momentum, mid_momentum, long_momentum)),
@@ -1084,6 +1085,7 @@ if country:
             '주가(전날대비)': 15,
             'EPS성장률': 10,
             '배당안정성': 10,
+            '영업이익률': 10,
             '모멘텀': 21,
         }
 

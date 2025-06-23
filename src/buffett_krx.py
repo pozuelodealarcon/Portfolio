@@ -38,7 +38,7 @@ fmp_key = os.environ['FMP_API_KEY']
 
 ################ PREDETERMINED FIELDS ###################
 
-NUM_THREADS = 5 #multithreading 
+NUM_THREADS = 2 #multithreading 
 CUTOFF = 0
 lee_kw_list = [ #2025 이재명 정부 예상 수혜주 
     "Software", #AI
@@ -99,6 +99,7 @@ def get_tickers_by_country(country: str, limit: int = 100, apikey: str = 'your_a
     'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
     'apikey': apikey,
     }
+    
     params = {
         'country': country,
         'limit': limit,
@@ -197,11 +198,11 @@ def buffett_score (de, cr, pbr, per, ind_per, roe, ind_roe, roa, ind_roa, eps, d
 def get_per_krx(ticker):
     url = f"https://finance.naver.com/item/main.naver?code={ticker[:6]}"
     headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-                      'AppleWebKit/537.36 (KHTML, like Gecko) '
-                      'Chrome/114.0.0.0 Safari/537.36',
-        'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
-        'Referer': 'https://finance.naver.com/'
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+        "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Referer": "https://finance.naver.com/",
+        "Connection": "keep-alive"
     }
     session = requests.Session()
     session.headers.update(headers)
@@ -211,6 +212,7 @@ def get_per_krx(ticker):
         # 첫 요청으로 쿠키 확보 (홈페이지 접속)
         session.get("https://finance.naver.com/", timeout=3)
         res = session.get(url, timeout=3)
+        time.sleep(random.uniform(0.7, 1.8)) # 딜레이 필수
         # Sleep for a random time to mimic human behavior
         res.raise_for_status()  # Optional: raises an error for HTTP issues
     except requests.exceptions.HTTPError as e:

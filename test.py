@@ -32,30 +32,18 @@ import os
 
 # Set your API key (use .env in production)
 FMP_API_KEY ='60ZVxqQtumzWp4LVs4PmJOjiNSnbGThu'
+import requests
+from bs4 import BeautifulSoup
 
-def get_dcf(ticker):
-    url = f"https://financialmodelingprep.com/api/v3/discounted-cash-flow/{ticker}?apikey={FMP_API_KEY}"
-    
-    try:
-        response = requests.get(url)
-        response.raise_for_status()
+url = 'https://finance.naver.com/item/coinfo.naver?code=012450&target=finsum_more'
+resp = requests.get(url)
+soup = BeautifulSoup(resp.text, 'html.parser')
 
-        data = response.json()
-        if not data:
-            print(f"No DCF data found for {ticker}")
-            return None
-        
-        dcf_data = data[0]  # API returns a list
-        print(f"Symbol: {dcf_data['symbol']}")
-        print(f"DCF Value: {dcf_data['dcf']}")
-        print(f"Stock Price: {dcf_data['Stock Price']}")
-        return dcf_data
-
-    except requests.exceptions.RequestException as e:
-        print(f"Request failed: {e}")
-        return None
-
-# Example usage
-if __name__ == "__main__":
-    ticker = "AAPL"  # You can change this
-    get_dcf(ticker)
+# '재무분석' 섹션의 테이블 tbody에서 TR 태그 중 ROA가 포함된 행 찾기
+tbody = soup.select_one('table.schtab > tbody')
+for tr in tbody.find_all('tr'):
+    cols = [td.get_text(strip=True) for td in tr.find_all('td')]
+    if cols and 'ROA' in cols[0]:
+        # 보통 컬럼 순서: index 1~n년도의 값들
+        roa_values = cols[1:]
+        print("ROA (%) values by year:", roa_values)

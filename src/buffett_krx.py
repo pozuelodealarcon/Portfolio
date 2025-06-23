@@ -121,7 +121,7 @@ def get_tickers_by_country(country: str, limit: int = 100, apikey: str = 'your_a
     return [item['symbol'] for item in data]
 
 # buffett's philosophy & my quant ideas
-def buffett_score (de, cr, pbr, per, ind_per, roe, ind_roe, roa, ind_roa, eps, div, icr):
+def buffett_score (de, cr, pbr, per, ind_per, roe, ind_roe, roa, ind_roa, eps, div, icr, opinc):
     score = 0
     #basic buffett-style filtering
     if de is not None and de <= 0.5 and de != 0:
@@ -145,7 +145,10 @@ def buffett_score (de, cr, pbr, per, ind_per, roe, ind_roe, roa, ind_roa, eps, d
     #         score +=0.75
     #     elif div >= 0.06:
     #         score +=0.5
-    if div:
+    if div: #3y yoy
+        score +=1
+    
+    if opinc: #3y yoy
         score +=1
 
     if eps is True:
@@ -224,7 +227,7 @@ def get_per_krx(ticker):
         print(f"Request failed: {e}")
 
     soup = BeautifulSoup(res.text, 'html.parser')
-    data = {'PBR': None, 'IND_PER': None, 'PER': None, 'DPS YoY': None, 'ROE': None, "IND_ROE": None}
+    data = {'PBR': None, 'IND_PER': None, 'PER': None, 'DPS YoY': None, 'ROE': None, "IND_ROE": None, "OpInc": None}
 
     aside = soup.select_one('div.aside_invest_info')
     if aside:
@@ -276,7 +279,36 @@ def get_per_krx(ticker):
             data['DPS YoY'] = all(
                 earlier <= later for earlier, later in zip(first_three, first_three[1:])
             )
+    #Operating Income YoY
+    ##############################################################
+    table = soup.select_one('div.section.cop_analysis table')
+    if table:
+        opinc = []
+        rows = table.select('tbody tr')
+        if rows:
+            for row in rows:
+                th = row.find('th')
+                if th and '영업이익률' in th.text:
+                    tds = row.select('td')
+                    if not tds:
+                        continue
+                    for td in tds:
+                        val = td.text.strip().replace(',', '').replace('원', '')
+                        try:
+                            opinc.append(float(val))
+                        except (ValueError, TypeError):
+                            opinc.append(None)
+                    break  # Found and processed the DPS row
 
+        # Filter out None values and take first 3
+        first_three = opinc[:3]
+        first_three = list(filter(lambda x: x is not None, first_three))
+
+        # Only compare if we have at least 2 values
+        if len(first_three) >= 2:
+            data['OpInc'] = all(
+                earlier <= later for earlier, later in zip(first_three, first_three[1:])
+            )
     ########################
 
     # 동일업종 비교 테이블은 div.section.inner_sub > table.class="compare" 내부에 위치
@@ -312,6 +344,8 @@ def get_per_krx(ticker):
                                 cleaned_values.append(float(item))
                         except ValueError:
                             continue
+
+                    cleaned_values = list(filter(lambda x: x >= -20, cleaned_values)) #clean outliers
 
                     if cleaned_values:
                         data['IND_ROE'] = sum(cleaned_values) / len(cleaned_values)
@@ -912,7 +946,7 @@ def process_ticker_quantitatives():
             # eps_growth_quart = has_stable_eps_growth_quarterly(ticker) 
             div_growth = krx_per['DPS YoY'] # buffett looks for stable dividend growth for at least 10 years
             # bvps_growth = bvps_undervalued(info.get('bookValue', None), currentPrice)
-            
+            operating_income_yoy = krx_per['OpInc']
             icr = get_interest_coverage_ratio(ticker)
             
             try:
@@ -944,7 +978,7 @@ def process_ticker_quantitatives():
                     cyclicality += 1
 
 
-            quantitative_buffett_score = buffett_score(debtToEquity, currentRatio, pbr, per, industry_per, roe, industry_roe, roa, industry_roa, eps_growth, div_growth, icr) + momentum_score(short_momentum, mid_momentum, long_momentum) + cyclicality
+            quantitative_buffett_score = buffett_score(debtToEquity, currentRatio, pbr, per, industry_per, roe, industry_roe, roa, industry_roa, eps_growth, div_growth, icr, operating_income_yoy) + momentum_score(short_momentum, mid_momentum, long_momentum) + cyclicality
             # quantitative_buffett_score = buffett_score(debtToEquity, currentRatio, pbr, per, industry_per, roe, industry_roe, roa, industry_roa, eps_growth, div_growth, icr) + cyclicality
 
             # rec = info.get('recommendationKey', None)

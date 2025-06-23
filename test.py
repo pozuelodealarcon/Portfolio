@@ -18,32 +18,80 @@ from urllib.request import urlopen
 import smtplib
 from email.message import EmailMessage
 from email.headerregistry import Address
+def get_per_krx(ticker):
+    url = f"https://finance.naver.com/item/main.naver?code={ticker[:6]}"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+        "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Referer": "https://finance.naver.com/",
+        "Connection": "keep-alive"
+    }
+    session = requests.Session()
+    session.headers.update(headers)
 
-import pandas as pd
-import requests
-from io import StringIO
-from datetime import datetime
-import requests
-from bs4 import BeautifulSoup
-import requests
-from bs4 import BeautifulSoup
-import requests
-import os
+    
+    try:
+        # 첫 요청으로 쿠키 확보 (홈페이지 접속)
+        session.get("https://finance.naver.com/", timeout=3)
+        res = session.get(url, timeout=3)
+        # Sleep for a random time to mimic human behavior
+        res.raise_for_status()  # Optional: raises an error for HTTP issues
+    except requests.exceptions.HTTPError as e:
+        if res.status_code == 401:
+            print("Unauthorized (401) - You might need to log in or use a valid token.")
+        else:
+            print(f"HTTP error occurred: {e} (Status Code: {res.status_code})")
+    except requests.RequestException as e:
+        print(f"Request failed: {e}")
 
-# Set your API key (use .env in production)
-FMP_API_KEY ='60ZVxqQtumzWp4LVs4PmJOjiNSnbGThu'
-import requests
-from bs4 import BeautifulSoup
+    soup = BeautifulSoup(res.text, 'html.parser')
+    data = {'PBR': None, 'IND_PER': None, 'PER': None, 'DPS YoY': None, 'ROE': None, "IND_ROE": None, "OpInc": None}
 
-url = 'https://finance.naver.com/item/coinfo.naver?code=012450&target=finsum_more'
-resp = requests.get(url)
-soup = BeautifulSoup(resp.text, 'html.parser')
 
-# '재무분석' 섹션의 테이블 tbody에서 TR 태그 중 ROA가 포함된 행 찾기
-tbody = soup.select_one('table.schtab > tbody')
-for tr in tbody.find_all('tr'):
-    cols = [td.get_text(strip=True) for td in tr.find_all('td')]
-    if cols and 'ROA' in cols[0]:
-        # 보통 컬럼 순서: index 1~n년도의 값들
-        roa_values = cols[1:]
-        print("ROA (%) values by year:", roa_values)
+    ##############################################################
+    table = soup.select_one('div.section.cop_analysis table')
+    if table:
+        opinc = []
+        rows = table.select('tbody tr')
+        if rows:
+            for row in rows:
+                th = row.find('th')
+                if th and '영업이익률' in th.text:
+                    tds = row.select('td')
+                    if not tds:
+                        continue
+                    for td in tds:
+                        val = td.text.strip().replace(',', '').replace('원', '')
+                        try:
+                            opinc.append(float(val))
+                        except (ValueError, TypeError):
+                            opinc.append(None)
+                    break  # Found and processed the DPS row
+
+        # Filter out None values and take first 3
+        first_three = opinc[:3]
+        first_three = list(filter(lambda x: x is not None, first_three))
+
+        # Only compare if we have at least 2 values
+        if len(first_three) >= 2:
+            data['OpInc'] = all(
+                earlier <= later for earlier, later in zip(first_three, first_three[1:])
+            )
+    return data
+
+import yfinance as yf
+
+def get_recent_quarter_roa(ticker):
+    stock = yf.Ticker(ticker)
+    
+    # Try to get ROA from info dict (may or may not exist)
+    roa = stock.info.get('returnOnAssetsQuarterly')
+    if roa is not None:
+        return roa * 100  # convert to percentage
+    
+
+# Example:
+ticker = 'AAPL'
+roa = get_recent_quarter_roa(ticker)
+print(f"Recent quarterly ROA for {ticker}: {roa}%")

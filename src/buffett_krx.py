@@ -1075,7 +1075,7 @@ df["B-Score"] = (df["B-Score"] / max_b_score) * 100
 # Round the B-Score values to 1 decimal place
 df["B-Score"] = df["B-Score"].round(0)
 
-df.sort_values(by='B-Score', ascending=False)
+df = df.sort_values(by='B-Score', ascending=False)
 
 if country: 
 

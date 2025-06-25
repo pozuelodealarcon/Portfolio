@@ -1188,7 +1188,7 @@ time.sleep(3)
 
 excel_path = f'result_KR_{formattedDate}.xlsx'
 
-recipients = ['chs_3411@naver.com', 'chschj@terpmail.umd.edu', 'eljm2080@gmail.com', 'hyungsukchoi3411@gmail.com']
+recipients = ['chs_3411@naver.com', 'eljm2080@gmail.com', 'hyungsukchoi3411@gmail.com']
 
 msg = EmailMessage()
 msg['Subject'] = f'{formattedDate} 퀀트 분석자료'

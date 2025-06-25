@@ -50,9 +50,7 @@ lee_kw_list = [ #2025 이재명 정부 예상 수혜주
     "Wind",
     "Plant",
     "Construction",
-    "Aerospace & Defense",
     "Biotechnology",
-    "Railroads",
 ]
 
 country = 'KR'
@@ -121,7 +119,7 @@ def get_tickers_by_country(country: str, limit: int = 100, apikey: str = 'your_a
     return [item['symbol'] for item in data]
 
 # buffett's philosophy & my quant ideas
-def buffett_score (de, cr, pbr, per, ind_per, roe, ind_roe, roa, ind_roa, eps, div, icr, opinc):
+def buffett_score (de, cr, pbr, per, ind_per, roe, ind_roe, roa, ind_roa, eps, div, icr, opinc_yoy, opinc_qoq):
     score = 0
     #basic buffett-style filtering
     if de is not None and de <= 0.5 and de != 0:
@@ -130,12 +128,8 @@ def buffett_score (de, cr, pbr, per, ind_per, roe, ind_roe, roa, ind_roa, eps, d
         score +=1
 
     if pbr is not None and (pbr <= 1.5 and pbr != 0):
-        score +=1
-        # 2. 저PBR + 고ROA 전략 (가치 + 자산 활용 효율)
-        # 아이디어: 자산 대비 효율적으로 수익을 내는 기업 중 저평가 기업 선별
-        if None not in {roa, cr}:
-            if pbr <= 1.0 and roa >= ind_roa and cr >= 1.5:
-                score +=1
+        score +=2
+        
 
     # 고배당주 수혜 예상
     # if div is not None: #cagr = +4~6-10%
@@ -148,8 +142,10 @@ def buffett_score (de, cr, pbr, per, ind_per, roe, ind_roe, roa, ind_roa, eps, d
     if div: #3y yoy
         score +=1
     
-    if opinc: #3y yoy
+    if opinc_yoy: #3y yoy
         score +=1
+    if opinc_qoq: #5q qoq
+        score +=0.5
 
     if eps is True:
         score += 1
@@ -188,13 +184,13 @@ def buffett_score (de, cr, pbr, per, ind_per, roe, ind_roe, roa, ind_roa, eps, d
         # 아이디어: 저평가된 기업 중 자본수익률이 높은 우량주 발굴
         if roe > ind_roe and per != 0:
             if per < ind_per:
-                score += 1.5  # strong fundamentals and value
-                if roa > ind_roa:
-                    score += 0.5
+                score += 2  # strong fundamentals and value
+                # if roa > ind_roa:
+                #     score += 0.5
             elif per <= 1.2 * ind_per:
-                score += 0.75  # great business, slightly overvalued (still reasonable)
-                if roa > ind_roa:
-                    score += 0.25
+                score += 1  # great business, slightly overvalued (still reasonable)
+                # if roa > ind_roa:
+                #     score += 0.25
          
     return score
     
@@ -227,7 +223,7 @@ def get_per_krx(ticker):
         print(f"Request failed: {e}")
 
     soup = BeautifulSoup(res.text, 'html.parser')
-    data = {'PBR': None, 'IND_PER': None, 'PER': None, 'DPS YoY': None, 'ROE': None, "IND_ROE": None, "OpInc": None}
+    data = {'PBR': None, 'IND_PER': None, 'PER': None, 'DPS YoY': None, 'ROE': None, "IND_ROE": None, "OpIncY": None, "OpIncQ": None}
 
     aside = soup.select_one('div.aside_invest_info')
     if aside:
@@ -301,13 +297,20 @@ def get_per_krx(ticker):
                     break  # Found and processed the DPS row
 
         # Filter out None values and take first 3
-        first_three = opinc[:3]
-        first_three = list(filter(lambda x: x is not None, first_three))
+        yoy = opinc[:3]
+        yoy = list(filter(lambda x: x is not None, yoy))
+
+        qoq = opinc[4:9]
+        qoq = list(filter(lambda x: x is not None, qoq))
 
         # Only compare if we have at least 2 values
-        if len(first_three) >= 2:
-            data['OpInc'] = all(
-                earlier <= later for earlier, later in zip(first_three, first_three[1:])
+        if len(yoy) >= 2:
+            data['OpIncY'] = all(
+                earlier <= later for earlier, later in zip(yoy, yoy[1:])
+            )
+        if len(qoq) >= 2:
+            data['OpIncQ'] = all(
+                earlier <= later for earlier, later in zip(qoq, qoq[1:])
             )
     ########################
 
@@ -466,8 +469,7 @@ def has_stable_eps_growth_cagr(ticker):
             if len(eps_list) == 0:
                 return None
             if eps_start <= 0 or eps_end < 0:
-                tolerance = 0.9
-                return all(earlier * tolerance <= later for earlier, later in zip(eps_list, eps_list[1:]))
+                return all(earlier <= later for earlier, later in zip(eps_list, eps_list[1:]))
             else:
                 cagr = ((eps_end / eps_start) ** (1/len(eps_list))) - 1
                 return cagr
@@ -946,7 +948,8 @@ def process_ticker_quantitatives():
             # eps_growth_quart = has_stable_eps_growth_quarterly(ticker) 
             div_growth = krx_per['DPS YoY'] # buffett looks for stable dividend growth for at least 10 years
             # bvps_growth = bvps_undervalued(info.get('bookValue', None), currentPrice)
-            operating_income_yoy = krx_per['OpInc']
+            operating_income_yoy = krx_per['OpIncY']
+            operating_income_qoq = krx_per['OpIncQ']
             icr = get_interest_coverage_ratio(ticker)
             
             try:
@@ -978,7 +981,7 @@ def process_ticker_quantitatives():
                     cyclicality += 1
 
 
-            quantitative_buffett_score = buffett_score(debtToEquity, currentRatio, pbr, per, industry_per, roe, industry_roe, roa, industry_roa, eps_growth, div_growth, icr, operating_income_yoy) + momentum_score(short_momentum, mid_momentum, long_momentum) + cyclicality
+            quantitative_buffett_score = buffett_score(debtToEquity, currentRatio, pbr, per, industry_per, roe, industry_roe, roa, industry_roa, eps_growth, div_growth, icr, operating_income_yoy, operating_income_qoq) + momentum_score(short_momentum, mid_momentum, long_momentum) + cyclicality
             # quantitative_buffett_score = buffett_score(debtToEquity, currentRatio, pbr, per, industry_per, roe, industry_roe, roa, industry_roa, eps_growth, div_growth, icr) + cyclicality
 
             # rec = info.get('recommendationKey', None)
@@ -1002,7 +1005,7 @@ def process_ticker_quantitatives():
                 "유동비율": round(currentRatio, 2) if currentRatio is not None else None,
                 "PBR": round(pbr,2) if pbr is not None else None,
                 "PER": f'{round(per,2)} ({industry_per})' if per is not None else None,
-                "ROE": str(round(roe,2)) + '%' if roe is not None else None,
+                "ROE": f'{(round(roe,2))}% ({round(industry_roe)})' if None not in {roe, industry_roe} else None,
                 "ROA": str(round(roa*100,2)) + '%' if roa is not None else None,
                 "ICR": icr,
                 "EPS성장률": eps_growth if isinstance(eps_growth, bool) else (f"{eps_growth:.2%}" if eps_growth is not None else None), #use this instead of operating income incrs for quart/annual 
@@ -1063,6 +1066,16 @@ q.join()
 
 df = pl.DataFrame(data)
 # df.dropna(subset=["D/E", "CR", "P/B", "ROE", "ROA", "PER", "ICR"], inplace = True)
+
+# Find the maximum B-Score
+max_b_score = df["B-Score"].max()
+
+# Scale the B-Score column such that the max value becomes 100
+df["B-Score"] = (df["B-Score"] / max_b_score) * 100
+
+
+# Round the B-Score values to 1 decimal place
+df["B-Score"] = df["B-Score"].round(0)
 
 df_sorted = df.sort("B-Score", descending = True)
 
@@ -1181,7 +1194,7 @@ msg = EmailMessage()
 msg['Subject'] = f'{formattedDate} 퀀트 분석자료'
 msg['From'] = Address(display_name='Hyungsuk Choi', addr_spec=EMAIL)
 msg['To'] = ''  # or '' or a single address to satisfy the 'To' header requirement
-msg.set_content(f'안녕하십니까?\n\n{formattedDate}기준 시가총액 상위 {limit}개 상장기업의 퀀트 분석자료를 보내드립니다. 각 기업의 종합 점수는 ‘B-Score’ 열을 참고해 주시기 바라며, 0점 미만의 기업은 제외되었습니다.\n\n본 자료는 워렌 버핏의 투자 철학에 기반하여 기업의 재무 건전성을 평가하기 위해 작성되었으며, 투자 판단 시에는 본 분석 외에도 별도의 면밀한 정성적 검토를 권장합니다.\n\n이용해주셔서 감사합니다.')
+msg.set_content(f'안녕하십니까?\n\n{formattedDate}기준 시가총액 상위 {limit}개 상장기업의 퀀트 분석자료를 보내드립니다. 각 기업의 종합 점수는 ‘B-Score’ 열을 참고해 주시기 바라며, 0점 미만의 기업은 제외되었습니다.\n\n본 자료는 워렌 버핏의 투자 철학에 기반하여 기업의 재무 건전성을 평가하기 위해 작성되었으며, 투자 판단 시에는 본 분석 외에도 별도의 면밀한 정성적 검토를 권장합니다.\n\n해당 메일은 매주 평일 오후 5시 자동으로 발송됩니다.\n\n이용해주셔서 감사합니다.')
 
 with open(excel_path, 'rb') as f:
     msg.add_attachment(f.read(), maintype='application',

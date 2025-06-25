@@ -1064,24 +1064,20 @@ for t in threads:
 
 q.join()
 
-df = pl.DataFrame(data)
+df = pd.DataFrame(data)
 # df.dropna(subset=["D/E", "CR", "P/B", "ROE", "ROA", "PER", "ICR"], inplace = True)
 
 # Find the maximum B-Score
 max_b_score = df["B-Score"].max()
 
-# Scale the B-Score column such that the max value becomes 100
 df["B-Score"] = (df["B-Score"] / max_b_score) * 100
-
 
 # Round the B-Score values to 1 decimal place
 df["B-Score"] = df["B-Score"].round(0)
 
-df_sorted = df.sort("B-Score", descending = True)
+df.sort_values(by='B-Score', ascending=False)
 
 if country: 
-
-    df = df_sorted.to_pandas()
 
     filename = f"result_{country}_{formattedDate}.xlsx"
 

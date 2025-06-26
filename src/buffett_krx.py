@@ -752,7 +752,7 @@ filtered = list(filter(lambda x: isinstance(x, str), raw_tickers))
 
 
 # block of code that gets rid of preferred stocks
-prohibited = {'008560.KS', '003550.KS', '048260.KQ', '000060.KS', '091990.KQ', '066970.KQ', '022100.KQ', '010145.KS', '003410.KS'}
+prohibited = {'008560.KS', '003550.KS', '048260.KQ', '000060.KS', '091990.KQ', '066970.KQ', '022100.KQ', '010145.KS', '003410.KS', '086520.KQ', '087010.KQ', '000250.KQ'}
 def keep_ticker(t):
     return len(t) > 5 and t[5] == '0' and t not in prohibited
 
@@ -995,23 +995,29 @@ def process_ticker_quantitatives():
             # KEY: sustainable && long-term durability
             # ex) brand power(Coca-Cola), network effect(Facebook, Visa), cost advantage(Walmart, Costco), high switching costs(Adobe),
             # regulatory advantage(gov protection), patients(Pfizer, Intel)
+            
+            roe_print = f'{(round(roe,1))}%' if not roe else 'N/A'
+            roe_print += f'({round(industry_roe)})' if not industry_roe else ''
+
+            per_print = f'{round(per,2)}' if not per else 'N/A'
+            per_print += f'({industry_per})' if not industry_per else '',
 
             result = {
                 "티커": ticker[:6] if country == 'KR' else ticker,
                 "종목": name,
                 "업종": industry,
                 "주가(전날대비)": f"{currentPrice:,.0f}" + percentage_change if country == 'KR' or country == 'JP' else f"{currentPrice:,.2f}" + percentage_change,
-                "부채비율": round(debtToEquity, 2) if debtToEquity is not None else None,
-                "유동비율": round(currentRatio, 2) if currentRatio is not None else None,
+                "부채비율": round(debtToEquity, 2) if debtToEquity is not None else 'N/A',
+                "유동비율": round(currentRatio, 2) if currentRatio is not None else 'N/A',
                 "PBR": round(pbr,2) if pbr is not None else None,
-                "PER": f'{round(per,2)} ({industry_per})' if per is not None else None,
-                "ROE": f'{(round(roe,2))}% ({round(industry_roe)})' if None not in {roe, industry_roe} else None,
-                "ROA": str(round(roa*100,2)) + '%' if roa is not None else None,
-                "ICR": icr,
-                "EPS성장률": eps_growth if isinstance(eps_growth, bool) else (f"{eps_growth:.2%}" if eps_growth is not None else None), #use this instead of operating income incrs for quart/annual 
+                "PER(업종)": per_print,
+                "ROE(업종)": roe_print,
+                "ROA": str(round(roa*100,1)) + '%' if roa is not None else 'N/A',
+                "ICR": icr if not icr else 'N/A',
+                "EPS성장률": eps_growth if isinstance(eps_growth, bool) else (f"{eps_growth:.2%}" if eps_growth is not None else 'N/A'), #use this instead of operating income incrs for quart/annual 
                 # "배당 성장률": f"{div_growth:.2%}" if div_growth is not None else None,
-                "배당안정성": div_growth,
-                "영업이익률": operating_income_yoy,
+                "배당안정성": div_growth if not div_growth else 'N/A',
+                "영업이익률": operating_income_yoy if not operating_income_yoy else 'N/A',
                 "B-Score": round(quantitative_buffett_score, 1),
                 # 'Analyst Forecast': rec + '(' + upside + ')',
                 '모멘텀': "/".join(f"{m:.1%}" if m is not None else "None" for m in (short_momentum, mid_momentum, long_momentum)),
@@ -1148,36 +1154,11 @@ if country:
             'mid_color': "#FFFF00",
             'max_color': "#00FF00"
         })
-        
-        # 3) Row fills based on B-Score ranges
-        red_fill = workbook.add_format({'bg_color': '#FFB347'})
-        yellow_fill = workbook.add_format({'bg_color': '#FFEB9C'})
-        green_fill = workbook.add_format({'bg_color': '#C6EFCE'})
-        
-        for row_num in range(start_row + 1, end_row + 1):
-            excel_row = row_num + 1
-            formula = f"${bscore_col_letter}{excel_row}"
-            
-            worksheet.conditional_format(f"{xl_col(start_col)}{excel_row}:{xl_col(end_col)}{excel_row}", {
-                'type': 'formula',
-                'criteria': f"{formula} < 4",
-                'format': red_fill
-            })
-            worksheet.conditional_format(f"{xl_col(start_col)}{excel_row}:{xl_col(end_col)}{excel_row}", {
-                'type': 'formula',
-                'criteria': f"AND({formula} >= 4, {formula} < 6)",
-                'format': yellow_fill
-            })
-            worksheet.conditional_format(f"{xl_col(start_col)}{excel_row}:{xl_col(end_col)}{excel_row}", {
-                'type': 'formula',
-                'criteria': f"{formula} >= 6",
-                'format': green_fill
-            })
 
 elif sp500:
-    df_sorted.to_pandas().to_excel(f"s&p500_{formattedDate}.xlsx", index=False)
+    df.to_excel(f"s&p500_{formattedDate}.xlsx", index=False)
 else:
-    df_sorted.to_pandas().to_excel(f"nasdaq100_{formattedDate}.xlsx", index=False)
+    df.to_excel(f"nasdaq100_{formattedDate}.xlsx", index=False)
 
 ##########################################################################################################
 time.sleep(3)

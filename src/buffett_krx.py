@@ -997,7 +997,7 @@ def process_ticker_quantitatives():
             # ex) brand power(Coca-Cola), network effect(Facebook, Visa), cost advantage(Walmart, Costco), high switching costs(Adobe),
             # regulatory advantage(gov protection), patients(Pfizer, Intel)
             
-            roe_print = f'{(round(roe,1))}%' if not roe else 'N/A'
+            roe_print = f'{round(roe,1)}%' if not roe else 'N/A'
             roe_print += f'({round(industry_roe)})' if not industry_roe else ''
 
             per_print = f'{round(per,2)}' if not per else 'N/A'

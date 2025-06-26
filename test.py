@@ -19,223 +19,84 @@ from urllib.request import urlopen
 import smtplib
 from email.message import EmailMessage
 from email.headerregistry import Address
-def get_per_krx(ticker):
-    url = f"https://finance.naver.com/item/main.naver?code={ticker[:6]}"
+import pandas as pd
+
+import pandas as pd
+import requests
+import pandas as pd
+import requests
+
+def get_date_str(x):
+    return x.split('(')[0].strip()
+
+def get_finstate_naver(code, fin_type='0', freq_type='0'):
+    url = f'https://companyinfo.stock.naver.com/v1/company/ajax/cF1001.aspx?cmp_cd={code}&fin_typ={fin_type}&freq_typ={freq_type}'
+    
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-        "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-        "Referer": "https://finance.naver.com/",
-        "Connection": "keep-alive"
+        'User-Agent': 'Mozilla/5.0',
+        'Referer': f'https://finance.naver.com/item/main.nhn?code={code}'
     }
-    session = requests.Session()
-    session.headers.update(headers)
-
     
+    resp = requests.get(url, headers=headers)
+    resp.encoding = 'utf-8'
+    
+    if resp.status_code != 200:
+        print(f"Request failed with status code {resp.status_code}")
+        return None
+
     try:
-        # 첫 요청으로 쿠키 확보 (홈페이지 접속)
-        session.get("https://finance.naver.com/", timeout=3)
-        res = session.get(url, timeout=3)
-        # Sleep for a random time to mimic human behavior
-        res.raise_for_status()  # Optional: raises an error for HTTP issues
-    except requests.exceptions.HTTPError as e:
-        if res.status_code == 401:
-            print("Unauthorized (401) - You might need to log in or use a valid token.")
-        else:
-            print(f"HTTP error occurred: {e} (Status Code: {res.status_code})")
-    except requests.RequestException as e:
-        print(f"Request failed: {e}")
-
-    soup = BeautifulSoup(res.text, 'html.parser')
-    data = {'PBR': None, 'IND_PER': None, 'PER': None, 'DPS YoY': None, 'ROE': None, "IND_ROE": None, "OpInc": None}
-
-
-    ##############################################################
-    table = soup.select_one('div.section.cop_analysis table')
-    if table:
-        opinc = []
-        rows = table.select('tbody tr')
-        if rows:
-            for row in rows:
-                th = row.find('th')
-                if th and '영업이익률' in th.text:
-                    tds = row.select('td')
-                    if not tds:
-                        continue
-                    for td in tds:
-                        val = td.text.strip().replace(',', '').replace('원', '')
-                        try:
-                            opinc.append(float(val))
-                        except (ValueError, TypeError):
-                            opinc.append(None)
-                    break  # Found and processed the DPS row
-
-        # Filter out None values and take first 3
-        first_three = opinc[:3]
-        first_three = list(filter(lambda x: x is not None, first_three))
-
-        # Only compare if we have at least 2 values
-        if len(first_three) >= 2:
-            data['OpInc'] = all(
-                earlier <= later for earlier, later in zip(first_three, first_three[1:])
-            )
-    return data
-
-  
-def get_per_krx(ticker):
-    url = f"https://finance.naver.com/item/main.naver?code={ticker[:6]}"
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-        "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-        "Referer": "https://finance.naver.com/",
-        "Connection": "keep-alive"
-    }
-    session = requests.Session()
-    session.headers.update(headers)
-
+        dfs = pd.read_html(resp.text)
+    except Exception as e:
+        print(f"Error parsing HTML: {e}")
+        return None
     
+    if len(dfs) == 0:
+        print("No table found in the HTML response.")
+        return None
+    
+    df = dfs[0]
+    if df.empty or '해당 데이터가 존재하지 않습니다' in df.iloc[0,0]:
+        print("No financial data found.")
+        return None
+    
+    # 컬럼 이름 처리 (multiindex -> 단일 index)
+    cols = []
+    for col in df.columns:
+        if isinstance(col, tuple):
+            # 보통 ('', '2025.12(예상)') 이런 형태
+            cols.append(get_date_str(col[1]))
+        else:
+            cols.append(col)
+    
+    cols[0] = 'date'
+    df.columns = cols
+    df.set_index('date', inplace=True)
+    
+    # 데이터 전치
+    df_t = df.T
+    
+    # 인덱스를 datetime 형으로 변환 시도
     try:
-        # 첫 요청으로 쿠키 확보 (홈페이지 접속)
-        session.get("https://finance.naver.com/", timeout=3)
-        res = session.get(url, timeout=3)
-        time.sleep(random.uniform(0.7, 1.8)) # 딜레이 필수
-        # Sleep for a random time to mimic human behavior
-        res.raise_for_status()  # Optional: raises an error for HTTP issues
-    except requests.exceptions.HTTPError as e:
-        if res.status_code == 401:
-            print("Unauthorized (401) - You might need to log in or use a valid token.")
-        else:
-            print(f"HTTP error occurred: {e} (Status Code: {res.status_code})")
-    except requests.RequestException as e:
-        print(f"Request failed: {e}")
-
-    soup = BeautifulSoup(res.text, 'html.parser')
-    data = {'PBR': None, 'IND_PER': None, 'PER': None, 'DPS YoY': None, 'ROE': None, "IND_ROE": None, "OpInc": None}
-
-    aside = soup.select_one('div.aside_invest_info')
-    if aside:
-        rows = aside.select('table tr')
-        if rows:
-            for row in rows:
-                text = row.text
-                em = row.select_one('td em')
-                if not em:
-                    continue
-                per_text = em.text.strip()
-
-                if 'PBR' in text:
-                    data['PBR'] = float(per_text.replace(',', '')) if 'N/A' not in per_text else None
-
-                elif '동일업종 PER' in text:
-                    data['IND_PER'] = float(per_text.replace(',', '')) if 'N/A' not in per_text else None
-
-                elif 'PER' in text and 'EPS' in text and '추정PER' not in text:
-                    data['PER'] = float(per_text.replace(',', '')) if 'N/A' not in per_text else None
+        df_t.index = pd.to_datetime(df_t.index)
+    except:
+        pass
     
-    # DPS 계산
-    ##############################################################
-    table = soup.select_one('div.section.cop_analysis table')
-    if table:
-        dividend = []
-        rows = table.select('tbody tr')
-        if rows:
-            for row in rows:
-                th = row.find('th')
-                if th and '주당배당금' in th.text:
-                    tds = row.select('td')
-                    if not tds:
-                        continue
-                    for td in tds:
-                        val = td.text.strip().replace(',', '').replace('원', '')
-                        try:
-                            dividend.append(float(val))
-                        except (ValueError, TypeError):
-                            dividend.append(None)
-                    break  # Found and processed the DPS row
+    # NaT 제거
+    df_t = df_t[pd.notnull(df_t.index)]
+    
+    # 컬럼명 일부 수정
+    df_t.rename(columns={'유보율': '자본유보율'}, inplace=True)
+    df_t.rename(columns={'현금배당성향': '현금배당성향(%)'}, inplace=True)
+    
+    return df_t
 
-        # Filter out None values and take first 3
-        first_three = dividend[:3]
-        first_three = list(filter(lambda x: x is not None, first_three))
+# 테스트
+code = '009830'  # 대신 원하는 종목코드 입력 가능
+fin_type = '1'   # 손익계산서
+freq_type = '0'  # 연간
 
-        # Only compare if we have at least 2 values
-        if len(first_three) >= 2:
-            data['DPS YoY'] = all(
-                earlier <= later for earlier, later in zip(first_three, first_three[1:])
-            )
-    #Operating Income YoY
-    ##############################################################
-    table = soup.select_one('div.section.cop_analysis table')
-    if table:
-        opinc = []
-        rows = table.select('tbody tr')
-        if rows:
-            for row in rows:
-                th = row.find('th')
-                if th and '영업이익률' in th.text:
-                    tds = row.select('td')
-                    if not tds:
-                        continue
-                    for td in tds:
-                        val = td.text.strip().replace(',', '').replace('원', '')
-                        try:
-                            opinc.append(float(val))
-                        except (ValueError, TypeError):
-                            opinc.append(None)
-                    break  # Found and processed the DPS row
-
-        # Filter out None values and take first 3
-        first_three = opinc[:3]
-        first_three = list(filter(lambda x: x is not None, first_three))
-
-        # Only compare if we have at least 2 values
-        if len(first_three) >= 2:
-            data['OpInc'] = all(
-                earlier <= later for earlier, later in zip(first_three, first_three[1:])
-            )
-    ########################
-
-    # 동일업종 비교 테이블은 div.section.inner_sub > table.class="compare" 내부에 위치
-    compare_table = soup.select_one('div.section.trade_compare table')
-
-    if compare_table:
-        rows = compare_table.select('tr')
-        if rows:
-            for row in rows:
-                th = row.find('th')
-                if th and 'ROE' in th.text:
-                    tds = row.find_all('td')
-                    if not tds:
-                        continue  # No data to process
-
-                    # Extract text and clean %
-                    result = [td.text.strip().replace('%', '') for td in tds]
-
-                    # Parse company ROE
-                    try:
-                        if result and result[0] != '':
-                            data['ROE'] = float(result[0])
-                    except (ValueError, IndexError):
-                        data['ROE'] = None  # Redundant due to default, but explicit
-
-                    # Parse industry ROE values
-                    raw_industry_values = result[1:] if len(result) > 1 else []
-                    cleaned_values = []
-
-                    for item in raw_industry_values:
-                        try:
-                            if item != '':
-                                cleaned_values.append(float(item))
-                        except ValueError:
-                            continue
-
-                    cleaned_values = list(filter(lambda x: x >= -20, cleaned_values)) #clean outliers
-
-                    if cleaned_values:
-                        data['IND_ROE'] = sum(cleaned_values) / len(cleaned_values)
-
-                    break  # Only process the first ROE row
-
-    return data
-
-print(get_per_krx('064350')['OpInc'])
+df_fin = get_finstate_naver(code, fin_type, freq_type)
+if df_fin is not None:
+    print(df_fin.loc['2025'])
+else:
+    print("재무 데이터 없음")

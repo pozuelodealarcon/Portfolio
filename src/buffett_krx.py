@@ -23,11 +23,6 @@ import smtplib
 from email.message import EmailMessage
 from email.headerregistry import Address
 
-EMAIL = os.environ['EMAIL_ADDRESS']
-PASSWORD = os.environ['EMAIL_PASSWORD']
-# Get the API key
-fmp_key = os.environ['FMP_API_KEY']
-
 
 ################ DEPENDENCIES ###########################
 
@@ -37,6 +32,12 @@ fmp_key = os.environ['FMP_API_KEY']
 
 
 ################ PREDETERMINED FIELDS ###################
+
+EMAIL = os.environ['EMAIL_ADDRESS']
+PASSWORD = os.environ['EMAIL_PASSWORD']
+# Get the API key
+fmp_key = os.environ['FMP_API_KEY']
+recipients = ['chs_3411@naver.com', 'eljm2080@gmail.com', 'hyungsukchoi3411@gmail.com']
 
 NUM_THREADS = 2 #multithreading 
 CUTOFF = 0
@@ -61,7 +62,7 @@ sp500 = True
 
 
 
-print('May take up to few minutes...')
+# print('May take up to few minutes...')
 
 today = dt.datetime.today().weekday()
 weekend = today - 4 # returns 1 for saturday, 2 for sunday
@@ -88,7 +89,7 @@ def get_tickers(country: str, limit: int, sp500: bool):
     else:
         raise Exception("No tickers list satisfies the given parameter")
 
-def get_tickers_by_country(country: str, limit: int = 100, apikey: str = 'your_api_key'):
+def get_tickers_by_country(country: str, limit: int, apikey: str):
     url = 'https://financialmodelingprep.com/api/v3/stock-screener'
     headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
@@ -1005,6 +1006,7 @@ def process_ticker_quantitatives():
             result = {
                 "티커": ticker[:6] if country == 'KR' else ticker,
                 "종목": name,
+                "B-Score": round(quantitative_buffett_score, 1),
                 "업종": industry,
                 "주가(전날대비)": f"{currentPrice:,.0f}" + percentage_change if country == 'KR' or country == 'JP' else f"{currentPrice:,.2f}" + percentage_change,
                 "부채비율": round(debtToEquity, 2) if debtToEquity is not None else 'N/A',
@@ -1018,7 +1020,6 @@ def process_ticker_quantitatives():
                 # "배당 성장률": f"{div_growth:.2%}" if div_growth is not None else None,
                 "배당안정성": div_growth if not div_growth else 'N/A',
                 "영업이익률": operating_income_yoy if not operating_income_yoy else 'N/A',
-                "B-Score": round(quantitative_buffett_score, 1),
                 # 'Analyst Forecast': rec + '(' + upside + ')',
                 '모멘텀': "/".join(f"{m:.1%}" if m is not None else "None" for m in (short_momentum, mid_momentum, long_momentum)),
                 # 'ESG': esg, #works only for US stocks
@@ -1155,6 +1156,31 @@ if country:
             'max_color': "#00FF00"
         })
 
+        pbr_col_idx = df.columns.get_loc('PBR')
+        pbr_col_letter = xl_col(pbr_col_idx)
+        pbr_range = f"{pbr_col_letter}{start_row + 2}:{pbr_col_letter}{end_row + 1}"
+
+        yellow_format = workbook.add_format({'bg_color': '#FFFF00', 'font_color': '#000000'})
+        orange_format = workbook.add_format({'bg_color': '#FFA500', 'font_color': '#000000'})  # 오렌지색
+
+
+                # 주황색 조건 (PBR > 10)
+        worksheet.conditional_format(pbr_range, {
+            'type': 'cell',
+            'criteria': '>',
+            'value': 10,
+            'format': orange_format
+        })
+
+        # 노란색 조건 (PBR > 3)
+        worksheet.conditional_format(pbr_range, {
+            'type': 'cell',
+            'criteria': '>',
+            'value': 3,
+            'format': yellow_format
+})
+
+
 elif sp500:
     df.to_excel(f"s&p500_{formattedDate}.xlsx", index=False)
 else:
@@ -1165,13 +1191,13 @@ time.sleep(3)
 
 excel_path = f'result_KR_{formattedDate}.xlsx'
 
-recipients = ['chs_3411@naver.com', 'eljm2080@gmail.com', 'hyungsukchoi3411@gmail.com']
+date_kr = dt.datetime.strptime(formattedDate, '%Y%m%d').strftime('%Y년 %m월 %d일')
 
 msg = EmailMessage()
-msg['Subject'] = f'{formattedDate} 퀀트 분석자료'
+msg['Subject'] = f'재무 퀀트 리포트 | {date_kr} 기준'
 msg['From'] = Address(display_name='Hyungsuk Choi', addr_spec=EMAIL)
 msg['To'] = ''  # or '' or a single address to satisfy the 'To' header requirement
-msg.set_content(f'안녕하십니까?\n\n{formattedDate}기준 시가총액 상위 {limit}개 상장기업의 퀀트 분석자료를 보내드립니다. 각 기업의 종합 점수는 ‘B-Score’ 열을 참고해 주시기 바라며, 0점 미만의 기업은 제외되었습니다.\n\n본 자료는 워렌 버핏의 투자 철학에 기반하여 기업의 재무 건전성을 평가하기 위해 작성되었으며, 투자 판단 시에는 본 분석 외에도 별도의 면밀한 정성적 검토를 권장합니다.\n\n해당 메일은 매주 평일 오후 5시 자동으로 발송됩니다.\n\n이용해주셔서 감사합니다.')
+msg.set_content(f'귀하의 투자 참고를 위해 {date_kr} 기준, 시가총액 상위 {limit}개 상장기업에 대한 최신 퀀트 분석 자료를 전달드립니다. 각 기업의 종합 점수는 ‘B-Score’ 항목을 참고해 주시기 바라며, B-Score가 0점 미만인 기업은 분석 대상에서 제외되었습니다.\n\n본 자료는 워런 버핏의 투자 철학을 바탕으로 기업의 재무 건전성을 평가하기 위해 작성되었으며, 투자 판단 시에는 본 분석 외에도 정성적 요소에 대한 별도의 면밀한 검토를 권장드립니다.\n\n해당 메일은 매주 평일 오후 5시에 자동 발송됩니다.\n\n감사합니다.')
 
 with open(excel_path, 'rb') as f:
     msg.add_attachment(f.read(), maintype='application',

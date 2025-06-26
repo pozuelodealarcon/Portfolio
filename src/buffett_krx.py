@@ -997,11 +997,11 @@ def process_ticker_quantitatives():
             # ex) brand power(Coca-Cola), network effect(Facebook, Visa), cost advantage(Walmart, Costco), high switching costs(Adobe),
             # regulatory advantage(gov protection), patients(Pfizer, Intel)
             
-            roe_print = f'{round(roe,1)}%' if not roe else 'N/A'
-            roe_print += f'({round(industry_roe)})' if not industry_roe else ''
+            roe_print = f'{round(roe,1)}%' if roe is not None else 'N/A'
+            roe_print += f'({round(industry_roe)})' if industry_roe is not None else ''
 
-            per_print = f'{round(per,2)}' if not per else 'N/A'
-            per_print += f'({industry_per})' if not industry_per else '',
+            per_print = f'{round(per,2)}' if per is not None else 'N/A'
+            per_print += f'({industry_per})' if industry_per is not None else ''
 
             result = {
                 "티커": ticker[:6] if country == 'KR' else ticker,
@@ -1015,11 +1015,11 @@ def process_ticker_quantitatives():
                 "PER(업종)": per_print,
                 "ROE(업종)": roe_print,
                 "ROA": str(round(roa*100,1)) + '%' if roa is not None else 'N/A',
-                "ICR": icr if not icr else 'N/A',
+                "ICR": icr if icr is not None else 'N/A',
                 "EPS성장률": eps_growth if isinstance(eps_growth, bool) else (f"{eps_growth:.2%}" if eps_growth is not None else 'N/A'), #use this instead of operating income incrs for quart/annual 
                 # "배당 성장률": f"{div_growth:.2%}" if div_growth is not None else None,
-                "배당안정성": div_growth if not div_growth else 'N/A',
-                "영업이익률": operating_income_yoy if not operating_income_yoy else 'N/A',
+                "배당안정성": div_growth if div_growth is not None else 'N/A',
+                "영업이익률": operating_income_yoy if operating_income_yoy is not None else 'N/A',
                 # 'Analyst Forecast': rec + '(' + upside + ')',
                 '모멘텀': "/".join(f"{m:.1%}" if m is not None else "None" for m in (short_momentum, mid_momentum, long_momentum)),
                 # 'ESG': esg, #works only for US stocks

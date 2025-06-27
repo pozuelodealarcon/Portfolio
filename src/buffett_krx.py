@@ -1007,9 +1007,11 @@ def process_ticker_quantitatives():
             # elif classification == 'cyclical':
             #     cyclicality -=0.
             
+            '''
             if industry is not None:
                 if any(kw in industry for kw in lee_kw_list):
                     cyclicality += 1
+            '''
 
 
             quantitative_buffett_score = buffett_score(debtToEquity, currentRatio, pbr, per, industry_per, roe, industry_roe, roa, industry_roa, eps_growth, div_growth, icr, operating_income_yoy, operating_income_qoq) + momentum_score(short_momentum, mid_momentum, long_momentum) + cyclicality
@@ -1045,7 +1047,7 @@ def process_ticker_quantitatives():
                 "PER(업종)": per_print,
                 "ROE(업종)": roe_print,
                 "ROA": str(round(roa*100,1)) + '%' if roa is not None else 'N/A',
-                "ICR": icr if icr is not None else 'N/A',
+                "ICR": round(icr,1) if icr is not None else 'N/A',
                 "EPS성장률": eps_growth if isinstance(eps_growth, bool) else (f"{eps_growth:.2%}" if eps_growth is not None else 'N/A'), #use this instead of operating income incrs for quart/annual 
                 # "배당 성장률": f"{div_growth:.2%}" if div_growth is not None else None,
                 "배당안정성": div_growth if div_growth is not None else 'N/A',
@@ -1212,7 +1214,25 @@ if country:
             'criteria': '>',
             'value': 3,
             'format': yellow_format
-})
+        })
+
+        # Create right-aligned format
+        right_align_format = workbook.add_format({'align': 'right'})
+
+        # Apply right alignment to 'at' and 'cat' columns
+        for col_name in ['PER(업종)', 'ROE(업종)', 'ROA', '부채비율', '유동비율', 'ICR']:
+            if col_name in df.columns:
+                col_idx = df.columns.get_loc(col_name)
+                worksheet.set_column(col_idx, col_idx, None, right_align_format)
+        
+        # Create center-aligned format
+        center_align_format = workbook.add_format({'align': 'center'})
+
+        for col_name in ['EPS성장률', '배당안정성', '엽업이익률']:
+            if col_name in df.columns:
+                col_idx = df.columns.get_loc(col_name)
+                worksheet.set_column(col_idx, col_idx, None, center_align_format)
+
 
 
 elif sp500:

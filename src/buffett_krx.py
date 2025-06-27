@@ -925,7 +925,8 @@ def classify_cyclicality(industry):
 
     except Exception as e:
         return None
-
+    
+retried_once = set()
 q = Queue()
 for ticker in tickers:
     q.put(ticker)
@@ -1060,6 +1061,10 @@ def process_ticker_quantitatives():
 
         except Exception as e:
             print(f"Error processing {ticker}: {e}")
+            with data_lock:
+                if ticker not in retried_once:
+                    retried_once.add(ticker)
+                    q.put(ticker)
             if "429" in str(e):
                 print("Too many requests! Waiting 10 seconds...")
                 time.sleep(10)
@@ -1085,7 +1090,7 @@ def process_ticker_quantitatives():
 
         finally:
             q.task_done()
-            time.sleep(2)
+            #time.sleep(2)
     
 
 threads = []

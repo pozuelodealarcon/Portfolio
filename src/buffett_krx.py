@@ -56,7 +56,7 @@ lee_kw_list = [ #2025 이재명 정부 예상 수혜주
 ]
 
 country = 'KR'
-limit=10 # 250 requests/day
+limit=200 # 250 requests/day
 sp500 = True
 
 #########################################################
@@ -1008,7 +1008,7 @@ def process_ticker_quantitatives():
             #     cyclicality -=0.
             
             if industry is not None:
-                if any(kw.lower() in industry.lower() for kw in lee_kw_list):
+                if any(kw in industry for kw in lee_kw_list):
                     cyclicality += 1
 
 

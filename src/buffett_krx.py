@@ -1251,7 +1251,7 @@ msg = EmailMessage()
 msg['Subject'] = f'재무 퀀트 리포트 | {date_kr}'
 msg['From'] = Address(display_name='Hyungsuk Choi', addr_spec=EMAIL)
 msg['To'] = ''  # or '' or a single address to satisfy the 'To' header requirement
-msg.set_content(f'귀하의 투자 참고를 위해 {date_kr} 기준, 시가총액 상위 {limit}개 상장기업에 대한 최신 퀀트 분석 자료를 전달드립니다. 각 기업의 종합 점수는 ‘B-Score’ 항목을 참고해 주시기 바라며, B-Score가 0점 미만인 기업은 분석 대상에서 제외되었습니다.\n\n본 자료는 워런 버핏의 투자 철학을 바탕으로 기업의 재무 건전성을 평가하기 위해 작성되었으며, 투자 판단 시에는 본 분석 외에도 정성적 요소에 대한 별도의 면밀한 검토를 권장드립니다.\n\n해당 메일은 매주 평일 오후 5시에 자동 발송됩니다.\n\n감사합니다.')
+msg.set_content(f'귀하의 투자 참고를 위해 {date_kr} 기준, 시가총액 상위 {limit}개 상장기업에 대한 최신 퀀트 분석 자료를 전달드립니다. 각 기업의 종합 점수는 ‘B-Score’ 항목을 참고해 주시기 바라며, B-Score가 0점 미만인 기업은 자료에서 제외되었습니다.\n\n본 자료는 워런 버핏의 투자 철학을 바탕으로 기업의 재무 건전성을 평가하기 위해 작성되었으며, 투자 판단 시에는 본 분석 외에도 정성적 요소에 대한 별도의 면밀한 검토를 권장드립니다.\n\n해당 메일은 매주 평일 오후 5시에 자동 발송됩니다.\n\n감사합니다.')
 
 with open(excel_path, 'rb') as f:
     msg.add_attachment(f.read(), maintype='application',

@@ -22,6 +22,7 @@ from urllib.request import urlopen
 import smtplib
 from email.message import EmailMessage
 from email.headerregistry import Address
+import re
 
 
 ################ DEPENDENCIES ###########################
@@ -55,7 +56,7 @@ lee_kw_list = [ #2025 이재명 정부 예상 수혜주
 ]
 
 country = 'KR'
-limit=200 # 250 requests/day
+limit=10 # 250 requests/day
 sp500 = True
 
 #########################################################
@@ -128,8 +129,12 @@ def buffett_score (de, cr, pbr, per, ind_per, roe, ind_roe, roa, ind_roa, eps, d
     if cr is not None and (cr >= 1.5 and cr <= 2.5):
         score +=1
 
-    if pbr is not None and (pbr <= 1.5 and pbr != 0):
-        score +=2
+    if pbr is not None and (pbr <= 2 and pbr != 0):
+        score +=0.5
+        if pbr <= 1.5:
+            score +=1
+            if pbr <= 1:
+                score += 0.5
         
 
     # 고배당주 수혜 예상
@@ -224,8 +229,29 @@ def get_per_krx(ticker):
         print(f"Request failed: {e}")
 
     soup = BeautifulSoup(res.text, 'html.parser')
-    data = {'PBR': None, 'IND_PER': None, 'PER': None, 'DPS YoY': None, 'ROE': None, "IND_ROE": None, "OpIncY": None, "OpIncQ": None}
 
+    data = {'name':(None, None), 'PBR': None, 'IND_PER': None, 'PER': None, 'DPS YoY': None, 'ROE': None, "IND_ROE": None, "OpIncY": None, "OpIncQ": None}
+
+    # 종목명
+    name_tag = soup.select_one("div.wrap_company h2")
+    name = name_tag.text.strip() if name_tag else None
+
+    # 업종명 전체 텍스트
+    sector_tag = soup.select_one("#content > div.section.trade_compare > h4 > em")
+    sector_text = sector_tag.text.strip() if sector_tag else None
+
+    sector = None
+    if sector_text:
+        # 정규식으로 '업종명 : (내용)｜' 패턴에서 (내용)만 추출
+        match = re.search(r"업종명\s*:\s*(.+?)\s*｜", sector_text)
+        if match:
+            sector = match.group(1).strip()
+        else:
+            # 만약 구분자 '｜'가 없으면 '업종명 :' 뒤부터 끝까지 가져오기
+            sector = sector_text.split("업종명 :")[-1].strip()
+
+    data['name'] = (name, sector)
+    ####
     aside = soup.select_one('div.aside_invest_info')
     if aside:
         rows = aside.select('table tr')
@@ -792,13 +818,11 @@ tickers = list(filter(keep_ticker, filtered))
 #     '015020.KS',  # POSCO
 #     '011170.KS'   # Lotte Chemical
 # ]
-def get_momentum_batch(tickers, period_days=126):
-    # Download 1 year of daily close prices for all tickers at once
+def get_momentum_batch(tickers, period_months=12):
     try:
-        data = yf.download(tickers, period="1y", interval="1d", progress=False)['Close']
+        data = yf.download(tickers, period="3y", interval="1mo", progress=False, auto_adjust=True)['Close']
     except Exception:
         return {}
-    # data is a DataFrame: rows = dates, columns = tickers
 
     momentum_dict = {}
     for ticker in tickers:
@@ -806,17 +830,17 @@ def get_momentum_batch(tickers, period_days=126):
             momentum_dict[ticker] = None
             continue
         prices = data[ticker].dropna()
-        if len(prices) < period_days:
+        if len(prices) < period_months:
             momentum_dict[ticker] = None
             continue
-        momentum = (prices.iloc[-1] / prices.iloc[-period_days]) - 1
+        momentum = (prices.iloc[-1] / prices.iloc[-period_months]) - 1
         momentum_dict[ticker] = momentum
 
     return momentum_dict
 
-momentum_3m = get_momentum_batch(tickers, 63)
-momentum_6m = get_momentum_batch(tickers, 126)
-momentum_12m = get_momentum_batch(tickers, 240)
+momentum_6m = get_momentum_batch(tickers, 6)
+momentum_1y = get_momentum_batch(tickers, 12)
+momentum_3y = get_momentum_batch(tickers, 36)
 
 def momentum_score(short, mid, long):
    
@@ -830,19 +854,25 @@ def momentum_score(short, mid, long):
         else:
             return 0
     
-    weights = {'short': 0.3, 'mid': 0.5, 'long': 1.2}
+    weights = {
+    'short': 0.15,
+    'mid': 0.35,
+    'long': 0.5
+}
+
     thresholds = {
-        'short': (0.05, -0.05),   # +5% / -5%
-        'mid': (0.10, -0.05),     # +10% / -5%
-        'long': (0.15, 0.0)       # +15% / 0%
-    }
+    'short': (0.05, -0.03),   # +3% / -3% over 6 months
+    'mid': (0.08, -0.04),     # +5% / -4% over 1 year
+    'long': (0.1, 0.0)       # +20% / 0% over 3 years
+}
+
     
     total_score = 0
     total_score += score_momentum(short, *thresholds['short']) * weights['short']
     total_score += score_momentum(mid, *thresholds['mid']) * weights['mid']
     total_score += score_momentum(long, *thresholds['long']) * weights['long']
     
-    return round(total_score/(sum(weights.values())),2)
+    return round(total_score,2)
 
 def classify_cyclicality(industry):
     """
@@ -908,11 +938,11 @@ def process_ticker_quantitatives():
     while not q.empty():
         ticker = q.get()
         try:
+            krx_per = get_per_krx(ticker[:6])
 
             info = yf.Ticker(ticker).info
-            name = info.get("longName") or info.get("shortName", ticker)
-            # sector = info.get("sector", None)
-            industry = info.get("industry", None)
+            name = krx_per['name'][0]
+            industry = krx_per['name'][1]
             currentPrice = info.get("currentPrice", None)
             percentage_change = get_percentage_change(ticker)
             # target_mean = info.get('targetMeanPrice', 0)
@@ -925,7 +955,6 @@ def process_ticker_quantitatives():
             debtToEquity = info.get('debtToEquity', None) # < 0.5
             debtToEquity = debtToEquity/100 if debtToEquity is not None else None
             currentRatio = info.get('currentRatio', None) # 초점: 회사의 단기 유동성, > 1.5 && < 2.5
-            krx_per = get_per_krx(ticker[:6])
 
             pbr = krx_per['PBR'] # 주가가 그 기업의 자산가치에 비해 과대/과소평가되어 있다는 의미. 낮으면 자산활용력 부족
             per = krx_per['PER'] # high per expects future growth but could be overvalued(=버블). 
@@ -954,17 +983,17 @@ def process_ticker_quantitatives():
             icr = get_interest_coverage_ratio(ticker)
             
             try:
-                short_momentum = momentum_3m[ticker]
+                short_momentum = momentum_6m[ticker]
             except KeyError:
                 short_momentum = None
 
             try:
-                mid_momentum = momentum_6m[ticker]
+                mid_momentum = momentum_1y[ticker]
             except KeyError:
                 mid_momentum = None
 
             try:
-                long_momentum = momentum_12m[ticker]
+                long_momentum = momentum_3y[ticker]
             except KeyError:
                 long_momentum = None
             
@@ -1096,8 +1125,8 @@ if country:
 
         # Define column widths you want (by column name)
         col_widths = {
-            '종목': 35,
-            '업종': 30,
+            '종목': 25,
+            '업종': 20,
             '주가(전날대비)': 15,
             'EPS성장률': 10,
             '배당안정성': 10,

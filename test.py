@@ -20,83 +20,37 @@ import smtplib
 from email.message import EmailMessage
 from email.headerregistry import Address
 import pandas as pd
-
-import pandas as pd
 import requests
-import pandas as pd
+from bs4 import BeautifulSoup, NavigableString
 import requests
+from bs4 import BeautifulSoup
+import requests
+from bs4 import BeautifulSoup
+import re
+import requests
+import requests
+from bs4 import BeautifulSoup
+import pandas as pd
 
-def get_date_str(x):
-    return x.split('(')[0].strip()
+def get_fcf_naver(code):
+    url = f"https://finance.naver.com/item/main.nhn?code={code}"
+    response = requests.get(url)
+    response.encoding = 'euc-kr'
+    soup = BeautifulSoup(response.text, "html.parser")
+    
+    # 재무제표 페이지 URL (현금흐름표)
+    cf_url = f"https://finance.naver.com/item/main.nhn?code={code}#tab_cfs"
+    cf_response = requests.get(cf_url)
+    cf_response.encoding = 'euc-kr'
+    cf_soup = BeautifulSoup(cf_response.text, "html.parser")
+    
+    # 네이버 금융은 동적 로딩(스크립트로 재무제표 로딩)이라 바로 FCF 테이블 못 찾을 수도 있음.
+    # 대신 재무제표는 네이버 금융에서 '재무제표 데이터'로 JSON 혹은 API 제공 안함.
 
-def get_finstate_naver(code, fin_type='0', freq_type='0'):
-    url = f'https://companyinfo.stock.naver.com/v1/company/ajax/cF1001.aspx?cmp_cd={code}&fin_typ={fin_type}&freq_typ={freq_type}'
+    # 그래서 일단은 네이버 증권 '재무제표' 탭을 직접 크롤링하거나,
+    # 또는 금융 데이터 전문 API(유료) 사용하는 걸 추천
     
-    headers = {
-        'User-Agent': 'Mozilla/5.0',
-        'Referer': f'https://finance.naver.com/item/main.nhn?code={code}'
-    }
-    
-    resp = requests.get(url, headers=headers)
-    resp.encoding = 'utf-8'
-    
-    if resp.status_code != 200:
-        print(f"Request failed with status code {resp.status_code}")
-        return None
+    print("네이버 금융 현금흐름표는 동적 로딩 방식이라 직접 크롤링 어려움.")
+    print("대안으로 DART 전자공시 API 또는 증권사 API 사용 권장.")
 
-    try:
-        dfs = pd.read_html(resp.text)
-    except Exception as e:
-        print(f"Error parsing HTML: {e}")
-        return None
-    
-    if len(dfs) == 0:
-        print("No table found in the HTML response.")
-        return None
-    
-    df = dfs[0]
-    if df.empty or '해당 데이터가 존재하지 않습니다' in df.iloc[0,0]:
-        print("No financial data found.")
-        return None
-    
-    # 컬럼 이름 처리 (multiindex -> 단일 index)
-    cols = []
-    for col in df.columns:
-        if isinstance(col, tuple):
-            # 보통 ('', '2025.12(예상)') 이런 형태
-            cols.append(get_date_str(col[1]))
-        else:
-            cols.append(col)
-    
-    cols[0] = 'date'
-    df.columns = cols
-    df.set_index('date', inplace=True)
-    
-    # 데이터 전치
-    df_t = df.T
-    
-    # 인덱스를 datetime 형으로 변환 시도
-    try:
-        df_t.index = pd.to_datetime(df_t.index)
-    except:
-        pass
-    
-    # NaT 제거
-    df_t = df_t[pd.notnull(df_t.index)]
-    
-    # 컬럼명 일부 수정
-    df_t.rename(columns={'유보율': '자본유보율'}, inplace=True)
-    df_t.rename(columns={'현금배당성향': '현금배당성향(%)'}, inplace=True)
-    
-    return df_t
-
-# 테스트
-code = '009830'  # 대신 원하는 종목코드 입력 가능
-fin_type = '1'   # 손익계산서
-freq_type = '0'  # 연간
-
-df_fin = get_finstate_naver(code, fin_type, freq_type)
-if df_fin is not None:
-    print(df_fin.loc['2025'])
-else:
-    print("재무 데이터 없음")
+get_fcf_naver("005930")

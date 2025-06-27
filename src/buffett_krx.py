@@ -1216,22 +1216,27 @@ if country:
             'format': yellow_format
         })
 
-        # Create right-aligned format
+        # Create formats
         right_align_format = workbook.add_format({'align': 'right'})
-
-        # Apply right alignment to 'at' and 'cat' columns
-        for col_name in ['PER(업종)', 'ROE(업종)', 'ROA', '부채비율', '유동비율', 'ICR']:
-            if col_name in df.columns:
-                col_idx = df.columns.get_loc(col_name)
-                worksheet.set_column(col_idx, col_idx, None, right_align_format)
-        
-        # Create center-aligned format
         center_align_format = workbook.add_format({'align': 'center'})
 
-        for col_name in ['EPS성장률', '배당안정성', '영업이익률']:
-            if col_name in df.columns:
-                col_idx = df.columns.get_loc(col_name)
-                worksheet.set_column(col_idx, col_idx, None, center_align_format)
+        # Write header (row 0) without formatting
+        for col_num, value in enumerate(df.columns.values):
+            worksheet.write(0, col_num, value)
+
+        # Write data rows with formatting based on column
+        for row_num, row_data in enumerate(df.values, start=1):
+            for col_num, cell_value in enumerate(row_data):
+                col_name = df.columns[col_num]
+                
+                if col_name in ['PER(업종)', 'ROE(업종)', 'ROA', '부채비율', '유동비율', 'ICR']:
+                    fmt = right_align_format
+                elif col_name in ['EPS성장률', '배당안정성', '영업이익률']:
+                    fmt = center_align_format
+                else:
+                    fmt = None
+
+                worksheet.write(row_num, col_num, cell_value, fmt)
 
 
 

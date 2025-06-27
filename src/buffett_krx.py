@@ -1228,7 +1228,7 @@ if country:
         # Create center-aligned format
         center_align_format = workbook.add_format({'align': 'center'})
 
-        for col_name in ['EPS성장률', '배당안정성', '엽업이익률']:
+        for col_name in ['EPS성장률', '배당안정성', '영업이익률']:
             if col_name in df.columns:
                 col_idx = df.columns.get_loc(col_name)
                 worksheet.set_column(col_idx, col_idx, None, center_align_format)

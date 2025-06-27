@@ -32,25 +32,15 @@ import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 
-def get_fcf_naver(code):
-    url = f"https://finance.naver.com/item/main.nhn?code={code}"
-    response = requests.get(url)
-    response.encoding = 'euc-kr'
-    soup = BeautifulSoup(response.text, "html.parser")
-    
-    # 재무제표 페이지 URL (현금흐름표)
-    cf_url = f"https://finance.naver.com/item/main.nhn?code={code}#tab_cfs"
-    cf_response = requests.get(cf_url)
-    cf_response.encoding = 'euc-kr'
-    cf_soup = BeautifulSoup(cf_response.text, "html.parser")
-    
-    # 네이버 금융은 동적 로딩(스크립트로 재무제표 로딩)이라 바로 FCF 테이블 못 찾을 수도 있음.
-    # 대신 재무제표는 네이버 금융에서 '재무제표 데이터'로 JSON 혹은 API 제공 안함.
+intro_message = (
+    f"귀하의 투자 참고를 위해 {date_kr} 기준, "
+    f"시가총액 상위 {limit}개 상장기업에 대한 최신 퀀트 분석 자료를 전달드립니다.\n\n"
+    "각 기업의 종합 점수는 ‘B-Score’ 항목을 참고해 주시기 바라며, "
+    "B-Score가 0점 미만인 기업은 자료에서 제외되었습니다.\n\n"
+    "본 자료는 워런 버핏의 투자 철학을 기반으로, "
+    "기업의 재무 건전성을 수치화하여 평가한 결과입니다.\n"
+    "투자 판단 시에는 정성적 요소에 대한 별도의 면밀한 검토도 "
+    "함께 병행하시기를 권장드립니다.\n"
+)
 
-    # 그래서 일단은 네이버 증권 '재무제표' 탭을 직접 크롤링하거나,
-    # 또는 금융 데이터 전문 API(유료) 사용하는 걸 추천
-    
-    print("네이버 금융 현금흐름표는 동적 로딩 방식이라 직접 크롤링 어려움.")
-    print("대안으로 DART 전자공시 API 또는 증권사 API 사용 권장.")
-
-get_fcf_naver("005930")
+print(intro_message)

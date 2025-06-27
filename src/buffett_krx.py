@@ -861,9 +861,9 @@ def momentum_score(short, mid, long):
 }
 
     thresholds = {
-    'short': (0.05, -0.03),   # +3% / -3% over 6 months
-    'mid': (0.08, -0.04),     # +5% / -4% over 1 year
-    'long': (0.1, 0.0)       # +20% / 0% over 3 years
+    'short': (0.2, 0.0),   # +3% / -3% over 6 months
+    'mid': (0.4, 0.0),     # +5% / -4% over 1 year
+    'long': (0.6, 0.0)       # +20% / 0% over 3 years
 }
 
     
@@ -1051,7 +1051,7 @@ def process_ticker_quantitatives():
                 "배당안정성": div_growth if div_growth is not None else 'N/A',
                 "영업이익률": operating_income_yoy if operating_income_yoy is not None else 'N/A',
                 # 'Analyst Forecast': rec + '(' + upside + ')',
-                '모멘텀': "/".join(f"{m:.1%}" if m is not None else "None" for m in (short_momentum, mid_momentum, long_momentum)),
+                '모멘텀(6m/1y/3y)': "/".join(f"{m:.1%}" if m is not None else "None" for m in (short_momentum, mid_momentum, long_momentum)),
                 # 'ESG': esg, #works only for US stocks
             }
 
@@ -1136,7 +1136,7 @@ if country:
             'EPS성장률': 10,
             '배당안정성': 10,
             '영업이익률': 10,
-            '모멘텀': 21,
+            '모멘텀(6m/1y/3y)': 21,
         }
 
         # Set widths for specified columns

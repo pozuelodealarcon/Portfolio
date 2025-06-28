@@ -1370,7 +1370,28 @@ if country:
             'mid_color': "#FFFF00",
             'max_color': "#00FF00"
         })
+        #############
+        # Get the column index for '합계점수'
+        total_score_col_idx = df.columns.get_loc('합계점수')
 
+        # Column letter for '합계점수'
+        total_score_col_letter = xl_col(total_score_col_idx)
+
+        # 2) Add gradient formatting on '합계점수' column
+        total_score_range = f"{total_score_col_letter}{start_row + 1}:{total_score_col_letter}{end_row + 1}"
+
+        worksheet.conditional_format(total_score_range, {
+            'type': '3_color_scale',
+            'min_type': 'min',
+            'mid_type': 'percentile',
+            'mid_value': 50,
+            'max_type': 'max',
+            'min_color': "#FF0000",
+            'mid_color': "#FFFF00",
+            'max_color': "#00FF00"
+        })
+
+        #############
         pbr_col_idx = df.columns.get_loc('PBR')
         pbr_col_letter = xl_col(pbr_col_idx)
         pbr_range = f"{pbr_col_letter}{start_row + 2}:{pbr_col_letter}{end_row + 1}"

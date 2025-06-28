@@ -4,6 +4,7 @@
 
 import yfinance as yf
 import pandas as pd
+from pykrx import stock
 #from dotenv import load_dotenv
 import os
 import requests
@@ -70,6 +71,9 @@ sp500 = True
 today = dt.datetime.today().weekday()
 weekend = today - 4 # returns 1 for saturday, 2 for sunday
 formattedDate = (dt.datetime.today() - dt.timedelta(days = weekend)).strftime("%Y%m%d") if today >= 5 else dt.datetime.today().strftime("%Y%m%d")
+
+three_months_approx = dt.datetime.today() - dt.timedelta(days=90)
+formattedDate_3m_ago =  three_months_approx.strftime("%Y%m%d")
 
 # dfKospi = stock.get_market_fundamental(formattedDate, market="ALL")
 
@@ -202,6 +206,19 @@ def buffett_score (de, cr, pbr, per, ind_per, roe, ind_roe, roa, ind_roa, eps, d
          
     return score
     
+def get_trading_volume(ticker):
+    # 1) 데이터 가져오기
+    df = stock.get_market_trading_volume_by_date(formattedDate_3m_ago, formattedDate, ticker[:6])
+
+    # 2) 외국인·기관 동시 순매수일 수 계산
+    df['기관_순매수_양수'] = df['기관합계'] > 0
+    df['외국인_순매수_양수'] = df['외국인합계'] > 0
+    df['동시_순매수'] = df['기관_순매수_양수'] & df['외국인_순매수_양수']
+    simultaneous_buy_days = df['동시_순매수'].sum()
+
+    return simultaneous_buy_days
+
+
 def get_per_krx(ticker):
     url = f"https://finance.naver.com/item/main.naver?code={ticker[:6]}"
     headers = {
@@ -1148,6 +1165,7 @@ def process_ticker_quantitatives():
             macd = df_batch_result.loc[df_batch_result['Ticker'] == ticker, 'macd_golden_cross'].values[0]
 
             momentum_score = score_momentum(ma, ma_lt, ret20, ret60, rsi, macd)
+            vol = get_trading_volume(ticker)
             cyclicality = 0
             # ACTIVATE THE CODE BELOW TO SCORE CYCLICALITY DEPENDING ON CURRENT MACROECON SITUATION
             # classification = classify_cyclicality(industry)
@@ -1188,7 +1206,6 @@ def process_ticker_quantitatives():
                 "티커": ticker[:6] if country == 'KR' else ticker,
                 "종목": name,
                 "B-Score": round(quantitative_buffett_score, 1),
-                '모멘텀': momentum_score,
                 "업종": industry,
                 "주가(전날대비)": f"{currentPrice:,.0f}" + percentage_change if country == 'KR' or country == 'JP' else f"{currentPrice:,.2f}" + percentage_change,
                 "부채비율": round(debtToEquity, 2) if debtToEquity is not None else 'N/A',
@@ -1202,6 +1219,8 @@ def process_ticker_quantitatives():
                 # "배당 성장률": f"{div_growth:.2%}" if div_growth is not None else None,
                 "배당안정성": div_growth if div_growth is not None else 'N/A',
                 "영업이익률": operating_income_yoy if operating_income_yoy is not None else 'N/A',
+                '모멘텀': momentum_score,
+                '거래량': vol,
                 # 'Analyst Forecast': rec + '(' + upside + ')',
                 #모멘텀(6m/1y/3y)': "/".join(f"{m:.1%}" if m is not None else "None" for m in (short_momentum, mid_momentum, long_momentum)),
                 # 'ESG': esg, #works only for US stocks
@@ -1262,11 +1281,21 @@ df = pd.DataFrame(data)
 
 # Find the maximum B-Score
 max_b_score = df["B-Score"].max()
-
 df["B-Score"] = (df["B-Score"] / max_b_score) * 100
-
 # Round the B-Score values to 1 decimal place
 df["B-Score"] = df["B-Score"].round(0)
+
+# 거래량 정규화 및 반올림
+max_volume = df["거래량"].max()
+df["거래량"] = (df["거래량"] / max_volume) * 100
+df["거래량"] = df["거래량"].round(0)
+
+# 모멘텀 정규화 및 반올림
+max_momentum = df["모멘텀"].max()
+df["모멘텀"] = (df["모멘텀"] / max_momentum) * 100
+df["모멘텀"] = df["모멘텀"].round(0)
+
+df["합계점수"] = df["B-Score"] + df["거래량"] + df["모멘텀"]
 
 df = df.sort_values(by='B-Score', ascending=False)
 

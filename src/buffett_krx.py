@@ -827,14 +827,16 @@ tickers = list(filter(keep_ticker, filtered))
 def check_momentum_conditions(ticker: str) -> dict:
     result = {
         'ma_crossover': False,
+        'ma_crossover_lt': False,
         'return_20d': False,
+        'return_60d': False,
         'rsi_rebound': False,
         'macd_golden_cross': False
     }
 
     try:
         # 데이터 다운로드 (auto_adjust=True 유지)
-        df_momentum = yf.download(ticker, period='3mo', interval='1d', progress=False, auto_adjust=True)
+        df_momentum = yf.download(ticker, period='1y', interval='1d', progress=False, auto_adjust=True)
 
         # 멀티인덱스 컬럼일 경우 첫 번째 레벨로 컬럼명 변경
         if isinstance(df_momentum.columns, pd.MultiIndex):
@@ -863,9 +865,18 @@ def check_momentum_conditions(ticker: str) -> dict:
         df_momentum['MA5'] = df_momentum['Close'].rolling(window=5).mean()
         df_momentum['MA20'] = df_momentum['Close'].rolling(window=20).mean()
 
+
         if pd.notna(df_momentum['MA5'].iloc[-1]) and pd.notna(df_momentum['MA20'].iloc[-1]):
             if df_momentum['MA5'].iloc[-1] > df_momentum['MA20'].iloc[-1]:
                 result['ma_crossover'] = True
+
+        df_momentum['MA50'] = df_momentum['Close'].rolling(window=50).mean()
+        df_momentum['MA200'] = df_momentum['Close'].rolling(window=200).mean()
+
+        if pd.notna(df_momentum['MA50'].iloc[-1]) and pd.notna(df_momentum['MA200'].iloc[-1]):
+            if df_momentum['MA50'].iloc[-1] > df_momentum['MA200'].iloc[-1]:
+                result['ma_crossover_lt'] = True
+
 
         # 20일 수익률 계산
         try:
@@ -874,6 +885,15 @@ def check_momentum_conditions(ticker: str) -> dict:
                 result['return_20d'] = True
         except IndexError:
             print(f"[Warning] Not enough data for 20-day return calculation for {ticker}")
+
+        # 60일 수익률 계산
+        try:
+            return_60d = (df_momentum['Close'].iloc[-1] / df_momentum['Close'].iloc[-61] - 1) * 100
+            if return_60d >= 10:
+                result['return_60d'] = True  # 필요하면 키 이름도 'return_60d'로 변경 가능
+        except IndexError:
+            print(f"[Warning] Not enough data for 60-day return calculation for {ticker}")
+
 
         try:
             rsi = ta.momentum.RSIIndicator(df_momentum['Close'], window=14).rsi()
@@ -979,17 +999,22 @@ df_batch_result = check_momentum_conditions_batch(tickers)
     
 #     return round(total_score,2)
 
-def score_momentum(ma, ret, rsi, macd):
+def score_momentum(ma, ma_lt, ret, ret60, rsi, macd):
     score = 0
     if ma:
-        score += 20
+        score += 15
+    if ma_lt:
+        score += 15
     if ret:
-        score += 20
+        score += 15
+    if ret60:
+        score += 15
     if rsi:
         score += 20
     if macd:
         score += 20
     return score
+
 
 def classify_cyclicality(industry):
     """
@@ -1116,11 +1141,13 @@ def process_ticker_quantitatives():
             #     long_momentum = None
             
             ma = df_batch_result.loc[df_batch_result['Ticker'] == ticker, 'ma_crossover'].values[0]
+            ma_lt = df_batch_result.loc[df_batch_result['Ticker'] == ticker, 'ma_crossover_lt'].values[0]
             ret20 = df_batch_result.loc[df_batch_result['Ticker'] == ticker, 'return_20d'].values[0]
+            ret60 = df_batch_result.loc[df_batch_result['Ticker'] == ticker, 'return_60d'].values[0]
             rsi = df_batch_result.loc[df_batch_result['Ticker'] == ticker, 'rsi_rebound'].values[0]
             macd = df_batch_result.loc[df_batch_result['Ticker'] == ticker, 'macd_golden_cross'].values[0]
 
-            momentum_score = score_momentum(ma, ret20, rsi, macd)
+            momentum_score = score_momentum(ma, ma_lt, ret20, ret60, rsi, macd)
             cyclicality = 0
             # ACTIVATE THE CODE BELOW TO SCORE CYCLICALITY DEPENDING ON CURRENT MACROECON SITUATION
             # classification = classify_cyclicality(industry)

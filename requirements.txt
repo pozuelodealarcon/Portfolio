@@ -1,4 +1,4 @@
-yfinance == 0.2.63
+yfinance == 0.2.64
 datetime == 5.5
 fredapi == 0.5.2
 openai == 1.78.1
@@ -13,5 +13,7 @@ PublicDataReader == 1.1.1
 finvizfinance == 1.1.0
 scipy == 1.15.3
 XlsxWriter == 3.2.5
+pykiwoom==0.0.6 
+ta==0.11.0
 # pip install -r requirements.txt
 

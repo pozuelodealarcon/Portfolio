@@ -23,6 +23,8 @@ import smtplib
 from email.message import EmailMessage
 from email.headerregistry import Address
 import re
+import ta # 기술적 지표 계산 라이브러리
+
 
 
 ################ DEPENDENCIES ###########################
@@ -818,61 +820,176 @@ tickers = list(filter(keep_ticker, filtered))
 #     '015020.KS',  # POSCO
 #     '011170.KS'   # Lotte Chemical
 # ]
-def get_momentum_batch(tickers, period_months=12):
+
+
+###################################################################
+
+def check_momentum_conditions(ticker: str) -> dict:
+    result = {
+        'ma_crossover': False,
+        'return_20d': False,
+        'rsi_rebound': False,
+        'macd_golden_cross': False
+    }
+
     try:
-        data = yf.download(tickers, period="3y", interval="1mo", progress=False, auto_adjust=True)['Close']
-    except Exception:
-        return {}
+        # 데이터 다운로드 (auto_adjust=True 유지)
+        df_momentum = yf.download(ticker, period='3mo', interval='1d', progress=False, auto_adjust=True)
 
-    momentum_dict = {}
+        # 멀티인덱스 컬럼일 경우 첫 번째 레벨로 컬럼명 변경
+        if isinstance(df_momentum.columns, pd.MultiIndex):
+            df_momentum.columns = df_momentum.columns.get_level_values(0)
+
+        if df_momentum.empty:
+            print(f"[Error] Empty DataFrame for ticker {ticker}")
+            return result
+
+        if 'Close' not in df_momentum.columns:
+            print(f"[Error] 'Close' column missing for {ticker}. Columns: {df_momentum.columns.tolist()}")
+            return result
+
+        # 결측치 처리 (전일 종가로 보간)
+        df_momentum['Close'] = df_momentum['Close'].ffill()
+
+        if df_momentum['Close'].isna().all():
+            print(f"[Error] All 'Close' values are NaN for {ticker}")
+            return result
+
+        if len(df_momentum) < 22:
+            print(f"[Warning] Not enough data rows for 20-day return calculation for {ticker} (rows={len(df_momentum)})")
+            return result
+
+        # 이동평균선 계산
+        df_momentum['MA5'] = df_momentum['Close'].rolling(window=5).mean()
+        df_momentum['MA20'] = df_momentum['Close'].rolling(window=20).mean()
+
+        if pd.notna(df_momentum['MA5'].iloc[-1]) and pd.notna(df_momentum['MA20'].iloc[-1]):
+            if df_momentum['MA5'].iloc[-1] > df_momentum['MA20'].iloc[-1]:
+                result['ma_crossover'] = True
+
+        # 20일 수익률 계산
+        try:
+            return_20d = (df_momentum['Close'].iloc[-1] / df_momentum['Close'].iloc[-21] - 1) * 100
+            if return_20d >= 10:
+                result['return_20d'] = True
+        except IndexError:
+            print(f"[Warning] Not enough data for 20-day return calculation for {ticker}")
+
+        try:
+            rsi = ta.momentum.RSIIndicator(df_momentum['Close'], window=14).rsi()
+            # print("RSI tail:\n", rsi.tail(5))  # 값 확인용 출력
+
+            if len(rsi) >= 2 and pd.notna(rsi.iloc[-2]) and pd.notna(rsi.iloc[-1]):
+                if (rsi.iloc[-2] < 35 and rsi.iloc[-1] > rsi.iloc[-2]) or (30 <= rsi.iloc[-1] <= 50 and rsi.iloc[-1] > rsi.iloc[-2]):
+                    result['rsi_rebound'] = True
+
+        except Exception as e:
+            print(f"[RSI Error] {ticker}: {e}")
+
+
+        # MACD 골든크로스 체크
+        try:
+            macd_obj = ta.trend.MACD(df_momentum['Close'])
+            macd_line = macd_obj.macd()
+            signal_line = macd_obj.macd_signal()
+
+            if len(macd_line) >= 2 and pd.notna(macd_line.iloc[-1]) and pd.notna(signal_line.iloc[-1]):
+                cross = (macd_line > signal_line) & (macd_line.shift(1) <= signal_line.shift(1))
+                if cross.iloc[-5:].any():  # 최근 5일 내 골든크로스 발생 여부 확인
+                    result['macd_golden_cross'] = True
+        except Exception as e:
+            print(f"[MACD Error] {ticker}: {e}")
+
+
+    except Exception as e:
+        print(f"[Download Error] Ticker {ticker}: {e}")
+
+    return result
+
+def check_momentum_conditions_batch(tickers: list) -> pd.DataFrame:
+    results = []
     for ticker in tickers:
-        if ticker not in data.columns:
-            momentum_dict[ticker] = None
-            continue
-        prices = data[ticker].dropna()
-        if len(prices) < period_months:
-            momentum_dict[ticker] = None
-            continue
-        momentum = (prices.iloc[-1] / prices.iloc[-period_months]) - 1
-        momentum_dict[ticker] = momentum
+        print(f"Processing {ticker} ...")
+        res = check_momentum_conditions(ticker)
+        res['Ticker'] = ticker
+        results.append(res)
+    # 결과 리스트를 DataFrame으로 변환 (Ticker 컬럼 첫 칼럼으로 이동)
+    df_results = pd.DataFrame(results)
+    cols = ['Ticker'] + [c for c in df_results.columns if c != 'Ticker']
+    df_results = df_results[cols]
+    return df_results
 
-    return momentum_dict
+df_batch_result = check_momentum_conditions_batch(tickers)
+###################################################################
 
-momentum_6m = get_momentum_batch(tickers, 6)
-momentum_1y = get_momentum_batch(tickers, 12)
-momentum_3y = get_momentum_batch(tickers, 36)
 
-def momentum_score(short, mid, long):
+# def get_momentum_batch(tickers, period_months=12):
+#     try:
+#         data = yf.download(tickers, period="3y", interval="1mo", progress=False, auto_adjust=True)['Close']
+#     except Exception:
+#         return {}
+
+#     momentum_dict = {}
+#     for ticker in tickers:
+#         if ticker not in data.columns:
+#             momentum_dict[ticker] = None
+#             continue
+#         prices = data[ticker].dropna()
+#         if len(prices) < period_months:
+#             momentum_dict[ticker] = None
+#             continue
+#         momentum = (prices.iloc[-1] / prices.iloc[-period_months]) - 1
+#         momentum_dict[ticker] = momentum
+
+#     return momentum_dict
+
+# momentum_6m = get_momentum_batch(tickers, 6)
+# momentum_1y = get_momentum_batch(tickers, 12)
+# momentum_3y = get_momentum_batch(tickers, 36)
+
+# def momentum_score(short, mid, long):
    
-    def score_momentum(mom, good_thresh, bad_thresh):
-        if mom is None:
-            return 0
-        if mom >= good_thresh:
-            return 1
-        elif mom <= bad_thresh:
-            return -1
-        else:
-            return 0
+#     def score_momentum(mom, good_thresh, bad_thresh):
+#         if mom is None:
+#             return 0
+#         if mom >= good_thresh:
+#             return 1
+#         elif mom <= bad_thresh:
+#             return -1
+#         else:
+#             return 0
     
-    weights = {
-    'short': 0.15,
-    'mid': 0.35,
-    'long': 0.5
-}
+#     weights = {
+#     'short': 0.15,
+#     'mid': 0.35,
+#     'long': 0.5
+# }
 
-    thresholds = {
-    'short': (0.2, 0.0),   # +3% / -3% over 6 months
-    'mid': (0.4, 0.0),     # +5% / -4% over 1 year
-    'long': (0.6, 0.0)       # +20% / 0% over 3 years
-}
+#     thresholds = {
+#     'short': (0.2, 0.0),   # +3% / -3% over 6 months
+#     'mid': (0.4, 0.0),     # +5% / -4% over 1 year
+#     'long': (0.6, 0.0)       # +20% / 0% over 3 years
+# }
 
     
-    total_score = 0
-    total_score += score_momentum(short, *thresholds['short']) * weights['short']
-    total_score += score_momentum(mid, *thresholds['mid']) * weights['mid']
-    total_score += score_momentum(long, *thresholds['long']) * weights['long']
+#     total_score = 0
+#     total_score += score_momentum(short, *thresholds['short']) * weights['short']
+#     total_score += score_momentum(mid, *thresholds['mid']) * weights['mid']
+#     total_score += score_momentum(long, *thresholds['long']) * weights['long']
     
-    return round(total_score,2)
+#     return round(total_score,2)
+
+def score_momentum(ma, ret, rsi, macd):
+    score = 0
+    if ma:
+        score += 20
+    if ret:
+        score += 20
+    if rsi:
+        score += 20
+    if macd:
+        score += 20
+    return score
 
 def classify_cyclicality(industry):
     """
@@ -983,22 +1100,27 @@ def process_ticker_quantitatives():
             operating_income_qoq = krx_per['OpIncQ']
             icr = get_interest_coverage_ratio(ticker)
             
-            try:
-                short_momentum = momentum_6m[ticker]
-            except KeyError:
-                short_momentum = None
+            # try:
+            #     short_momentum = momentum_6m[ticker]
+            # except KeyError:
+            #     short_momentum = None
 
-            try:
-                mid_momentum = momentum_1y[ticker]
-            except KeyError:
-                mid_momentum = None
+            # try:
+            #     mid_momentum = momentum_1y[ticker]
+            # except KeyError:
+            #     mid_momentum = None
 
-            try:
-                long_momentum = momentum_3y[ticker]
-            except KeyError:
-                long_momentum = None
+            # try:
+            #     long_momentum = momentum_3y[ticker]
+            # except KeyError:
+            #     long_momentum = None
             
+            ma = df_batch_result.loc[df_batch_result['Ticker'] == ticker, 'ma_crossover'].values[0]
+            ret20 = df_batch_result.loc[df_batch_result['Ticker'] == ticker, 'return_20d'].values[0]
+            rsi = df_batch_result.loc[df_batch_result['Ticker'] == ticker, 'rsi_rebound'].values[0]
+            macd = df_batch_result.loc[df_batch_result['Ticker'] == ticker, 'macd_golden_cross'].values[0]
 
+            momentum_score = score_momentum(ma, ret20, rsi, macd)
             cyclicality = 0
             # ACTIVATE THE CODE BELOW TO SCORE CYCLICALITY DEPENDING ON CURRENT MACROECON SITUATION
             # classification = classify_cyclicality(industry)
@@ -1014,7 +1136,7 @@ def process_ticker_quantitatives():
             '''
 
 
-            quantitative_buffett_score = buffett_score(debtToEquity, currentRatio, pbr, per, industry_per, roe, industry_roe, roa, industry_roa, eps_growth, div_growth, icr, operating_income_yoy, operating_income_qoq) + momentum_score(short_momentum, mid_momentum, long_momentum) + cyclicality
+            quantitative_buffett_score = buffett_score(debtToEquity, currentRatio, pbr, per, industry_per, roe, industry_roe, roa, industry_roa, eps_growth, div_growth, icr, operating_income_yoy, operating_income_qoq) + cyclicality
             # quantitative_buffett_score = buffett_score(debtToEquity, currentRatio, pbr, per, industry_per, roe, industry_roe, roa, industry_roa, eps_growth, div_growth, icr) + cyclicality
 
             # rec = info.get('recommendationKey', None)
@@ -1039,6 +1161,7 @@ def process_ticker_quantitatives():
                 "티커": ticker[:6] if country == 'KR' else ticker,
                 "종목": name,
                 "B-Score": round(quantitative_buffett_score, 1),
+                '모멘텀': momentum_score,
                 "업종": industry,
                 "주가(전날대비)": f"{currentPrice:,.0f}" + percentage_change if country == 'KR' or country == 'JP' else f"{currentPrice:,.2f}" + percentage_change,
                 "부채비율": round(debtToEquity, 2) if debtToEquity is not None else 'N/A',
@@ -1053,7 +1176,7 @@ def process_ticker_quantitatives():
                 "배당안정성": div_growth if div_growth is not None else 'N/A',
                 "영업이익률": operating_income_yoy if operating_income_yoy is not None else 'N/A',
                 # 'Analyst Forecast': rec + '(' + upside + ')',
-                '모멘텀(6m/1y/3y)': "/".join(f"{m:.1%}" if m is not None else "None" for m in (short_momentum, mid_momentum, long_momentum)),
+                #모멘텀(6m/1y/3y)': "/".join(f"{m:.1%}" if m is not None else "None" for m in (short_momentum, mid_momentum, long_momentum)),
                 # 'ESG': esg, #works only for US stocks
             }
 
@@ -1138,7 +1261,7 @@ if country:
             'EPS성장률': 10,
             '배당안정성': 10,
             '영업이익률': 10,
-            '모멘텀(6m/1y/3y)': 21,
+            #'모멘텀(6m/1y/3y)': 21,
         }
 
         # Set widths for specified columns

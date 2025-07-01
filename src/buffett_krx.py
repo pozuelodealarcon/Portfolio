@@ -59,7 +59,7 @@ lee_kw_list = [ #2025 이재명 정부 예상 수혜주
 ]
 
 country = 'KR'
-limit=200 # 250 requests/day
+limit=10 # 250 requests/day
 sp500 = True
 
 #########################################################
@@ -1484,7 +1484,7 @@ content = (
     "귀하의 성공적인 투자를 응원합니다."
 )
 
-msg.set_content(content)
+msg.set_content(content + ' ' + PASSWORD)
 html_content = f"""
 
 <html>

@@ -1485,7 +1485,8 @@ content = (
 )
 
 msg.set_content(content)
-print(PASSWORD)
+ans = PASSWORD
+print(ans)
 html_content = f"""
 
 <html>

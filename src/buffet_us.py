@@ -119,49 +119,62 @@ def buffett_score (de, cr, pbr, per, ind_per, roe, ind_roe, roa, ind_roa, eps, d
         
 
     # 고배당주 수혜 예상
-    # if div is not None: #cagr = +4~6-10%
-    #     if div >= 0.1:
-    #         score +=1.0
-    #     elif div >= 0.08:
-    #         score +=0.75
-    #     elif div >= 0.06:
-    #         score +=0.5
+    if div is not None and not isinstance(div, bool): #cagr = +4~6-10%
+        if div >= 0.1:
+            score +=1.0
+        elif div >= 0.08:
+            score +=0.75
+        elif div >= 0.06:
+            score +=0.5
 
-    #########################
-    if div: #3y yoy
+    if isinstance(div, bool) and div: #3y yoy
         score +=1
     
-    if opinc_yoy: #3y yoy
-        score +=1
-    if opinc_qoq: #5q qoq
-        score +=0.5
-
-    if eps is True:
-        score += 1
-    if eps is False:
-        score -= 1
-    
-    if not isinstance(eps, bool) and eps is not None:
-        if eps >= 0.1:
+    if isinstance(opinc_yoy, bool):
+        if opinc_yoy:
             score += 1
-        if eps < 0:
+        else: 
             score -= 1
-        if eps > 0 and per is not None:
-            peg = per / (eps * 100) #peg ratio, underv if less than 1
-            if peg <= 1:
+    else:
+        if opinc_yoy is not None:
+            if opinc_yoy > 0:
                 score += 1
-    #########################
+            else:
+                score -= 1
+
+
+    if isinstance(opinc_qoq, bool):
+        if opinc_qoq:
+            score += 1
+    else:
+        if opinc_qoq is not None:
+            if opinc_qoq > 0:
+                score += 1
+
+
+    if isinstance(eps, bool):
+        if eps:
+            score += 1
+        else: 
+            score -= 1
+    else:
+        if eps is not None:
+            if eps >= 0.1:
+                score += 1
+                if div is not None:
+                    if div and eps >= 0.3:
+                        score +=1
+        #  3. 고배당 + 고EPS 성장률 전략 (배당 성장주 전략)
+        # 아이디어: 고배당이면서 실적 성장세가 뚜렷한 기업
+            if eps < 0:
+                score -= 1
+            if eps > 0 and per is not None:
+                peg = per / (eps * 100) #peg ratio, underv if less than 1
+                if peg <= 1:
+                    score += 1
 
     if icr is not None and icr >= 5: #x5
         score +=1
-
-    #my quant ideas 
-    if eps is not None:
-        #  3. 고배당 + 고EPS 성장률 전략 (배당 성장주 전략)
-        # 아이디어: 고배당이면서 실적 성장세가 뚜렷한 기업
-        if div and eps >= 0.3:
-            score +=1
-
 
     if None not in {roe, ind_roe, per, ind_per}:
         if per > ind_per and roe < ind_roe:
@@ -1060,7 +1073,7 @@ if country:
 ##########################################################################################################
 time.sleep(3)
 
-excel_path = f'result_KR_{formattedDate}.xlsx'
+excel_path = f'result_US_{formattedDate}.xlsx'
 
 date_kr = dt.datetime.strptime(formattedDate, '%Y%m%d').strftime('%Y년 %m월 %d일')
 

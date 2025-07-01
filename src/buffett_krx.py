@@ -840,7 +840,6 @@ tickers = list(filter(keep_ticker, filtered))
 
 
 ###################################################################
-
 def check_momentum_conditions(ticker: str) -> dict:
     result = {
         'ma_crossover': False,
@@ -917,7 +916,10 @@ def check_momentum_conditions(ticker: str) -> dict:
             # print("RSI tail:\n", rsi.tail(5))  # 값 확인용 출력
 
             if len(rsi) >= 2 and pd.notna(rsi.iloc[-2]) and pd.notna(rsi.iloc[-1]):
-                if (rsi.iloc[-2] < 35 and rsi.iloc[-1] > rsi.iloc[-2]) or (30 <= rsi.iloc[-1] <= 50 and rsi.iloc[-1] > rsi.iloc[-2]):
+                if (
+    (rsi.iloc[-2] < 40 and rsi.iloc[-1] > rsi.iloc[-2]) or
+    (30 <= rsi.iloc[-1] <= 60 and rsi.iloc[-1] > rsi.iloc[-2]) or
+    (rsi.iloc[-2] < 50 and rsi.iloc[-1] >= 50)):
                     result['rsi_rebound'] = True
 
         except Exception as e:

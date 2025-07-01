@@ -938,7 +938,7 @@ if country:
         # Define column widths you want (by column name)
         col_widths = {
             '티커':6,
-            '종목': 20,
+            '종목': 25,
             'B-Score':6,
             '업종': 25,
             '주가(전날대비)': 15,

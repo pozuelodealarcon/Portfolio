@@ -1019,13 +1019,13 @@ df_batch_result = check_momentum_conditions_batch(tickers)
 def score_momentum(ma, ma_lt, ret, ret60, rsi, macd):
     score = 0
     if ma:
-        score += 15
+        score += 10
     if ma_lt:
-        score += 15
+        score += 20
     if ret:
-        score += 15
+        score += 10
     if ret60:
-        score += 15
+        score += 20
     if rsi:
         score += 20
     if macd:

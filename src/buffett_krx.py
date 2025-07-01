@@ -1484,7 +1484,8 @@ content = (
     "귀하의 성공적인 투자를 응원합니다."
 )
 
-msg.set_content(content + ' ' + PASSWORD)
+msg.set_content(content)
+print(PASSWORD)
 html_content = f"""
 
 <html>

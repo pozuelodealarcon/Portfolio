@@ -948,7 +948,6 @@ def check_momentum_conditions(ticker: str) -> dict:
 def check_momentum_conditions_batch(tickers: list) -> pd.DataFrame:
     results = []
     for ticker in tickers:
-        print(f"Processing {ticker} ...")
         res = check_momentum_conditions(ticker)
         res['Ticker'] = ticker
         results.append(res)

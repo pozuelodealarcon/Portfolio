@@ -613,10 +613,13 @@ def get_percentage_change(ticker):
 
         if prev_close != 0:
             percent_change = ((last_close - prev_close) / prev_close) * 100
-            if percent_change >= 0:
-                return (f" (+{percent_change:.2f}%)")  # e.g., (-6.20%)
+            if percent_change is None:
+                return None
             else:
-                return (f" ({percent_change:.2f}%)")  # e.g., (-6.20%)
+                if percent_change >= 0:
+                    return (f" (+{percent_change:.2f}%)")  # e.g., (-6.20%)
+                else:
+                    return (f" ({percent_change:.2f}%)")  # e.g., (-6.20%)
         else:
             return ' ()'
     else:

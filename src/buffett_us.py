@@ -683,7 +683,7 @@ def get_operating_income_yoy(ticker):
         periods = len(income_values) - 1
         cagr = (oi_end / oi_start) ** (1 / periods) - 1
 
-        return f"{cagr:.0%}"
+        return cagr
 
     except Exception as e:
         print(f"[Error processing {ticker}]: {e}")
@@ -720,7 +720,7 @@ def get_operating_income_qoq(ticker):
         periods = len(income_values) - 1  # number of quarters
         qoq_cagr = (oi_end / oi_start) ** (1 / periods) - 1
 
-        return f"{qoq_cagr:.0%}"
+        return qoq_cagr
 
     except Exception as e:
         print(f"[Error processing {ticker}]: {e}")
@@ -852,6 +852,9 @@ def process_ticker_quantitatives():
 
             per_print = f'{round(per,2)}' if per is not None else 'N/A'
             per_print += f'({industry_per})' if industry_per is not None else ''
+
+            operating_income_yoy = f'{operating_income_yoy:.0%}' if isinstance(operating_income_yoy, float) else operating_income_yoy
+            operating_income_qoq = f'{operating_income_qoq:.0%}' if isinstance(operating_income_qoq, float) else operating_income_qoq
 
             result = {
                 "티커": ticker,

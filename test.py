@@ -63,4 +63,4 @@ def get_us_tickers_by_market_cap(limit: int, apikey: str):
 
 
 
-print(get_us_tickers_by_market_cap(300, '60ZVxqQtumzWp4LVs4PmJOjiNSnbGThu'))
+print(get_us_tickers_by_market_cap(300, ''))

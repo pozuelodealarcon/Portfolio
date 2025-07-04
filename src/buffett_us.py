@@ -40,7 +40,7 @@ recipients = ['chs_3411@naver.com', 'eljm2080@gmail.com', 'hyungsukchoi3411@gmai
 NUM_THREADS = 2 #multithreading 
 
 country = 'US'
-limit=300 # 250 requests/day
+limit=200 # 250 requests/day
 sp500 = True
 
 #########################################################

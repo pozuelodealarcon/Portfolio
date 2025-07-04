@@ -553,12 +553,12 @@ def check_momentum_conditions(ticker: str) -> dict:
             return result
 
         # 이동평균선 계산
-        df_momentum['MA5'] = df_momentum['Close'].rolling(window=5).mean()
-        df_momentum['MA20'] = df_momentum['Close'].rolling(window=20).mean()
+        df_momentum['MA20'] = df_momentum['Close'].rolling(window=5).mean()
+        df_momentum['MA60'] = df_momentum['Close'].rolling(window=20).mean()
 
 
-        if pd.notna(df_momentum['MA5'].iloc[-1]) and pd.notna(df_momentum['MA20'].iloc[-1]):
-            if df_momentum['MA5'].iloc[-1] > df_momentum['MA20'].iloc[-1]:
+        if pd.notna(df_momentum['MA20'].iloc[-1]) and pd.notna(df_momentum['MA60'].iloc[-1]):
+            if df_momentum['MA20'].iloc[-1] > df_momentum['MA60'].iloc[-1]:
                 result['ma_crossover'] = True
 
         df_momentum['MA50'] = df_momentum['Close'].rolling(window=50).mean()
@@ -588,32 +588,34 @@ def check_momentum_conditions(ticker: str) -> dict:
 
         try:
             rsi = ta.momentum.RSIIndicator(df_momentum['Close'], window=14).rsi()
-            # print("RSI tail:\n", rsi.tail(5))  # 값 확인용 출력
 
-            if len(rsi) >= 2 and pd.notna(rsi.iloc[-2]) and pd.notna(rsi.iloc[-1]):
-                if (
-    (rsi.iloc[-2] < 40 and rsi.iloc[-1] > rsi.iloc[-2]) or
-    (30 <= rsi.iloc[-1] <= 60 and rsi.iloc[-1] > rsi.iloc[-2]) or
-    (rsi.iloc[-2] < 50 and rsi.iloc[-1] >= 50)):
-                    result['rsi_rebound'] = True
+            if len(rsi) >= 7:
+                recent = rsi.iloc[-7:]
+
+                # Condition: RSI has been steadily climbing, but still under overbought (e.g., < 70)
+                if all(recent > 45) and recent.iloc[-1] < 70 and recent.is_monotonic_increasing:
+                    result['rsi_growth'] = True
 
         except Exception as e:
             print(f"[RSI Error] {ticker}: {e}")
 
-
-        # MACD 골든크로스 체크
         try:
             macd_obj = ta.trend.MACD(df_momentum['Close'])
             macd_line = macd_obj.macd()
             signal_line = macd_obj.macd_signal()
 
-            if len(macd_line) >= 2 and pd.notna(macd_line.iloc[-1]) and pd.notna(signal_line.iloc[-1]):
-                cross = (macd_line > signal_line) & (macd_line.shift(1) <= signal_line.shift(1))
-                if cross.iloc[-5:].any():  # 최근 5일 내 골든크로스 발생 여부 확인
-                    result['macd_golden_cross'] = True
+            if len(macd_line) >= 7:
+                macd_recent = macd_line.iloc[-7:]
+                signal_recent = signal_line.iloc[-7:]
+
+                # Confirm MACD is above Signal consistently
+                if (macd_recent > signal_recent).sum() >= 5 and macd_recent.iloc[-1] > signal_recent.iloc[-1]:
+                    # Also confirm MACD is rising overall
+                    if macd_recent.iloc[-1] > macd_recent.iloc[0]:
+                        result['macd_trend_up'] = True
+
         except Exception as e:
             print(f"[MACD Error] {ticker}: {e}")
-
 
     except Exception as e:
         print(f"[Download Error] Ticker {ticker}: {e}")
@@ -923,7 +925,7 @@ df["모멘텀"] = df["모멘텀"].round(0)
 
 df["합계점수"] = df["B-Score"] + df["모멘텀"]
 
-df = df.sort_values(by='B-Score', ascending=False)
+df = df.sort_values(by='합계점수', ascending=False)
 
 if country: 
 

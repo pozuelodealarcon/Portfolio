@@ -71,7 +71,7 @@ def get_tickers(country: str, limit: int, sp500: bool):
     else:
         raise Exception("No tickers list satisfies the given parameter")
 
-def get_tickers_by_country(limit: int, apikey: str):
+def get_tickers_by_country(country:str, limit: int, apikey: str):
     url = 'https://financialmodelingprep.com/api/v3/stock-screener'
     headers = {
         'User-Agent': 'Mozilla/5.0',
@@ -528,7 +528,7 @@ def get_industry_roa(ind):
 ######## LOAD TICKERS ###########
 raw_tickers = get_tickers(country, limit, sp500)
 
-prohibited = {'AFA', 'BACRP', 'CDVM', 'NVL', 'TBB', 'TBC', 'VZA'}
+prohibited = {'AFA', 'BACRP', 'CDVM', 'NVL', 'TBB', 'TBC', 'VZA'} # no data on yfinance or frequently cause errors
 def keep_ticker(t):
     return t not in prohibited
 tickers = list(filter(keep_ticker, raw_tickers))

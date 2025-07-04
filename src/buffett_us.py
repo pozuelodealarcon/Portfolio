@@ -71,7 +71,7 @@ def get_tickers(country: str, limit: int, sp500: bool):
     else:
         raise Exception("No tickers list satisfies the given parameter")
 
-def get_us_tickers_by_country(limit: int, apikey: str):
+def get_tickers_by_country(limit: int, apikey: str):
     url = 'https://financialmodelingprep.com/api/v3/stock-screener'
     headers = {
         'User-Agent': 'Mozilla/5.0',

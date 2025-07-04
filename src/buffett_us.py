@@ -71,35 +71,54 @@ def get_tickers(country: str, limit: int, sp500: bool):
     else:
         raise Exception("No tickers list satisfies the given parameter")
 
-def get_tickers_by_country(country: str, limit: int, apikey: str):
+def get_us_tickers_by_country(limit: int, apikey: str):
     url = 'https://financialmodelingprep.com/api/v3/stock-screener'
     headers = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-                  'AppleWebKit/537.36 (KHTML, like Gecko) '
-                  'Chrome/114.0.0.0 Safari/537.36',
-    'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
-    'apikey': apikey,
+        'User-Agent': 'Mozilla/5.0',
+        'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
     }
-    
-    params = {
-        'country': country,
-        'limit': limit,
-        'type': 'stock',
-        'sort': 'marketCap',
-        'order': 'desc',
-        'apikey': apikey,
-        'isEtf': False,
-        'isFund': False,
-        # 'sector' : Consumer Cyclical | Energy | Technology | Industrials | Financial Services | Basic Materials | Communication Services | Consumer Defensive | Healthcare | Real Estate | Utilities | Industrial Goods | Financial | Services | Conglomerates
-        # 'exchange' : nyse | nasdaq | amex | euronext | tsx | etf | mutual_fund
-    }
+
+    exchanges = ['nyse', 'nasdaq', 'amex']
+    all_stocks = []
+
     try:
-        response = requests.get(url, params=params, headers=headers)
+        for exchange in exchanges:
+            params = {
+                'exchange': exchange,
+                'limit': 500,  # 넉넉히 가져오기
+                'type': 'stock',
+                'isEtf': False,
+                'isFund': False,
+                'apikey': apikey,
+            }
+            r = requests.get(url, headers=headers, params=params)
+            r.raise_for_status()
+            data = r.json()
+            all_stocks.extend(data)
+
+        # 시가총액 기준 정렬
+        sorted_stocks = sorted(
+            all_stocks,
+            key=lambda x: x.get('marketCap', 0),
+            reverse=True
+        )
+
+        # 중복 제거 및 상위 limit만 추출
+        seen = set()
+        unique_sorted = []
+        for stock in sorted_stocks:
+            symbol = stock.get("symbol")
+            if symbol and symbol not in seen:
+                seen.add(symbol)
+                unique_sorted.append(symbol)
+            if len(unique_sorted) >= limit:
+                break
+
+        return unique_sorted
+
     except Exception as e:
-        print('FMP error:', e)
+        print(f"Error: {e}")
         return []
-    data = response.json()
-    return [item['symbol'] for item in data]
 
 # buffett's philosophy & my quant ideas
 def buffett_score (de, cr, pbr, per, ind_per, roe, ind_roe, roa, ind_roa, eps, div, icr, opinc_yoy, opinc_qoq):
@@ -271,7 +290,7 @@ def has_stable_dividend_growth_cagr(ticker):
 def has_stable_eps_growth_cagr(ticker):
     try:
         ticker_obj = yf.Ticker(ticker)
-        income_stmt = ticker_obj.financials  # Annual by default
+        income_stmt = ticker_obj.financials  # Annual financials DataFrame
 
         if "Diluted EPS" not in income_stmt.index:
             return None
@@ -281,33 +300,42 @@ def has_stable_eps_growth_cagr(ticker):
         # Sort by date ascending (oldest to newest)
         eps_series = eps_series.sort_index()
 
-        # Need at least 2 data points to calculate growth
-        if len(eps_series) < 2:
+        # Get current year to filter last 5 years
+        current_year = dt.datetime.today().year
+
+        # Filter EPS for last 5 years explicitly
+        # income_stmt columns are timestamps, get their years
+        eps_years = [col.year for col in eps_series.index]
+
+        # Select only last 5 years (if available)
+        selected_years = [year for year in eps_years if current_year - 5 <= year <= current_year - 1]
+
+        # Filter eps_series to selected years only
+        filtered_eps = eps_series[[col for col in eps_series.index if col.year in selected_years]]
+
+        if len(filtered_eps) < 2:
             return None
 
-        eps_list = eps_series.tolist()
+        eps_list = filtered_eps.tolist()
 
         eps_start = eps_list[0]
         eps_end = eps_list[-1]
 
-        # Protect against invalid data (zero or negative start/end)
         if eps_start <= 0 or eps_end <= 0:
-            # Check if EPS is roughly stable or growing (with tolerance)
-            tolerance = 0.9  # allow 10% decrease between periods
+            tolerance = 0.95
             stable_growth = all(
                 later >= earlier * tolerance for earlier, later in zip(eps_list, eps_list[1:])
             )
-            return stable_growth  # Returns bool here
+            return stable_growth
 
-        # Calculate CAGR over periods (len-1)
         periods = len(eps_list) - 1
         cagr = (eps_end / eps_start) ** (1 / periods) - 1
 
-        return cagr  # Return CAGR as float (e.g. 0.07 for 7%)
+        return cagr
 
     except Exception:
         return None
-
+    
 # gets the most recent interest coverage ratio available
 def get_interest_coverage_ratio(ticker):
     financials = yf.Ticker(ticker).financials # Annual financials, columns = dates (most recent first)
@@ -500,22 +528,10 @@ def get_industry_roa(ind):
 ######## LOAD TICKERS ###########
 raw_tickers = get_tickers(country, limit, sp500)
 
-def clean_us_tickers(ticker_list):
-    # Only allow tickers that:
-    # - Do not contain a dot (.)
-    # - Do not start with a digit
-    return sorted({
-        t for t in ticker_list
-        if '.' not in t and not t[0].isdigit()
-    })
-
-# Use your raw list from earlier
-cleaned = clean_us_tickers(raw_tickers)
-
 prohibited = {'AFA', 'BACRP', 'CDVM', 'NVL', 'TBB', 'TBC', 'VZA'}
 def keep_ticker(t):
     return len(t) > 5 and t[5] == '0' and t not in prohibited
-tickers = list(filter(keep_ticker, cleaned))
+tickers = list(filter(keep_ticker, raw_tickers))
 
 
 def check_momentum_conditions(ticker: str) -> dict:
@@ -950,6 +966,7 @@ if country:
             '부채비율':6,
             '유동비율':6,
             'PBR':6,
+            'PER(업종)': 7,
             'ICR':6,
             'EPS성장률': 10,
             '배당성장률': 10,
@@ -1083,10 +1100,9 @@ msg['From'] = Address(display_name='Hyungsuk Choi', addr_spec=EMAIL)
 msg['To'] = ''  # or '' or a single address to satisfy the 'To' header requirement
 
 content = (
-    f"귀하의 투자 참고를 위해 {date_kr} 기준, "
+    f"귀하의 중장기 투자 참고를 위해 {date_kr} 기준, "
     f"시가총액 상위 {limit}개 상장기업에 대한 최신 퀀트 분석 자료를 전달드립니다. "
-    "각 기업의 종합 점수는 ‘B-Score’ 항목을 참고해 주시기 바라며, "
-    "B-Score가 0점 미만인 기업은 자료에서 제외되었습니다.\n\n"
+    "각 기업의 재무 점수는 ‘B-Score’, 중장기 모멘텀을 포함한 총점수는 '종합점수' 항목을 참고해 주시기 바랍니다.\n\n"
     "본 자료는 워런 버핏의 투자 철학을 기반으로, "
     "기업의 재무 건전성을 수치화하여 평가한 결과입니다. "
     "투자 판단 시에는 정성적 요소에 대한 별도의 면밀한 검토도 "
@@ -1099,24 +1115,23 @@ content = (
     "ROE 자기자본이익률 (Return on Equity): 자본을(부채 미포함) 얼마나 효율적으로 운용해 이익을 냈는지를 나타냅니다.\n"
     "ROA 총자산이익률 (Return on Assets): 총자산(부채 포함) 대비 수익률로, 보수적인 수익성 지표입니다.\n"
     "ICR 이자보상비율 (Interest Coverage Ratio): 영업이익으로 이자비용을 얼마나 감당할 수 있는지 나타냅니다.\n"
-    "EPS 주당순이익 (Earnings Per Share): 1주당 기업이 창출한 순이익으로, 수익성과 성장성 판단에 유용합니다.\n"
-    "배당안정성: 최근 3년간 배당의 지속성과 안정성을 평가한 지표입니다.\n"
-    "영업이익률: 최근 3년간 평균 영업이익률 추세로, 기업의 수익성 수준을 보여줍니다.\n"
-    "모멘텀: 주가 상승 흐름을 반영한 지표로, 주가의 탄력과 추세를 평가합니다.\n\n"
+    "EPS 주당순이익 (Earnings Per Share): 최근 5년간 1주당 기업이 창출한 순이익의 성장률로, 수익성과 성장성 판단에 유용합니다.\n"
+    "배당성장률: 최근 10년간 배당금의 성장률을 나타내는 지표입니다.\n"
+    "영업이익률: 최근 5개 영업년도/분기의 평균 영업이익률 성장률로, 기업의 수익성 수준을 보여줍니다.\n"
+    "모멘텀: 주가의 중장기 상승 흐름을 반영한 지표로, 주가의 탄력과 추세를 평가합니다.\n\n"
+    "ESG: 기업의 지속가능성을 나타내는 지표로, 동종업계 대비 수준과 함께 평가합니다. (LAG: 뒤쳐짐, AVG: 평균, LEAD: 우수)\n\n"
     "해당 메일은 매주 평일 오후 5시에 자동 발송되며, 안정적이고 현명한 투자를 위한 참고 자료로 제공됩니다.\n\n"
     "귀하의 성공적인 투자를 응원합니다."
 )
 
 msg.set_content(content)
 html_content = f"""
-
 <html>
   <body>
-    <p>귀하의 투자 참고를 위해 <b>{date_kr}</b> 기준, 
+    <p>귀하의 중장기 투자 참고를 위해 <b>{date_kr}</b> 기준, 
     시가총액 상위 <b>{limit}</b>개 상장기업에 대한 최신 퀀트 분석 자료를 전달드립니다.</p>
 
-    <p>각 기업의 종합 점수는 <b>B-Score</b> 항목을 참고해 주시기 바라며, 
-    B-Score가 0점 미만인 기업은 자료에서 제외되었습니다.</p>
+    <p>각 기업의 재무 점수는 <b>B-Score</b>, 중장기 모멘텀을 포함한 총점수는 <b>종합점수</b> 항목을 참고해 주시기 바랍니다.</p>
 
     <p>본 자료는 <b>워런 버핏의 투자 철학</b>을 기반으로, 기업의 재무 건전성을 수치화하여 평가한 결과입니다.<br>
     투자 판단 시에는 정성적 요소에 대한 별도의 면밀한 검토도 함께 병행하시기를 권장드립니다.</p>
@@ -1138,10 +1153,11 @@ html_content = f"""
         <tr><td><b>ROE</b></td><td>자기자본이익률</td><td>자본을(부채 미포함) 얼마나 효율적으로 운용해 이익을 냈는지를 나타냅니다.</td></tr>
         <tr><td><b>ROA</b></td><td>총자산이익률</td><td>총자산(부채 포함) 대비 수익률로, 보수적인 수익성 지표입니다.</td></tr>
         <tr><td><b>ICR</b></td><td>이자보상비율</td><td>영업이익으로 이자비용을 얼마나 감당할 수 있는지 나타냅니다.</td></tr>
-        <tr><td><b>EPS</b></td><td>주당순이익</td><td>1주당 기업이 창출한 순이익으로, 수익성과 성장성 판단에 유용합니다.</td></tr>
-        <tr><td><b>배당안정성</b></td><td>-</td><td>최근 3년간 배당의 지속성과 안정성을 평가한 지표입니다.</td></tr>
-        <tr><td><b>영업이익률</b></td><td>-</td><td>최근 3년간 평균 영업이익률 추세로, 기업의 수익성 수준을 보여줍니다.</td></tr>
-        <tr><td><b>모멘텀</b></td><td>-</td><td>주가 상승 흐름을 반영한 지표로, 주가의 탄력과 추세를 평가합니다.</td></tr>
+        <tr><td><b>EPS</b></td><td>주당순이익</td><td>최근 5년간 1주당 기업이 창출한 순이익의 성장률로, 수익성과 성장성 판단에 유용합니다.</td></tr>
+        <tr><td><b>배당성장률</b></td><td>-</td><td>최근 10년간 배당금의 성장률을 나타내는 지표입니다.</td></tr>
+        <tr><td><b>영업이익률</b></td><td>-</td><td>최근 5개 영업년도/분기의 평균 영업이익률 성장률로, 기업의 수익성 수준을 보여줍니다.</td></tr>
+        <tr><td><b>모멘텀</b></td><td>-</td><td>주가의 중장기 상승 흐름을 반영한 지표로, 주가의 탄력과 추세를 평가합니다.</td></tr>
+        <tr><td><b>ESG</b></td><td>-</td><td>기업의 지속가능성을 나타내는 지표로, 동종업계 대비 수준과 함께 평가합니다. (LAG: 뒤쳐짐, AVG: 평균, LEAD: 우수)</td></tr>
       </tbody>
     </table>
 

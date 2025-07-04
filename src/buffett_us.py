@@ -197,30 +197,28 @@ def buffett_score (de, cr, pbr, per, ind_per, roe, ind_roe, roa, ind_roa, eps, d
          
     return score
     
-def get_trading_volume_increase_rate(ticker_symbol: str):
+def get_trading_volume_vs_avg20(ticker_symbol: str) -> float:
     try:
-        # Fetch data
+        # Fetch 21 days of data
         ticker = yf.Ticker(ticker_symbol)
-        hist = ticker.history(period="6d")
+        hist = ticker.history(period="21d")
 
-        # Check if we have enough data
-        if len(hist) < 5:
-            return f"Not enough data to calculate 5-day volume trend for {ticker_symbol}."
+        if len(hist) < 21:
+            return None  # Not enough data
 
-        # Get volumes with safe indexing
-        volume_start = hist["Volume"].iloc[0]
-        volume_end = hist["Volume"].iloc[4]
+        today_volume = hist["Volume"].iloc[-1]
+        avg_volume_20 = hist["Volume"].iloc[:-1].mean()
 
-        # Prevent division by zero
-        if volume_start == 0 or pd.isna(volume_start) or pd.isna(volume_end):
-            return f"Invalid volume data for {ticker_symbol}."
+        if avg_volume_20 == 0 or pd.isna(today_volume) or pd.isna(avg_volume_20):
+            return None  # Invalid data
 
-        # Calculate increase rate
-        volume_increase_rate = ((volume_end - volume_start) / volume_start) * 100
-        return f'{volume_increase_rate:.0f}%'
+        # Return ratio (e.g., 1.5 means 150% of avg volume)
+        return round(today_volume / avg_volume_20, 1)
 
     except Exception as e:
-        return f"Error calculating volume increase rate for {ticker_symbol}: {e}"
+        print(f"[Error] {ticker_symbol}: {e}")
+        return None
+
 
 
 def has_stable_dividend_growth_cagr(ticker):
@@ -512,7 +510,12 @@ def clean_us_tickers(ticker_list):
     })
 
 # Use your raw list from earlier
-tickers = clean_us_tickers(raw_tickers)
+cleaned = clean_us_tickers(raw_tickers)
+
+prohibited = {'AFA', 'BACRP', 'CDVM', 'NVL', 'TBB', 'TBC', 'VZA'}
+def keep_ticker(t):
+    return len(t) > 5 and t[5] == '0' and t not in prohibited
+tickers = list(filter(keep_ticker, cleaned))
 
 
 def check_momentum_conditions(ticker: str) -> dict:
@@ -834,7 +837,7 @@ def process_ticker_quantitatives():
             macd = df_batch_result.loc[df_batch_result['Ticker'] == ticker, 'macd_golden_cross'].values[0]
 
             momentum_score = score_momentum(ma, ma_lt, ret20, ret60, rsi, macd)
-            vol = get_trading_volume_increase_rate(ticker)
+            # vol = get_trading_volume_vs_avg20(ticker)
             esg = get_esg_score(ticker)
         
             quantitative_buffett_score = buffett_score(debtToEquity, currentRatio, pbr, per, industry_per, roe, industry_roe, roa, industry_roa, eps_growth, div_growth, icr, operating_income_yoy, operating_income_qoq)
@@ -875,7 +878,7 @@ def process_ticker_quantitatives():
                 "배당성장률": div_growth if isinstance(div_growth, bool) else (f"{div_growth:.2%}" if div_growth is not None else 'N/A'),
                 "영업이익률(Y/Q)": str(operating_income_yoy if operating_income_yoy is not None else 'N/A') + '/' + str(operating_income_qoq if operating_income_qoq is not None else 'N/A'),
                 '모멘텀': momentum_score,
-                '거래량': vol,
+                # '거래량': vol,
                 'ESG': esg, #works only for US stocks
             }
 
@@ -1036,20 +1039,12 @@ if country:
         orange_format = workbook.add_format({'bg_color': '#FFA500', 'font_color': '#000000'})  # 오렌지색
 
 
-                # 주황색 조건 (PBR > 10)
+        # 주황색 조건 (PBR > 10)
         worksheet.conditional_format(pbr_range, {
             'type': 'cell',
             'criteria': '>',
             'value': 10,
             'format': orange_format
-        })
-
-        # 노란색 조건 (PBR > 3)
-        worksheet.conditional_format(pbr_range, {
-            'type': 'cell',
-            'criteria': '>',
-            'value': 3,
-            'format': yellow_format
         })
 
         # Create formats

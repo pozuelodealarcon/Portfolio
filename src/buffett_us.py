@@ -528,7 +528,7 @@ def get_industry_roa(ind):
 ######## LOAD TICKERS ###########
 raw_tickers = get_tickers(country, limit, sp500)
 
-prohibited = {'AFA', 'BACRP', 'CDVM', 'NVL', 'TBB', 'TBC', 'VZA'} # no data on yfinance or frequently cause errors
+prohibited = {'AFA', 'BACRP', 'CDVM', 'NVL', 'TBB', 'TBC', 'VZA', "ANTM","SOJD","SOJE","SOJC","RY-PT","DUKB"} # no data on yfinance or frequently cause errors
 def keep_ticker(t):
     return t not in prohibited
 tickers = list(filter(keep_ticker, raw_tickers))
@@ -1095,7 +1095,7 @@ excel_path = f'result_US_{formattedDate}.xlsx'
 date_kr = dt.datetime.strptime(formattedDate, '%Y%m%d').strftime('%Y년 %m월 %d일')
 
 msg = EmailMessage()
-msg['Subject'] = f'US 퀀트 리포트 | {date_kr}'
+msg['Subject'] = f'美증시 퀀트 분석 | {date_kr}'
 msg['From'] = Address(display_name='Hyungsuk Choi', addr_spec=EMAIL)
 msg['To'] = ''  # or '' or a single address to satisfy the 'To' header requirement
 

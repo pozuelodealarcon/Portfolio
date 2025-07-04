@@ -530,7 +530,7 @@ raw_tickers = get_tickers(country, limit, sp500)
 
 prohibited = {'AFA', 'BACRP', 'CDVM', 'NVL', 'TBB', 'TBC', 'VZA'}
 def keep_ticker(t):
-    return len(t) > 5 and t[5] == '0' and t not in prohibited
+    return t not in prohibited
 tickers = list(filter(keep_ticker, raw_tickers))
 
 

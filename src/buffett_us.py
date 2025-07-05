@@ -1103,7 +1103,7 @@ df["모멘텀"] = df["모멘텀"].round(0)
 
 df["합계점수"] = df["B-Score"] + df["모멘텀"]
 
-df = df.sort_values(by='B-Score', ascending=False)
+df = df.sort_values(by='합계점수', ascending=False)
 
 if country: 
 

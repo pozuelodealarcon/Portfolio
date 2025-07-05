@@ -1062,11 +1062,16 @@ q.join()
 df = pd.DataFrame(data)
 # df.dropna(subset=["D/E", "CR", "P/B", "ROE", "ROA", "PER", "ICR"], inplace = True)
 
-# Find the maximum B-Score
+min_b_score = df["B-Score"].min()
 max_b_score = df["B-Score"].max()
-df["B-Score"] = (df["B-Score"] / max_b_score) * 100
-# Round the B-Score values to 1 decimal place
+
+if min_b_score == max_b_score:
+    df["B-Score"] = 0
+else:
+    df["B-Score"] = (df["B-Score"] - min_b_score) / (max_b_score - min_b_score) * 100
+
 df["B-Score"] = df["B-Score"].round(0)
+
 
 # 모멘텀 정규화 및 반올림
 max_momentum = df["모멘텀"].max()

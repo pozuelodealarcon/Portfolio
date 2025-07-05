@@ -1019,8 +1019,8 @@ def process_ticker_quantitatives():
                 "ROE(업종)": roe_print,
                 "ROA(업종)": roa_print,
                 "ICR": round(icr,1) if icr is not None else 'N/A',
-                "FCF수익률": f"{fcf_yield:.1%}" if fcf_yield is not None else 'N/A',
-                "FCF성장률/예상": f"{fcf_cagr:.1%}/{est_fcf_cagr:.1%}" if fcf_cagr is not None and est_fcf_cagr is not None else 'N/A',
+                "FCF수익률": f"{fcf_yield:.1f}%" if fcf_yield is not None else 'N/A',
+                "FCF성장률/예상": f"{fcf_cagr:.1f}%/{est_fcf_cagr:.1f}%" if fcf_cagr is not None and est_fcf_cagr is not None else 'N/A',
                 "EPS성장률": eps_growth if isinstance(eps_growth, bool) else (f"{eps_growth:.2%}" if eps_growth is not None else 'N/A'), #use this instead of operating income incrs for quart/annual 
                 "배당성장률": div_growth if isinstance(div_growth, bool) else (f"{div_growth:.2%}" if div_growth is not None else 'N/A'),
                 "영업이익률(Y/Q)": str(operating_income_yoy if operating_income_yoy is not None else 'N/A') + '/' + str(operating_income_qoq if operating_income_qoq is not None else 'N/A'),
@@ -1099,6 +1099,7 @@ if country:
             'PBR':6,
             'PER(업종)': 7,
             'ICR':6,
+            "FCF성장률/예상": 10,
             'EPS성장률': 10,
             '배당성장률': 10,
             '모멘텀':6,

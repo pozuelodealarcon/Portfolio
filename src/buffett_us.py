@@ -468,27 +468,48 @@ def get_esg_score(ticker):
     finally:
         return ans
 
+# def get_percentage_change(ticker):
+#     ticker = yf.Ticker(ticker)
+
+#     # Get last 2 days of price data
+#     data = ticker.history(period="2d")
+
+#     # Check if we have at least 2 days and prev_close is not zero
+#     if len(data) >= 2:
+#         prev_close = data['Close'].iloc[-2]
+#         last_close = data['Close'].iloc[-1]
+
+#         if prev_close != 0:
+#             percent_change = ((last_close - prev_close) / prev_close) * 100
+#             if percent_change >= 0:
+#                 return (f" (+{percent_change:.2f}%)")  # e.g., (-6.20%)
+#             else:
+#                 return (f" ({percent_change:.2f}%)")  # e.g., (-6.20%)
+#         else:
+#             return ' ()'
+#     else:
+#         return ' ()'
+
+### 1mo ver.
 def get_percentage_change(ticker):
-    ticker = yf.Ticker(ticker)
+    ticker_obj = yf.Ticker(ticker)
 
-    # Get last 2 days of price data
-    data = ticker.history(period="2d")
+    # Get last 1 month of price data
+    data = ticker_obj.history(period="1mo")
 
-    # Check if we have at least 2 days and prev_close is not zero
     if len(data) >= 2:
-        prev_close = data['Close'].iloc[-2]
-        last_close = data['Close'].iloc[-1]
+        start_close = data['Close'].iloc[0]
+        end_close = data['Close'].iloc[-1]
 
-        if prev_close != 0:
-            percent_change = ((last_close - prev_close) / prev_close) * 100
-            if percent_change >= 0:
-                return (f" (+{percent_change:.2f}%)")  # e.g., (-6.20%)
-            else:
-                return (f" ({percent_change:.2f}%)")  # e.g., (-6.20%)
+        if start_close != 0:
+            percent_change = ((end_close - start_close) / start_close) * 100
+            sign = "+" if percent_change >= 0 else ""
+            return f" ({sign}{percent_change:.2f}%)"
         else:
-            return ' ()'
+            return " ()"
     else:
-        return ' ()'
+        return " ()"
+
 
 def download_industry_per():
     # FullRatio의 산업별 PER 페이지 URL
@@ -1012,7 +1033,7 @@ def process_ticker_quantitatives():
                 "종목": name,
                 "B-Score": round(quantitative_buffett_score, 1),
                 "업종": industry,
-                "주가(전날대비)": f"${currentPrice:,.2f}" + percentage_change,
+                "주가(1개월대비)": f"${currentPrice:,.2f}" + percentage_change,
                 "추정DCF": f"${intrinsic_value:,.0f}" if intrinsic_value is not None else 'N/A',
                 "부채비율": round(debtToEquity, 2) if debtToEquity is not None else 'N/A',
                 "유동비율": round(currentRatio, 2) if currentRatio is not None else 'N/A',
@@ -1100,7 +1121,7 @@ if country:
             '종목': 25,
             'B-Score':6,
             '업종': 25,
-            '주가(전날대비)': 15,
+            '주가(1개월대비)': 15,
             '부채비율':6,
             '유동비율':6,
             'PBR':6,
@@ -1268,7 +1289,7 @@ html_content = f"""
 <html>
   <body>
     <p>귀하의 중장기 투자 참고를 위해 <b>{date_kr}</b> 기준, 
-    시가총액 상위 <b>{limit}</b>개 상장기업에 대한 최신 퀀트 분석 자료를 전달드립니다.</p>
+    시가총액 상위 <b>{limit}</b>개, 뉴욕증권거래소(NYSE), 나스닥(NASDAQ), 아멕스(AMEX)에 상장된 기업들의 최신 퀀트 데이터를 전달드립니다.</p>
 
     <p>각 기업의 재무 점수는 <b>B-Score</b>, 중장기 모멘텀을 포함한 총점수는 <b>종합점수</b> 항목을 참고해 주시기 바랍니다.</p>
 
@@ -1285,6 +1306,7 @@ html_content = f"""
         </tr>
       </thead>
       <tbody>
+        <tr><td><b>DCF</b></td><td>할인된 현금흐름</td><td>미래 예상 자유현금흐름(FCF)을 적절한 할인율로 현재가치로 환산하여 보수적으로 산출한 기업의 내재가치입니다. 이 내재가치를 현재 주가와 비교하여 기업의 저평가 여부를 판단합니다.</td></tr>
         <tr><td><b>D/E</b></td><td>부채비율</td><td>자본 대비 부채의 비율로, 재무 건전성을 나타냅니다. 낮을수록 안정적입니다.</td></tr>
         <tr><td><b>CR</b></td><td>유동비율</td><td>유동자산이 유동부채를 얼마나 커버할 수 있는지를 보여줍니다.</td></tr>
         <tr><td><b>PBR</b></td><td>주가순자산비율</td><td>주가가 장부가치 대비 얼마나 높은지를 나타내며, 1보다 낮으면 저평가로 해석되기도 합니다.</td></tr>
@@ -1292,6 +1314,8 @@ html_content = f"""
         <tr><td><b>ROE</b></td><td>자기자본이익률</td><td>자본을(부채 미포함) 얼마나 효율적으로 운용해 이익을 냈는지를 나타냅니다.</td></tr>
         <tr><td><b>ROA</b></td><td>총자산이익률</td><td>총자산(부채 포함) 대비 수익률로, 보수적인 수익성 지표입니다.</td></tr>
         <tr><td><b>ICR</b></td><td>이자보상비율</td><td>영업이익으로 이자비용을 얼마나 감당할 수 있는지 나타냅니다.</td></tr>
+        <tr><td><b>FCF수익률</b></td><td>-</td><td>자유현금흐름(FCF)을 시가총액으로 나눈 비율로, 이 비율이 높을수록 기업이 창출하는 현금 대비 주가가 저평가되었음을 의미합니다.</td></tr>
+        <tr><td><b>FCF성장률/예상</b></td><td>-</td><td>자유현금흐름의 성장률과 향후 예상 성장률을 나타내는 지표입니다.</td></tr>
         <tr><td><b>EPS</b></td><td>주당순이익</td><td>최근 5년간 1주당 기업이 창출한 순이익의 성장률로, 수익성과 성장성 판단에 유용합니다.</td></tr>
         <tr><td><b>배당성장률</b></td><td>-</td><td>최근 10년간 배당금의 성장률을 나타내는 지표입니다.</td></tr>
         <tr><td><b>영업이익률</b></td><td>-</td><td>최근 5개 영업년도/분기의 평균 영업이익률 성장률로, 기업의 수익성 수준을 보여줍니다.</td></tr>

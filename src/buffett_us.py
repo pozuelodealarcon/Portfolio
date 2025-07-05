@@ -287,6 +287,8 @@ def dcf_valuation(fcf_history, discount_rate, long_term_growth, years=10, shares
     if discount_rate <= long_term_growth:
         return (None, None)  # Invalid terminal growth assumption
 
+    if cagr is None or cagr <= 0:
+        return (None, None)  # Invalid CAGR assumption
     est_cagr = cagr / 100.0 * 0.5 #conservative
     growth_rate = min(est_cagr, discount_rate)
 
@@ -981,7 +983,7 @@ def process_ticker_quantitatives():
             fcf_yield, fcf_cagr, fcf_list = get_fcf_yield_and_cagr(ticker)
             tenyr_treasury_yield = get_10yr_treasury_yield()
             discount_rate = (tenyr_treasury_yield+5.0)/100.0
-            intrinsic_value, est_fcf_cagr = dcf_valuation(fcf_list, discount_rate=discount_rate, long_term_growth=0.02, years=10, shares_outstanding=shares_outstanding, fcf_cagr=fcf_cagr)
+            intrinsic_value, est_fcf_cagr = dcf_valuation(fcf_list, discount_rate=discount_rate, long_term_growth=0.02, years=10, shares_outstanding=shares_outstanding, cagr=fcf_cagr)
 
             intrinsic_value_score = score_intrinsic_value(intrinsic_value, currentPrice, fcf_yield, tenyr_treasury_yield, fcf_cagr, est_fcf_cagr)
 

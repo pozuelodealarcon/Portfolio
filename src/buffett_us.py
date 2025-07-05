@@ -994,10 +994,10 @@ def process_ticker_quantitatives():
             # regulatory advantage(gov protection), patients(Pfizer, Intel)
             
             roe_print = f'{round(roe*100,1)}%' if roe is not None else 'N/A'
-            roe_print += f'({round(industry_roe*100, 1)})' if industry_roe is not None else ''
+            roe_print += f'({round(industry_roe*100)})' if industry_roe is not None else ''
 
             roa_print = f'{round(roa*100,1)}%' if roa is not None else 'N/A'
-            roa_print += f'({round(industry_roa*100, 1)})' if industry_roe is not None else ''
+            roa_print += f'({round(industry_roa*100)})' if industry_roe is not None else ''
 
             per_print = f'{round(per,2)}' if per is not None else 'N/A'
             per_print += f'({industry_per})' if industry_per is not None else ''

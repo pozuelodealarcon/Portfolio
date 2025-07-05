@@ -76,7 +76,8 @@ def get_10yr_treasury_yield():
         return f"Error fetching yield: {e}"
 
 
-def dcf_valuation(fcf_history, discount_rate, long_term_growth, years=10, shares_outstanding=None):
+def dcf_valuation(fcf_history, discount_rate, long_term_growth, years=10, shares_outstanding=None, cagr = 0.05):
+    
     if not fcf_history or len(fcf_history) < 2:
         return (None, None)
 
@@ -89,9 +90,8 @@ def dcf_valuation(fcf_history, discount_rate, long_term_growth, years=10, shares
     if discount_rate <= long_term_growth:
         return (None, None)  # Invalid terminal growth assumption
 
-    # CAGR and growth rate
-    cagr = (end_fcf / start_fcf) ** (1 / (len(fcf_history) - 1)) - 1
-    growth_rate = min(cagr, discount_rate)
+    est_cagr = cagr * 0.5
+    growth_rate = min(est_cagr, discount_rate)
 
     # Project FCFs
     projected_fcfs = [end_fcf * (1 + growth_rate) ** i for i in range(1, years + 1)]

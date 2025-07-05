@@ -273,7 +273,8 @@ def get_10yr_treasury_yield():
         return f"Error fetching yield: {e}"
 
 
-def dcf_valuation(fcf_history, discount_rate, long_term_growth, years=10, shares_outstanding=None):
+def dcf_valuation(fcf_history, discount_rate, long_term_growth, years=10, shares_outstanding=None, cagr = 0.05):
+    
     if not fcf_history or len(fcf_history) < 2:
         return (None, None)
 
@@ -286,9 +287,8 @@ def dcf_valuation(fcf_history, discount_rate, long_term_growth, years=10, shares
     if discount_rate <= long_term_growth:
         return (None, None)  # Invalid terminal growth assumption
 
-    # CAGR and growth rate
-    cagr = (end_fcf / start_fcf) ** (1 / (len(fcf_history) - 1)) - 1
-    growth_rate = min(cagr, discount_rate)
+    est_cagr = cagr / 100.0 * 0.5 #conservative
+    growth_rate = min(est_cagr, discount_rate)
 
     # Project FCFs
     projected_fcfs = [end_fcf * (1 + growth_rate) ** i for i in range(1, years + 1)]
@@ -981,7 +981,7 @@ def process_ticker_quantitatives():
             fcf_yield, fcf_cagr, fcf_list = get_fcf_yield_and_cagr(ticker)
             tenyr_treasury_yield = get_10yr_treasury_yield()
             discount_rate = (tenyr_treasury_yield+5.0)/100.0
-            intrinsic_value, est_fcf_cagr = dcf_valuation(fcf_list, discount_rate=discount_rate, long_term_growth=0.02, years=10, shares_outstanding=shares_outstanding)
+            intrinsic_value, est_fcf_cagr = dcf_valuation(fcf_list, discount_rate=discount_rate, long_term_growth=0.02, years=10, shares_outstanding=shares_outstanding, fcf_cagr=fcf_cagr)
 
             intrinsic_value_score = score_intrinsic_value(intrinsic_value, currentPrice, fcf_yield, tenyr_treasury_yield, fcf_cagr, est_fcf_cagr)
 
@@ -1010,8 +1010,8 @@ def process_ticker_quantitatives():
                 "종목": name,
                 "B-Score": round(quantitative_buffett_score, 1),
                 "업종": industry,
-                "주가(전날대비)": f"{currentPrice:,.0f}" + percentage_change if country == 'KR' or country == 'JP' else f"{currentPrice:,.2f}" + percentage_change,
-                "DCF": f"{intrinsic_value:,.1f}" if intrinsic_value is not None else 'N/A',
+                "주가(전날대비)": f"${currentPrice:,.2f}" + percentage_change,
+                "추정DCF": f"${intrinsic_value:,.0f}" if intrinsic_value is not None else 'N/A',
                 "부채비율": round(debtToEquity, 2) if debtToEquity is not None else 'N/A',
                 "유동비율": round(currentRatio, 2) if currentRatio is not None else 'N/A',
                 "PBR": round(pbr,2) if pbr is not None else None,
@@ -1075,7 +1075,7 @@ df["모멘텀"] = df["모멘텀"].round(0)
 
 df["합계점수"] = df["B-Score"] + df["모멘텀"]
 
-df = df.sort_values(by='합계점수', ascending=False)
+df = df.sort_values(by='B-Score', ascending=False)
 
 if country: 
 

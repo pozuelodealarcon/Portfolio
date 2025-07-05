@@ -215,7 +215,101 @@ def buffett_score (de, cr, pbr, per, ind_per, roe, ind_roe, roa, ind_roa, eps, d
                 #     score += 0.25
          
     return score
-    
+
+def get_fcf_yield_and_cagr(ticker):
+    try:
+        ticker_obj = yf.Ticker(ticker)
+
+        # 1. Market cap
+        market_cap = ticker_obj.info.get('marketCap')
+        if market_cap is None or market_cap == 0:
+            return (None, None, "Market cap unavailable")
+
+        # 2. Cash flow DataFrame
+        cashflow_df = ticker_obj.cashflow
+        if cashflow_df.empty or 'Free Cash Flow' not in cashflow_df.index:
+            return (None, None, "Free Cash Flow data unavailable")
+
+        # 3. Get FCF series (drop NaNs and reverse to oldest -> newest)
+        fcf_series = cashflow_df.loc['Free Cash Flow'].dropna()
+        fcf_series = fcf_series[::-1]  # chronological order
+
+        if len(fcf_series) < 2:
+            return (None, None, "Insufficient FCF history for CAGR")
+
+        fcf_data = fcf_series.tolist()
+
+        # 4. FCF Yield = latest FCF / market cap
+        latest_fcf = fcf_series.iloc[-1]
+        if latest_fcf == 0:
+            fcf_yield = 0.0
+        else:
+            fcf_yield = round((latest_fcf / market_cap) * 100, 2)
+
+        # 5. FCF CAGR calculation
+        initial_fcf = fcf_series.iloc[0]
+        final_fcf = fcf_series.iloc[-1]
+        n_years = len(fcf_series) - 1
+
+        if initial_fcf <= 0 or final_fcf <= 0:
+            fcf_cagr = None  # Cannot compute CAGR with non-positive values
+        else:
+            fcf_cagr = round(((final_fcf / initial_fcf) ** (1 / n_years) - 1) * 100, 2)
+
+        return (fcf_yield, fcf_cagr, fcf_data)
+
+    except Exception as e:
+        return (None, None, f"Error: {str(e)}")
+
+
+
+def get_10yr_treasury_yield():
+    try:
+        tnx = yf.Ticker("^TNX")
+        tnx_data = tnx.history(period="1d")
+        latest_yield = tnx_data['Close'].iloc[-1]
+        return round(latest_yield, 2)  # Already in percent
+    except Exception as e:
+        return f"Error fetching yield: {e}"
+
+
+def dcf_valuation(fcf_history, discount_rate, long_term_growth, years=10, shares_outstanding=None):
+    if not fcf_history or len(fcf_history) < 2:
+        return (None, None)
+
+    start_fcf = fcf_history[0]  # oldest
+    end_fcf = fcf_history[-1]   # most recent
+
+    if start_fcf <= 0 or end_fcf <= 0:
+        return (None, None)
+
+    if discount_rate <= long_term_growth:
+        return (None, None)  # Invalid terminal growth assumption
+
+    # CAGR and growth rate
+    cagr = (end_fcf / start_fcf) ** (1 / (len(fcf_history) - 1)) - 1
+    growth_rate = min(cagr, discount_rate)
+
+    # Project FCFs
+    projected_fcfs = [end_fcf * (1 + growth_rate) ** i for i in range(1, years + 1)]
+
+    # Terminal Value
+    terminal_value = projected_fcfs[-1] * (1 + long_term_growth) / (discount_rate - long_term_growth)
+
+    # Discounting
+    discounted_fcfs = [fcf / ((1 + discount_rate) ** i) for i, fcf in enumerate(projected_fcfs, 1)]
+    discounted_terminal_value = terminal_value / ((1 + discount_rate) ** years)
+
+    enterprise_value = sum(discounted_fcfs) + discounted_terminal_value
+
+    if shares_outstanding is None or shares_outstanding <= 0:
+        return (None, None)
+
+    intrinsic_value = enterprise_value / shares_outstanding
+
+    return float(intrinsic_value), round(growth_rate * 100, 2)
+
+
 def get_trading_volume_vs_avg20(ticker_symbol: str) -> float:
     try:
         # Fetch 21 days of data
@@ -746,6 +840,33 @@ def get_operating_income_qoq(ticker):
     except Exception as e:
         print(f"[Error processing {ticker}]: {e}")
         return None
+    
+def score_intrinsic_value(intrinsic_value, current_price, fcf_yield, tenyr_treasury_yield, fcf_cagr, est_fcf_cagr):
+    score = 0
+
+    if intrinsic_value is not None and current_price is not None:
+        if intrinsic_value > current_price:
+            score += 2  # undervalued
+        elif intrinsic_value < current_price:
+            score -= 1  # overvalued
+
+    if fcf_cagr is not None and est_fcf_cagr is not None:
+        if fcf_cagr >= est_fcf_cagr:
+            score += 2
+        elif fcf_cagr < est_fcf_cagr:       
+            score -= 1
+
+    if fcf_yield is not None:
+        if fcf_yield > tenyr_treasury_yield:
+            score += 2
+        elif fcf_yield < tenyr_treasury_yield:
+            score -= 1
+
+    if fcf_cagr is not None:
+        if fcf_cagr >= 0:
+            score += 1
+
+    return score
 
 def classify_cyclicality(industry):
     """
@@ -821,7 +942,7 @@ def process_ticker_quantitatives():
             debtToEquity = info.get('debtToEquity', None) # < 0.5
             debtToEquity = debtToEquity/100 if debtToEquity is not None else None
             currentRatio = info.get('currentRatio', None) # 초점: 회사의 단기 유동성, > 1.5 && < 2.5
-
+            shares_outstanding = info.get('sharesOutstanding')
             pbr = info.get('priceToBook', None) # 초점: 자산가치, 저pbr종목은 저평가된 자산 가치주로 간주. 장기 수익률 설명력 높음 < 1.5 (=being traded at 1.5 times its book value (asset-liab))
             per = info.get('trailingPE', None) # 초점: 수익성, over/undervalue? 저per 종목 선별, 10-20전후(혹은 산업평균)로 낮고 높음 구분. 주가가 그 기업의 이익에 비해 과대/과소평가되어 있다는 의미
                                                                        # low per could be undervalued or company in trouble, IT, 바이오 등 성장산업은 자연스레 per이 높게 형성
@@ -857,7 +978,14 @@ def process_ticker_quantitatives():
             esg = get_esg_score(ticker)
         
             quantitative_buffett_score = buffett_score(debtToEquity, currentRatio, pbr, per, industry_per, roe, industry_roe, roa, industry_roa, eps_growth, div_growth, icr, operating_income_yoy, operating_income_qoq)
-         
+            fcf_yield, fcf_cagr, fcf_list = get_fcf_yield_and_cagr(ticker)
+            tenyr_treasury_yield = get_10yr_treasury_yield()
+            discount_rate = (tenyr_treasury_yield+5.0)/100.0
+            intrinsic_value, est_fcf_cagr = dcf_valuation(fcf_list, discount_rate=discount_rate, long_term_growth=0.02, years=10, shares_outstanding=shares_outstanding)
+
+            intrinsic_value_score = score_intrinsic_value(intrinsic_value, currentPrice, fcf_yield, tenyr_treasury_yield, fcf_cagr, est_fcf_cagr)
+
+            quantitative_buffett_score += intrinsic_value_score
 
             ## FOR extra 10 score:::
             # MOAT -> sustainable competitive advantage that protects a company from its competitors, little to no competition, dominant market share, customer loyalty 
@@ -883,6 +1011,7 @@ def process_ticker_quantitatives():
                 "B-Score": round(quantitative_buffett_score, 1),
                 "업종": industry,
                 "주가(전날대비)": f"{currentPrice:,.0f}" + percentage_change if country == 'KR' or country == 'JP' else f"{currentPrice:,.2f}" + percentage_change,
+                "DCF": f"{intrinsic_value:,.1f}" if intrinsic_value is not None else 'N/A',
                 "부채비율": round(debtToEquity, 2) if debtToEquity is not None else 'N/A',
                 "유동비율": round(currentRatio, 2) if currentRatio is not None else 'N/A',
                 "PBR": round(pbr,2) if pbr is not None else None,
@@ -890,6 +1019,8 @@ def process_ticker_quantitatives():
                 "ROE(업종)": roe_print,
                 "ROA(업종)": roa_print,
                 "ICR": round(icr,1) if icr is not None else 'N/A',
+                "FCF수익률": f"{fcf_yield:.1%}" if fcf_yield is not None else 'N/A',
+                "FCF성장률/예상": f"{fcf_cagr:.1%}/{est_fcf_cagr:.1%}" if fcf_cagr is not None and est_fcf_cagr is not None else 'N/A',
                 "EPS성장률": eps_growth if isinstance(eps_growth, bool) else (f"{eps_growth:.2%}" if eps_growth is not None else 'N/A'), #use this instead of operating income incrs for quart/annual 
                 "배당성장률": div_growth if isinstance(div_growth, bool) else (f"{div_growth:.2%}" if div_growth is not None else 'N/A'),
                 "영업이익률(Y/Q)": str(operating_income_yoy if operating_income_yoy is not None else 'N/A') + '/' + str(operating_income_qoq if operating_income_qoq is not None else 'N/A'),

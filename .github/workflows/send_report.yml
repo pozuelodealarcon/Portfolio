@@ -32,7 +32,7 @@ jobs:
 
   update-cache:
     runs-on: ubuntu-latest
-    if: github.event_name == 'schedule' && startsWith(github.event.schedule, '0 23 * * 1')  # Monday only
+    if: github.event_name == 'schedule' && startsWith(github.event.schedule, '0 23 * * 6')  # Monday only
 
     steps:
     - name: Checkout repo

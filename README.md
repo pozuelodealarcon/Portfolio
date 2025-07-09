@@ -1,5 +1,5 @@
-# 🇺🇸 Buffett-Style Quant Portfolio (U.S. Stock Market Quant Analysis Program)
-```markdown
+# 🇺🇸 Quantitative Investment Analysis and Optimization Tool with Buffett Methodology
+
 
 📈 **A program that combines Warren Buffett’s investment philosophy with modern quantitative strategies**  
 to analyze U.S. stocks and automatically generate optimized portfolios for mid-term and long-term value investment
@@ -17,13 +17,12 @@ to analyze U.S. stocks and automatically generate optimized portfolios for mid-t
 
 ## 📁 Directory Structure
 
-```
+
 
 src/
 ├── buffett\_us.py        # Main executable file
-yf\_cache\_multi.csv       # Cached price data
 
-````
+
 
 ## ⚙️ Installation
 

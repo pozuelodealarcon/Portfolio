@@ -1,9 +1,9 @@
-name: Send Buffett Report at 8 AM KST
+name: Send Buffett Excel at 8AM KST
 
 on:
   schedule:
-    - cron: '0 23 * * 1-5'  # 매주 월~금 23:00 UTC → KST 기준 08:00 다음날 (즉, 한국시간 오후 5시)
-  workflow_dispatch:  # 수동 실행 허용
+    - cron: '0 23 * * 1-5'  # 매주 월~금 23:00 UTC = KST 08:00 (다음날 5PM)
+  workflow_dispatch:
 
 jobs:
   send-daily-excel:
@@ -32,7 +32,6 @@ jobs:
 
   update-cache:
     runs-on: ubuntu-latest
-    # 자동 실행: 토요일 08:00 KST (즉 금요일 23:00 UTC)만 실행 또는 수동 실행 시에도 허용
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'schedule' && startsWith(github.event.schedule, '0 23 * * 6'))
 
     steps:
@@ -49,4 +48,6 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run cache update script
+        env:
+          FMP_API_KEY: ${{ secrets.FMP_API_KEY }}
         run: python src/yf_cache_downloader.py

@@ -1710,10 +1710,12 @@ time.sleep(3)
 
 excel_path = f'result_US_{formattedDate}.xlsx'
 
-date_kr = dt.datetime.strptime(formattedDate, '%Y%m%d').strftime('%Y년 %m월 %d일')
+
+date_kr = dt.datetime.strptime(formattedDate, '%Y%m%d').strftime('%-m월 %-d일')
+
 
 msg = EmailMessage()
-msg['Subject'] = f'美증시 퀀트 분석 | {date_kr}'
+msg['Subject'] = f'[{date_kr}] 美증시 퀀트 분석 리포트'
 msg['From'] = Address(display_name='Hyungsuk Choi', addr_spec=EMAIL)
 msg['To'] = ''  # or '' or a single address to satisfy the 'To' header requirement
 

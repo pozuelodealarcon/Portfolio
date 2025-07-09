@@ -1,0 +1,51 @@
+name: Send Buffett Excel at 5PM KST
+
+on:
+  schedule:
+    - cron: '0 23 * * 1-5'  # 5 PM KST = 8 AM UTC, Monday–Friday
+  workflow_dispatch:
+
+jobs:
+  send-daily-excel:
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'schedule' && github.event.schedule == '0 23 * * 1-5' }}
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12.1'
+
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+
+    - name: Run Buffett script and email
+      env:
+        EMAIL_ADDRESS: ${{ secrets.EMAIL_ADDRESS }}
+        EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+        FMP_API_KEY: ${{ secrets.FMP_API_KEY }}
+      run: python src/buffett_us.py
+
+  update-cache:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' && startsWith(github.event.schedule, '0 23 * * 1')  # Monday only
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12.1'
+
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+
+    - name: Run cache update script
+      run: python src/yf_cache_downloader.py

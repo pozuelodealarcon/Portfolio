@@ -1335,7 +1335,8 @@ if not symbols_in_data:
 
 data = close_df[symbols_in_data]
 
-returns = data.pct_change().dropna()
+returns = data.pct_change(fill_method='pad').dropna()
+
 # Sharpe Ratio 최적화 함수
 def objective_sharpe(weights): 
     port_return = np.dot(weights, returns.mean()) * 252

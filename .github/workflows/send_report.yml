@@ -35,8 +35,10 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'schedule' && startsWith(github.event.schedule, '0 23 * * 6'))
 
     steps:
-      - name: Checkout repo
+      - name: Checkout repo with write access
         uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}  # Enables git push
 
       - name: Set up Python
         uses: actions/setup-python@v4

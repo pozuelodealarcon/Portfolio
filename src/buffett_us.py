@@ -41,6 +41,7 @@ EMAIL = os.environ['EMAIL_ADDRESS']
 PASSWORD = os.environ['EMAIL_PASSWORD']
 # Get the API key
 fmp_key = os.environ['FMP_API_KEY']
+marketaux_api = os.environ['MARKETAUX_API']
 recipients = ['chs_3411@naver.com', 'eljm2080@gmail.com', 'hyungsukchoi3411@gmail.com']
 
 NUM_THREADS = 2 #multithreading 
@@ -1297,7 +1298,88 @@ df = df.sort_values(by='합계점수', ascending=False)
 top_tickers = df['티커'].head(opt).tolist()
 
 #################################################################
+def get_news_for_tickers(tickers, api_token):
+    """
+    Fetch recent and relevant news for multiple stock tickers using Marketaux API,
+    including sentiment score, and return as a single pandas DataFrame.
+
+    Parameters:
+    - tickers: list of ticker strings, e.g. ['AAPL', 'TSM']
+    - api_token: Marketaux API token string
+
+    Returns:
+    - pandas DataFrame with news for all tickers concatenated
+    """
+    all_news = []
+
+    for ticker in tickers:
+        # Step 1: Get company name
+        try:
+            company_info = yf.Ticker(ticker).info
+            company_name = company_info.get("shortName", "")
+        except Exception as e:
+            print(f"[{ticker}] Failed to get company name: {e}")
+            company_name = ""
+
+        if not company_name:
+            print(f"[{ticker}] No company name found, skipping.")
+            continue
+
+        published_after = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+
+        # Step 2: Query Marketaux News API
+        url = "https://api.marketaux.com/v1/news/all"
+        params = {
+            "api_token": api_token,
+            "symbols": ticker.upper(),
+            "language": "en",
+            "published_after": published_after,
+            "limit": 3,  # Fetch more and filter after
+            "sort": "published_at"
+        }
+
+        response = requests.get(url, params=params)
+        if response.status_code != 200:
+            print(f"[{ticker}] API Error {response.status_code}: {response.text}")
+            continue
+
+        articles = response.json().get("data", [])
+        filtered = []
+
+        for article in articles:
+            title = article.get("title", "").lower()
+            if ticker.lower() not in title and company_name.lower() not in title:
+                continue  # Skip if neither ticker nor company name in title
+
+            # Get sentiment score from entities
+            sentiment_score = None
+            for entity in article.get("entities", []):
+                if entity.get("symbol", "").upper() == ticker.upper():
+                    sentiment_score = entity.get("sentiment_score")
+                    break
+
+            filtered.append({
+                "Ticker": ticker.upper(),
+                "Company": company_name,
+                "Title": article.get("title"),
+                "Description": article.get("description"),
+                "URL": article.get("url"),
+                "Published": article.get("published_at"),
+                "Sentiment": sentiment_score
+            })
+
+            if len(filtered) >= 3:  # Limit to 3 relevant articles per ticker
+                break
+
+        if filtered:
+            all_news.extend(filtered)
+        else:
+            print(f"[{ticker}] No relevant news articles found.")
+
+    # Create and return a single DataFrame with all results
+    return pd.DataFrame(all_news)
 #################################################################
+news_df = get_news_for_tickers(top_tickers, api_token=marketaux_api)
 #################################################################
 
 # Seleccionar Criterio de Optimización
@@ -1546,6 +1628,22 @@ df_stats = pd.DataFrame(stats_rows)
 
 filename = f"result_{country}_{formattedDate}.xlsx"
 
+def autofit_columns_and_wrap(ws, df):
+    # Adjust column widths
+    for i, col in enumerate(df.columns):
+        # Get max length of data in the column including header
+        max_len = max(
+            df[col].astype(str).map(len).max(),
+            len(col)
+        ) + 2  # Add some padding
+        ws.set_column(i, i, max_len)
+    
+    # Enable text wrap for all used rows and columns
+    wrap_format = ws.book.add_format({'text_wrap': True})
+    # Apply wrap format for all cells including header
+    for row in range(len(df) + 1):  # +1 for header
+        ws.set_row(row, None, wrap_format)
+
 with pd.ExcelWriter(filename, engine='xlsxwriter') as writer:
 
       # 종목분석 시트 먼저 생성해야 함
@@ -1570,6 +1668,16 @@ with pd.ExcelWriter(filename, engine='xlsxwriter') as writer:
         'columns': [{'header': col} for col in df_stats.columns],
         'style': 'Table Style Medium 9'
     })
+
+    # 뉴스 데이터프레임 시트 생성 및 표 적용
+    news_df.to_excel(writer, index=False, sheet_name='종목뉴스')
+    ws_news = writer.sheets['종목뉴스']
+    (nr, nc) = news_df.shape
+    ws_news.add_table(0, 0, nr, nc - 1, {
+        'columns': [{'header': col} for col in news_df.columns],
+        'style': 'Table Style Medium 9'
+    })
+    autofit_columns_and_wrap(ws_news, news_df)
 
     workbook  = writer.book
     worksheet = writer.sheets['종목분석']

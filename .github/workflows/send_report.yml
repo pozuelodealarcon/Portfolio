@@ -28,6 +28,7 @@ jobs:
           EMAIL_ADDRESS: ${{ secrets.EMAIL_ADDRESS }}
           EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
           FMP_API_KEY: ${{ secrets.FMP_API_KEY }}
+          MARKETAUX_API: ${{ secrets.MARKETAUX_API }}
         run: python src/buffett_us.py
 
   update-cache:

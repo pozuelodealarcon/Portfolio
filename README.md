@@ -13,6 +13,7 @@ to analyze U.S. stocks and automatically generate optimized portfolios for mid-t
 - DCF intrinsic value evaluation based on FCF yield and CAGR  
 - ESG performance classification  
 - Portfolio optimization (Sharpe, Sortino, CVaR, variance minimization)  
+- Queries Marketaux API for the three latest and relevant news; returns the headline and summary along with sentiment scores associated with the ticker in each article
 - Results saved to Excel and automatically emailed
 
 ## 📁 Directory Structure

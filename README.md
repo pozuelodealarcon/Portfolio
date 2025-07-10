@@ -115,7 +115,7 @@ GitHub Actions automatically:
 
 ## 📤 Automated Execution (GitHub Actions)
 
-Configured in `.github/workflows/buffett.yml` to run **automatically every Mon-Fri at 08:00 KST**.
+Configured in `.github/workflows/buffett.yml` to run **automatically every Mondays and Fridays at 08:00 KST**.
 
 ---
 

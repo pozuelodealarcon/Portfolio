@@ -59,7 +59,12 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git pull --rebase origin main
+
+          git fetch origin main
+          git rebase origin/main || echo "Rebase failed, continuing anyway"
+
           git add yf_cache_multi.csv
-          git commit -m "Update cache file at $(date +'%Y-%m-%d %H:%M:%S')" || echo "No changes to commit"
-          git push origin main
+          git commit -m "Update cache file at $(date +'%Y-%m-%d %H:%M:%S')"
+          git push origin main --force
+
+

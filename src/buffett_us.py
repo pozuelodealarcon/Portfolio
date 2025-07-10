@@ -1325,7 +1325,7 @@ def get_news_for_tickers(tickers, api_token):
             print(f"[{ticker}] No company name found, skipping.")
             continue
 
-        published_after = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+        published_after = (datetime.now() - timedelta(days=2)).strftime("%Y-%m-%d")
 
         # Step 2: Query Marketaux News API
         url = "https://api.marketaux.com/v1/news/all"
@@ -1628,20 +1628,20 @@ df_stats = pd.DataFrame(stats_rows)
 
 filename = f"result_{country}_{formattedDate}.xlsx"
 
-def autofit_columns_and_wrap(ws, df):
+def autofit_columns_and_wrap(ws, df, workbook):
     # Adjust column widths
     for i, col in enumerate(df.columns):
-        # Get max length of data in the column including header
         max_len = max(
             df[col].astype(str).map(len).max(),
             len(col)
-        ) + 2  # Add some padding
+        ) + 2
         ws.set_column(i, i, max_len)
-    
-    # Enable text wrap for all used rows and columns
-    wrap_format = ws.book.add_format({'text_wrap': True})
-    # Apply wrap format for all cells including header
-    for row in range(len(df) + 1):  # +1 for header
+
+    # Create wrap format from workbook (not worksheet)
+    wrap_format = workbook.add_format({'text_wrap': True})
+
+    # Apply wrap format for all rows (including header)
+    for row in range(len(df) + 1):
         ws.set_row(row, None, wrap_format)
 
 with pd.ExcelWriter(filename, engine='xlsxwriter') as writer:
@@ -1677,7 +1677,7 @@ with pd.ExcelWriter(filename, engine='xlsxwriter') as writer:
         'columns': [{'header': col} for col in news_df.columns],
         'style': 'Table Style Medium 9'
     })
-    autofit_columns_and_wrap(ws_news, news_df)
+    autofit_columns_and_wrap(ws_news, news_df, writer.book)
 
     workbook  = writer.book
     worksheet = writer.sheets['종목분석']

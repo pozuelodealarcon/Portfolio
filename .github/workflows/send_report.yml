@@ -71,7 +71,5 @@ jobs:
 
           # 3. 푸시
           git push origin main
-              env:
-                GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # GitHub Actions가 자동으로 제공하는 토큰
-
+             
 

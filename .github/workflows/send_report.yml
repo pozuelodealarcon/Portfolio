@@ -70,6 +70,6 @@ jobs:
           git rebase origin/main || echo "Rebase failed" # 내 코드 정리해서 최신 위에 얹기
 
           # 3. 푸시
-          git push origin main
+          git push origin main #push
              
 

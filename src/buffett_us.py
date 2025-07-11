@@ -49,7 +49,6 @@ NUM_THREADS = 2 #multithreading
 country = 'US'
 limit=100 # 250 requests/day
 opt = 10 # top X tickers to optimize
-opt_news = 30 # top X tickers to fetch news for
 sp500 = True
 
 #########################################################
@@ -1297,7 +1296,7 @@ df = df.sort_values(by='합계점수', ascending=False)
 
 # 상위 X개 티커 리스트 추출
 top_tickers = df['티커'].head(opt).tolist()
-top_tickers_news = df['티커'].head(opt_news).tolist()
+top_tickers_news = df['티커'].tolist()
 
 #################################################################
 def clean_short_name(name):

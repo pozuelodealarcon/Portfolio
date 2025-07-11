@@ -1368,7 +1368,7 @@ def get_news_for_tickers(tickers, api_token):
                 "Title": article.get("title"),
                 "Sentiment": sentiment_score,
                 "Description": article.get("description"),
-                "Published": article.get("published_at"),
+                "Published": str(article.get("published_at"))[:10],
                 "URL": article.get("url"),
             })
 
@@ -1632,29 +1632,26 @@ df_stats = pd.DataFrame(stats_rows)
 filename = f"result_{country}_{formattedDate}.xlsx"
 
 def autofit_columns_and_wrap(ws, df, workbook):
-    # Adjust column widths
-    for i, col in enumerate(df.columns):
-        max_len = max(
-            df[col].astype(str).map(len).max(),
-            len(col)
-        ) + 2
-        ws.set_column(i, i, max_len)
+    # Desired pixel widths
+    pixel_widths = [92, 200, 86, 555, 85, 150]
+    char_widths = [round(p * 0.1428) for p in pixel_widths]
 
-    # Create wrap format
+    # Apply column widths and wrap
     wrap_format = workbook.add_format({'text_wrap': True, 'valign': 'top'})
 
-    # Apply wrap format to all data cells (including header)
-    nrows, ncols = df.shape
+    for i, col in enumerate(df.columns):
+        # Set specific width
+        if i < len(char_widths):
+            ws.set_column(i, i, char_widths[i])
+        else:
+            ws.set_column(i, i, 20)  # default fallback
+        # Write header with wrap
+        ws.write(0, i, col, wrap_format)
 
-    # Apply to header row
-    for col in range(ncols):
-        ws.write(0, col, df.columns[col], wrap_format)
-
-    # Apply to data rows
-    for row in range(1, nrows + 1):
-        for col in range(ncols):
-            # Get the cell value as string to write with wrap format
-            val = df.iat[row-1, col]
+    # Write data with wrap format
+    for row in range(1, len(df) + 1):
+        for col in range(len(df.columns)):
+            val = df.iat[row - 1, col]
             ws.write(row, col, val, wrap_format)
 
 

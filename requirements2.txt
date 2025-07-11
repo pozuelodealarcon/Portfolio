@@ -1,0 +1,2 @@
+yfinance == 0.2.64
+datetime == 5.5

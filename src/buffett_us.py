@@ -5,7 +5,7 @@ import yfinance as yf
 import pandas as pd
 import numpy as np
 import requests
-#from pykrx import stock
+import string
 import datetime as dt
 import openpyxl
 import math
@@ -48,7 +48,8 @@ NUM_THREADS = 2 #multithreading
 
 country = 'US'
 limit=100 # 250 requests/day
-opt = 10 # top X tickers to analyze
+opt = 10 # top X tickers to optimize
+opt_news = 30 # top X tickers to fetch news for
 sp500 = True
 
 #########################################################
@@ -1296,33 +1297,37 @@ df = df.sort_values(by='합계점수', ascending=False)
 
 # 상위 X개 티커 리스트 추출
 top_tickers = df['티커'].head(opt).tolist()
+top_tickers_news = df['티커'].head(opt_news).tolist()
 
 #################################################################
+def clean_short_name(name):
+    if not name:
+        return ''
+    suffixes = [' Inc.', ' Inc', ' Corporation', ' Corp.', ' Corp', ' Ltd.', ' Ltd', ' Co.', ' Co']
+    for suffix in suffixes:
+        if name.endswith(suffix):
+            name = name[:-len(suffix)]
+            break
+    translator = str.maketrans('', '', string.punctuation)
+    name = name.translate(translator)
+    name = name.strip()
+    return name.lower()  # convert to lower for case-insensitive compare
+
 def get_news_for_tickers(tickers, api_token):
-    """
-    Fetch recent and relevant news for multiple stock tickers using Marketaux API,
-    including sentiment score, and return as a single pandas DataFrame.
-
-    Parameters:
-    - tickers: list of ticker strings, e.g. ['AAPL', 'TSM']
-    - api_token: Marketaux API token string
-
-    Returns:
-    - pandas DataFrame with news for all tickers concatenated
-    """
     all_news = []
 
     for ticker in tickers:
-        # Step 1: Get company name
+        # Step 1: Get cleaned company name
         try:
             company_info = yf.Ticker(ticker).info
-            company_name = company_info.get("shortName", "")
+            full_name = company_info.get("shortName", "")
+            clean_name = clean_short_name(full_name)
         except Exception as e:
             print(f"[{ticker}] Failed to get company name: {e}")
-            company_name = ""
+            continue
 
-        if not company_name:
-            print(f"[{ticker}] No company name found, skipping.")
+        if not clean_name:
+            print(f"[{ticker}] No company name found after cleaning, skipping.")
             continue
 
         published_after = (datetime.now() - timedelta(days=2)).strftime("%Y-%m-%d")
@@ -1334,8 +1339,8 @@ def get_news_for_tickers(tickers, api_token):
             "symbols": ticker.upper(),
             "language": "en",
             "published_after": published_after,
-            "limit": 3,  # Fetch more and filter after
-            "sort": "published_at"
+            "search": clean_name,
+            "limit": 10,  # fetch more to filter after
         }
 
         response = requests.get(url, params=params)
@@ -1348,8 +1353,9 @@ def get_news_for_tickers(tickers, api_token):
 
         for article in articles:
             title = article.get("title", "").lower()
-            if ticker.lower() not in title and company_name.lower() not in title:
-                continue  # Skip if neither ticker nor company name in title
+            # Filter: title must contain ticker OR clean company name
+            if clean_name not in title.lower():
+                continue
 
             # Get sentiment score from entities
             sentiment_score = None
@@ -1359,16 +1365,15 @@ def get_news_for_tickers(tickers, api_token):
                     break
 
             filtered.append({
-                "Ticker": ticker.upper(),
-                "Company": company_name,
+                "Company": full_name,
                 "Title": article.get("title"),
+                "Sentiment": sentiment_score,
                 "Description": article.get("description"),
-                "URL": article.get("url"),
                 "Published": article.get("published_at"),
-                "Sentiment": sentiment_score
+                "URL": article.get("url"),
             })
 
-            if len(filtered) >= 3:  # Limit to 3 relevant articles per ticker
+            if len(filtered) >= 3:
                 break
 
         if filtered:
@@ -1376,10 +1381,9 @@ def get_news_for_tickers(tickers, api_token):
         else:
             print(f"[{ticker}] No relevant news articles found.")
 
-    # Create and return a single DataFrame with all results
     return pd.DataFrame(all_news)
 #################################################################
-news_df = get_news_for_tickers(top_tickers, api_token=marketaux_api)
+news_df = get_news_for_tickers(top_tickers_news, api_token=marketaux_api)
 #################################################################
 
 # Seleccionar Criterio de Optimización
@@ -1637,12 +1641,23 @@ def autofit_columns_and_wrap(ws, df, workbook):
         ) + 2
         ws.set_column(i, i, max_len)
 
-    # Create wrap format from workbook (not worksheet)
-    wrap_format = workbook.add_format({'text_wrap': True})
+    # Create wrap format
+    wrap_format = workbook.add_format({'text_wrap': True, 'valign': 'top'})
 
-    # Apply wrap format for all rows (including header)
-    for row in range(len(df) + 1):
-        ws.set_row(row, None, wrap_format)
+    # Apply wrap format to all data cells (including header)
+    nrows, ncols = df.shape
+
+    # Apply to header row
+    for col in range(ncols):
+        ws.write(0, col, df.columns[col], wrap_format)
+
+    # Apply to data rows
+    for row in range(1, nrows + 1):
+        for col in range(ncols):
+            # Get the cell value as string to write with wrap format
+            val = df.iat[row-1, col]
+            ws.write(row, col, val, wrap_format)
+
 
 with pd.ExcelWriter(filename, engine='xlsxwriter') as writer:
 

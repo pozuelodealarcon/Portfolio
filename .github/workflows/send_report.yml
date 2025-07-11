@@ -61,11 +61,17 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          git fetch origin main
-          git rebase origin/main
-
+          # 1. 변경사항 먼저 커밋
           git add yf_cache_multi.csv
           git commit -m "Update cache file at $(date +'%Y-%m-%d %H:%M:%S')" || echo "No changes to commit"
+
+          # 2. 원격 fetch 후 rebase
+          git fetch origin main
+          git rebase origin/main || echo "Rebase failed"
+
+          # 3. 푸시
           git push origin main
+              env:
+                GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # GitHub Actions가 자동으로 제공하는 토큰
 
 

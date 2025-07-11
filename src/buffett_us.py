@@ -1339,7 +1339,7 @@ def get_news_for_tickers(tickers, api_token):
             "language": "en",
             "published_after": published_after,
             "search": clean_name,
-            "limit": 10,  # fetch more to filter after
+            "limit": 3,  # fetch more to filter after
         }
 
         response = requests.get(url, params=params)

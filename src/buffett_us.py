@@ -1366,9 +1366,9 @@ def get_news_for_tickers(tickers, api_token):
             filtered.append({
                 "Company": full_name,
                 "Title": article.get("title"),
-                "Sentiment": sentiment_score,
+                "Sentiment": round(float(sentiment_score),2) if sentiment_score else None,
                 "Description": article.get("description"),
-                "Published": str(article.get("published_at"))[:10],
+                "Published": str(article.get("published_at"))[:10] if article.get("published_at") else None,
                 "URL": article.get("url"),
             })
 
@@ -1633,7 +1633,7 @@ filename = f"result_{country}_{formattedDate}.xlsx"
 
 def autofit_columns_and_wrap(ws, df, workbook):
     # Desired pixel widths
-    pixel_widths = [92, 200, 86, 555, 85, 150]
+    pixel_widths = [92, 200, 50, 500, 85, 150]
     char_widths = [round(p * 0.1428) for p in pixel_widths]
 
     # Apply column widths and wrap
@@ -1903,6 +1903,7 @@ html_content = f"""
         <tr><td><b>Sortino Ratio</b></td><td>소티노 지수</td><td>수익률 대비 하방 위험(손실 변동성)을 고려한 위험 조정 수익률을 나타냅니다. 값이 높을수록 하방 위험 대비 수익률이 우수함을 의미합니다.</td></tr>
         <tr><td><b>Variance</b></td><td>분산</td><td>포트폴리오 수익률의 변동성을 나타내는 지표로, 위험 수준 평가에 사용됩니다. 값이 낮을수록 안정적인 포트폴리오임을 뜻합니다.</td></tr>
         <tr><td><b>Sharpe Ratio</b></td><td>샤프 지수</td><td>포트폴리오의 초과 수익률을 표준편차로 나눈 지표로, 위험 대비 수익률을 평가합니다. 값이 클수록 효율적인 투자임을 나타냅니다.</td></tr>
+        <tr><td><b>Sentiment Score</b></td><td>감성 점수</td><td>텍스트의 긍정 또는 부정 정도를 수치화한 지표로, 투자 심리나 뉴스 반응을 정량적으로 평가합니다. 값이 높을수록 긍정적인 정서임을 나타냅니다.</td></tr>
 
       </tbody>
     </table>

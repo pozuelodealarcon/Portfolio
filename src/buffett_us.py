@@ -1631,28 +1631,37 @@ df_stats = pd.DataFrame(stats_rows)
 
 filename = f"result_{country}_{formattedDate}.xlsx"
 
-def autofit_columns_and_wrap(ws, df, workbook):
-    # Desired pixel widths
+def autofit_columns_and_wrap(ws, df: pd.DataFrame, workbook):
+    # 픽셀 -> 문자 수 환산 (0.1428 배율 기준)
     pixel_widths = [92, 200, 50, 500, 85, 150]
     char_widths = [round(p * 0.1428) for p in pixel_widths]
 
-    # Apply column widths and wrap
+    # wrap + top-align 포맷
     wrap_format = workbook.add_format({'text_wrap': True, 'valign': 'top'})
 
+    # 헤더 작성 및 열 너비 설정
     for i, col in enumerate(df.columns):
-        # Set specific width
-        if i < len(char_widths):
-            ws.set_column(i, i, char_widths[i])
-        else:
-            ws.set_column(i, i, 20)  # default fallback
-        # Write header with wrap
-        ws.write(0, i, col, wrap_format)
+        width = char_widths[i] if i < len(char_widths) else 20
+        ws.set_column(i, i, width)
+        ws.write(0, i, str(col), wrap_format)
 
-    # Write data with wrap format
+    # 데이터 셀 작성
     for row in range(1, len(df) + 1):
         for col in range(len(df.columns)):
             val = df.iat[row - 1, col]
-            ws.write(row, col, val, wrap_format)
+
+            # NaN / inf / None -> 문자열 변환
+            if isinstance(val, float):
+                if math.isnan(val) or math.isinf(val):
+                    val = str(val)
+            elif val is None:
+                val = ""
+
+            # Excel 쓰기 실패 대비 안전 write
+            try:
+                ws.write(row, col, val, wrap_format)
+            except Exception:
+                ws.write(row, col, str(val), wrap_format)
 
 
 with pd.ExcelWriter(filename, engine='xlsxwriter') as writer:

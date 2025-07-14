@@ -1970,7 +1970,7 @@ html_content = f"""
       </tbody>
     </table>
 
-    <h3 style="margin-top: 30px;"><strong>🤖 AI가 Pick한 {date_kr_month} 추천 종목</strong></h3>
+    <h3 style="margin-top: 30px;"><strong>📊 {date_kr_month} AI 추천 종목</strong></h3>
 
     <p>{answer}</p>
 

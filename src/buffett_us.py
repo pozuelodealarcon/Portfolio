@@ -1299,86 +1299,74 @@ top_tickers = df['티커'].head(opt).tolist()
 top_tickers_news = df['티커'].tolist()
 
 #################################################################
-def clean_short_name(name):
-    if not name:
-        return ''
-    suffixes = [' Inc.', ' Inc', ' Corporation', ' Corp.', ' Corp', ' Ltd.', ' Ltd', ' Co.', ' Co']
-    for suffix in suffixes:
-        if name.endswith(suffix):
-            name = name[:-len(suffix)]
-            break
-    translator = str.maketrans('', '', string.punctuation)
-    name = name.translate(translator)
-    name = name.strip()
-    return name.lower()  # convert to lower for case-insensitive compare
-
 def get_news_for_tickers(tickers, api_token):
     all_news = []
 
     for ticker in tickers:
-        # Step 1: Get cleaned company name
         try:
             company_info = yf.Ticker(ticker).info
             full_name = company_info.get("shortName", "")
-            clean_name = clean_short_name(full_name)
         except Exception as e:
-            print(f"[{ticker}] Failed to get company name: {e}")
+            print(f"[{ticker}] ⚠️ Failed to retrieve company info: {e}")
             continue
 
-        if not clean_name:
-            print(f"[{ticker}] No company name found after cleaning, skipping.")
+        if not full_name:
+            print(f"[{ticker}] ⚠️ No company name found, skipping.")
             continue
 
         published_after = (datetime.now() - timedelta(days=2)).strftime("%Y-%m-%d")
-
-        # Step 2: Query Marketaux News API
         url = "https://api.marketaux.com/v1/news/all"
         params = {
             "api_token": api_token,
             "symbols": ticker.upper(),
             "language": "en",
             "published_after": published_after,
-            "search": clean_name,
-            "limit": 3,  # fetch more to filter after
+            "limit": 5,  # Fetch extra to allow filtering
         }
 
-        response = requests.get(url, params=params)
-        if response.status_code != 200:
-            print(f"[{ticker}] API Error {response.status_code}: {response.text}")
+        try:
+            response = requests.get(url, params=params)
+            response.raise_for_status()
+            articles = response.json().get("data", [])
+        except Exception as e:
+            print(f"[{ticker}] ❌ API request failed: {e}")
             continue
 
-        articles = response.json().get("data", [])
-        filtered = []
+        filtered_articles = []
 
         for article in articles:
-            title = article.get("title", "").lower()
-            # Filter: title must contain ticker OR clean company name
-            if clean_name not in title.lower():
-                continue
-
-            # Get sentiment score from entities
+            relevant = False
             sentiment_score = None
+
             for entity in article.get("entities", []):
                 if entity.get("symbol", "").upper() == ticker.upper():
-                    sentiment_score = entity.get("sentiment_score")
+                    relevant = True
+                    score = entity.get("sentiment_score")
+                    try:
+                        sentiment_score = round(float(score), 2)
+                    except (TypeError, ValueError):
+                        sentiment_score = None
                     break
 
-            filtered.append({
+            if not relevant:
+                continue
+
+            filtered_articles.append({
                 "Company": full_name,
                 "Title": article.get("title"),
-                "Sentiment": round(float(sentiment_score),2) if sentiment_score else None,
+                "Sentiment": sentiment_score,
                 "Description": article.get("description"),
-                "Published": str(article.get("published_at"))[:10] if article.get("published_at") else None,
+                "Published": article.get("published_at", "")[:10],
                 "URL": article.get("url"),
             })
 
-            if len(filtered) >= 3:
+            if len(filtered_articles) >= 3:
                 break
 
-        if filtered:
-            all_news.extend(filtered)
+        if filtered_articles:
+            all_news.extend(filtered_articles)
         else:
-            print(f"[{ticker}] No relevant news articles found.")
+            print(f"[{ticker}] ℹ️ No relevant news articles found.")
 
     return pd.DataFrame(all_news)
 #################################################################

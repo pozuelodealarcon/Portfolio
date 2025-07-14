@@ -29,7 +29,10 @@ jobs:
           EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
           FMP_API_KEY: ${{ secrets.FMP_API_KEY }}
           MARKETAUX_API: ${{ secrets.MARKETAUX_API }}
-        run: python src/buffett_us.py
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}  # Pass it to bash via custom name
+        run: |
+          export GEMINI_API_KEY=$GEMINI_API_KEY
+          python src/buffett_us.py
 
   update-cache:
     runs-on: ubuntu-latest

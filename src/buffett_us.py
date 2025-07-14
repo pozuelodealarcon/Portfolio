@@ -27,6 +27,8 @@ from scipy.stats import norm
 from scipy.stats import skew, kurtosis
 from scipy.stats.mstats import gmean
 from datetime import datetime, timedelta
+from google import genai
+from google.genai import types
 
 ################ DEPENDENCIES ###########################
 
@@ -1829,7 +1831,71 @@ excel_path = f'result_US_{formattedDate}.xlsx'
 
 
 date_kr = dt.datetime.strptime(formattedDate, '%Y%m%d').strftime('%-m월 %-d일')
+date_kr_month = dt.datetime.strptime(formattedDate, '%Y%m%d').strftime('%-m월')
+#########################################################################################################
 
+# Initialize client
+client = genai.Client(api_key=os.environ['GEMINI_API_KEY'])
+
+# Prepare Google Search tool
+search_tool = types.Tool(google_search=types.GoogleSearch())
+
+def generate_prompt(df_stocks: pd.DataFrame, df_news: pd.DataFrame) -> str:
+    limit = 30
+    top_stocks = df_stocks.sort_values(by='합계점수', ascending=False).head(limit)
+    tickers = top_stocks['티커'].tolist()
+
+    # 뉴스 감정 지수 평균 + 최근 뉴스 요약 (기업명별)
+    news_summary = []
+    if {'기업명', '감정지수', '뉴스 요약'}.issubset(df_news.columns):
+        grouped = df_news.groupby('기업명')
+        for comp, group in grouped:
+            avg_sent = group['감정지수'].mean()
+            recent_summaries = group.sort_values(by='발행일', ascending=False)['뉴스 요약'].head(3).tolist()
+            summaries_text = ' / '.join([s for s in recent_summaries if s])  # 요약문 합침
+            news_summary.append(f"{comp}: 평균 감정지수 {avg_sent:.2f}, 최근 뉴스 요약: {summaries_text}")
+
+    prompt = f"""
+당신은 전문 주식 분석가입니다. 최근 주식 데이터와 뉴스 감정 지수 및 뉴스 요약 정보를 활용하여 다음 작업을 수행해 주세요.
+
+주요 종목 목록 (장기 재무건정성 + 중장기 모멘텀 합계점수 순 상위 {limit}개 티커): {', '.join(tickers)}.
+
+뉴스 요약 및 감정 지수:
+{chr(10).join(news_summary)}
+
+위 데이터를 바탕으로, 각 종목의 장기적인 경쟁 우위 정보를 인터넷 검색을 통해 찾아주세요.
+그리고 이 중 다음 한 달간 가장 상승 가능성이 높은 5개 티커를 선정하고, 
+각 종목별로 명확하고 타당한 근거를 함께 설명해 주세요.
+
+분석에는 최신 웹 검색 결과도 활용해 주세요.
+결과는 5개 티커와 그 이유를 간결하게 불릿 포인트로 알려 주세요.
+"""
+
+    return prompt.strip()
+
+
+def query_gemini(prompt: str) -> str:
+    response = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            tools=[search_tool],
+            response_modalities=["TEXT"],
+        ),
+    )
+    return response.text
+
+
+def main(df_stocks, df_news):
+    prompt = generate_prompt(df_stocks, df_news)
+    print("Prompt sent to Gemini:\n", prompt)
+
+    answer = query_gemini(prompt)
+    return answer
+
+answer = main(df, news_df)
+
+#########################################################################################################
 
 msg = EmailMessage()
 msg['Subject'] = f'[{date_kr}] 美증시 퀀트 분석 리포트'
@@ -1901,14 +1967,20 @@ html_content = f"""
         <tr><td><b>Variance</b></td><td>분산</td><td>포트폴리오 수익률의 변동성을 나타내는 지표로, 위험 수준 평가에 사용됩니다. 값이 낮을수록 안정적인 포트폴리오임을 뜻합니다.</td></tr>
         <tr><td><b>Sharpe Ratio</b></td><td>샤프 지수</td><td>포트폴리오의 초과 수익률을 표준편차로 나눈 지표로, 위험 대비 수익률을 평가합니다. 값이 클수록 효율적인 투자임을 나타냅니다.</td></tr>
         <tr><td><b>Sentiment Score</b></td><td>감성 점수</td><td>텍스트의 긍정 또는 부정 정도를 수치화한 지표로, 투자 심리나 뉴스 반응을 정량적으로 평가합니다. 값이 높을수록 긍정적인 정서임을 나타냅니다.</td></tr>
-
       </tbody>
     </table>
 
-    <p>본 자료는 <b>워런 버핏의 '가치투자'</b>(기업의 내재가치보다 시장 가격이 낮을 때 매수해, 가격이 가치에 수렴할 때 차익을 얻는 투자 방식) 철학을 기반으로, 기업의 재무 건전성을 수치화하여 평가한 결과입니다.<br>
-    투자 판단 시에는 정성적 요소에 대한 별도의 면밀한 검토도 함께 병행하시기를 권장드립니다.</p>
+    <h3 style="margin-top: 30px;"><strong>🤖 AI가 Pick한 {date_kr_month} 추천 종목</strong></h3>
 
-    <p><em>해당 메일은 매주 월요일과 금요일 오전 8시에 자동 발송되며, 안정적이고 현명한 투자를 위한 참고 자료로 제공됩니다.</em></p>
+    <p>{answer}</p>
+
+    <p style="margin-top: 20px; font-size: 14px; color: #444;">
+    본 자료는 <strong>워런 버핏의 '가치투자'</strong> (기업의 내재가치보다 시장 가격이 낮을 때 매수해, 가격이 가치에 수렴할 때 차익을 얻는 투자 방식) 철학을 기반으로,<br>
+    기업의 재무 건전성을 수치화하여 평가한 결과입니다.<br>
+    투자 판단 시에는 정성적 요소에 대한 별도의 면밀한 검토도 함께 병행하시기를 권장드립니다.
+    </p>
+
+    <p><em>해당 메일은 매주 월, 수, 금, 일요일 오전 8시에 자동 발송되며, 안정적이고 현명한 투자를 위한 참고 자료로 제공됩니다.</em></p>
 
     <p><b>귀하의 성공적인 투자를 응원합니다.</b></p>
   </body>

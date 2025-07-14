@@ -1835,7 +1835,7 @@ date_kr_month = dt.datetime.strptime(formattedDate, '%Y%m%d').strftime('%-m월')
 #########################################################################################################
 
 # Initialize client
-client = genai.Client(api_key=os.environ['GEMINI_API_KEY'])
+client = genai.Client(api_key=os.getenv['GEMINI_API_KEY'])
 
 # Prepare Google Search tool
 search_tool = types.Tool(google_search=types.GoogleSearch())

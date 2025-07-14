@@ -1352,11 +1352,11 @@ def get_news_for_tickers(tickers, api_token):
                 continue
 
             filtered_articles.append({
-                "Company": full_name,
-                "Title": article.get("title"),
-                "Sentiment": sentiment_score,
-                "Description": article.get("description"),
-                "Published": article.get("published_at", "")[:10],
+                "기업명": full_name,
+                "기사 제목": article.get("title"),
+                "감정지수": sentiment_score,
+                "뉴스 요약": article.get("description"),
+                "발행일": article.get("published_at", "")[:10],
                 "URL": article.get("url"),
             })
 

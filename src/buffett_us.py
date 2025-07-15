@@ -1092,18 +1092,20 @@ def monte_carlo_dcf_valuation(
     currency='$',
 ):
     if initial_fcf <= 0:
-        raise ValueError("initial_fcf must be positive")
+        return None, None
     if wacc <= terminal_growth_rate:
-        raise ValueError("wacc must be greater than terminal_growth_rate")
+        return None, None
+
     if projection_years <= 0 or num_simulations <= 0:
-        raise ValueError("projection_years and num_simulations must be positive integers")
+        return None, None
 
     stock = yf.Ticker(ticker)
     info = stock.info
 
     shares_outstanding = info.get('sharesOutstanding')
     if not shares_outstanding or shares_outstanding <= 0:
-        raise ValueError(f"Shares outstanding info not found or invalid for ticker {ticker}")
+        return None, None
+
 
     total_debt = info.get('totalDebt') or 0
     cash = info.get('totalCash') or 0

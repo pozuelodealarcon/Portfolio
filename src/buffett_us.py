@@ -1962,6 +1962,8 @@ def main(df_stocks, df_news):
     answer = query_gemini(prompt)
     return answer
 
+answer = main(df, news_df) 
+
 #########################################################################################################
 
 msg = EmailMessage()

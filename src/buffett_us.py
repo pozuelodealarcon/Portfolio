@@ -1915,7 +1915,7 @@ date_kr = dt.datetime.strptime(formattedDate, '%Y%m%d').strftime('%-m월 %-d일'
 date_kr_month = dt.datetime.strptime(formattedDate, '%Y%m%d').strftime('%-m월')
 #########################################################################################################
 # Configure API key
-client = genai.Client(api_key=os.getenv('GEMINI_API_KEY'))
+genai.configure(api_key=os.environ['GEMINI_API_KEY'])
 
 def generate_prompt(df_stocks: pd.DataFrame, df_news: pd.DataFrame) -> str:
     limit = 30
@@ -1948,10 +1948,9 @@ def generate_prompt(df_stocks: pd.DataFrame, df_news: pd.DataFrame) -> str:
     return prompt.strip()
 
 def query_gemini(prompt: str) -> str:
-    response = client.chat.completions.create(
+    response = genai.chat.completions.create(
         model="gemini-2.5-flash",
-        messages=[{"role": "user", "content": prompt}],
-        # No 'tools' parameter here because SDK does not support search tool integration now
+        messages=[{"role": "user", "content": prompt}]
     )
     return response.choices[0].message.content
 
@@ -1962,7 +1961,7 @@ def main(df_stocks, df_news):
     answer = query_gemini(prompt)
     return answer
 
-answer = main(df, news_df) 
+answer = main(df, news_df)
 
 #########################################################################################################
 

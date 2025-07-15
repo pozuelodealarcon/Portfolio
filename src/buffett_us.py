@@ -1081,6 +1081,71 @@ def score_intrinsic_value(intrinsic_value, current_price, fcf_yield, tenyr_treas
 
     return score
 
+
+def monte_carlo_dcf_valuation(
+    ticker,
+    initial_fcf,
+    wacc,
+    terminal_growth_rate,
+    projection_years=5,
+    num_simulations=10_000,
+    currency='$',
+):
+    if initial_fcf <= 0:
+        raise ValueError("initial_fcf must be positive")
+    if wacc <= terminal_growth_rate:
+        raise ValueError("wacc must be greater than terminal_growth_rate")
+    if projection_years <= 0 or num_simulations <= 0:
+        raise ValueError("projection_years and num_simulations must be positive integers")
+
+    stock = yf.Ticker(ticker)
+    info = stock.info
+
+    shares_outstanding = info.get('sharesOutstanding')
+    if not shares_outstanding or shares_outstanding <= 0:
+        raise ValueError(f"Shares outstanding info not found or invalid for ticker {ticker}")
+
+    total_debt = info.get('totalDebt') or 0
+    cash = info.get('totalCash') or 0
+    net_debt = total_debt - cash
+
+    growth_mean = 0.08
+    growth_std = 0.03
+
+    equity_values = []
+
+    for _ in range(num_simulations):
+        fcf = initial_fcf
+        total_value = 0
+
+        for year in range(1, projection_years + 1):
+            growth_rate = np.random.normal(growth_mean, growth_std)
+            fcf *= (1 + growth_rate)
+            discounted_fcf = fcf / ((1 + wacc) ** year)
+            total_value += discounted_fcf
+
+        terminal_value = fcf * (1 + terminal_growth_rate) / (wacc - terminal_growth_rate)
+        discounted_terminal_value = terminal_value / ((1 + wacc) ** projection_years)
+
+        enterprise_value = total_value + discounted_terminal_value
+        equity_value = enterprise_value - net_debt
+
+        equity_values.append(equity_value)
+
+    equity_values = np.array(equity_values)
+    fair_value_per_share = equity_values / shares_outstanding
+
+    mean_val = np.mean(fair_value_per_share)
+    median_val = np.median(fair_value_per_share)
+    std_val = np.std(fair_value_per_share)
+    conf_lower = np.percentile(fair_value_per_share, 2.5)
+    conf_upper = np.percentile(fair_value_per_share, 97.5)
+
+    result = (
+        f"{currency}{conf_lower:,.0f} - {currency}{conf_upper:,.0f}"
+    )
+    return float(median_val), result
+
 def classify_cyclicality(industry):
     """
     Classify a ticker as 'cyclical', 'defensive', or 'neutral' based on its industry.
@@ -1195,11 +1260,27 @@ def process_ticker_quantitatives():
             fcf_yield, fcf_cagr, fcf_list = get_fcf_yield_and_cagr(ticker, api_key=fmp_key)
             tenyr_treasury_yield = get_10yr_treasury_yield()
             discount_rate = (tenyr_treasury_yield+(beta*5.0))/100.0 if beta is not None else (tenyr_treasury_yield+5.0)/100.0
-            intrinsic_value, est_fcf_cagr = dcf_valuation(fcf_list, discount_rate=discount_rate, long_term_growth=0.02, years=10, shares_outstanding=shares_outstanding, cagr=fcf_cagr)
+            terminal_growth_rate = 0.02 #0.03
+            # intrinsic_value, est_fcf_cagr = dcf_valuation(fcf_list, discount_rate=discount_rate, long_term_growth=terminal_growth_rate, years=10, shares_outstanding=shares_outstanding, cagr=fcf_cagr)
+            if not fcf_list or fcf_list[-1] is None:
+                # handle missing FCF, e.g. skip, default, or raise error
+                initial_fcf = None
+            else:
+                initial_fcf = fcf_list[-1]
 
+            if initial_fcf is None:
+                # maybe skip valuation or set a default score
+                intrinsic_value, intrinsic_value_range = None, None
+            else:
+                intrinsic_value, intrinsic_value_range = monte_carlo_dcf_valuation(
+                    ticker, initial_fcf, discount_rate, terminal_growth_rate, projection_years=5, num_simulations=10_000, currency='$'
+                )
+            
+            
             intrinsic_value_score = score_intrinsic_value(intrinsic_value, currentPrice, fcf_yield, tenyr_treasury_yield, fcf_cagr)
-
             quantitative_buffett_score += intrinsic_value_score
+            
+            
 
             ## FOR extra 10 score:::
             # MOAT -> sustainable competitive advantage that protects a company from its competitors, little to no competition, dominant market share, customer loyalty 
@@ -1225,7 +1306,7 @@ def process_ticker_quantitatives():
                 "B-Score": round(quantitative_buffett_score, 1),
                 "업종": industry,
                 "주가(1개월대비)": f"${currentPrice:,.2f}" + percentage_change,
-                "추정DCF": f"${intrinsic_value:,.0f}" if intrinsic_value is not None else 'N/A',
+                "추정DCF": intrinsic_value_range if intrinsic_value_range is not None else 'N/A',
                 "부채비율": round(debtToEquity, 2) if debtToEquity is not None else 'N/A',
                 "유동비율": round(currentRatio, 2) if currentRatio is not None else 'N/A',
                 "PBR": round(pbr,2) if pbr is not None else None,

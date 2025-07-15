@@ -15,5 +15,12 @@ scipy == 1.15.3
 XlsxWriter == 3.2.5
 ta==0.11.0
 google-generativeai==0.8.5
+Cython==3.1.2 
+patsy==1.0.1 
+pmdarima==2.0.4 
+statsmodels==0.14.5
+pulp==1.6.8 
+pyparsing==3.2.3
+kaleido==1.0.0
 # pip install -r requirements.txt
 

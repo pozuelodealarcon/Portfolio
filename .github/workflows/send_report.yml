@@ -21,6 +21,8 @@ jobs:
 
       - name: Install dependencies
         run: |
+          pip install --upgrade pip
+          pip install google-generativeai
           pip install -r requirements.txt
 
       - name: Run Buffett script and email

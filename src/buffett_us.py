@@ -27,8 +27,9 @@ from scipy.stats import norm
 from scipy.stats import skew, kurtosis
 from scipy.stats.mstats import gmean
 from datetime import datetime, timedelta
-from google import genai
 from google.genai import types
+import google.generativeai as genai
+
 
 ################ DEPENDENCIES ###########################
 
@@ -2028,7 +2029,7 @@ html_content = f"""
       </thead>
       <tbody>
         <tr><td><b>FCF</b></td><td>자유현금흐름</td><td>기업이 영업활동을 통해 벌어들인 현금에서 설비 투자 등 사업 유지를 위해 지출한 자금을 제외한 후, 실제로 기업이 자유롭게 사용할 수 있는 현금입니다. 이 현금은 신규 투자 등 다양한 용도로 활용될 수 있습니다.</td></tr>
-        <tr><td><b>DCF</b></td><td>할인된 현금흐름</td><td>미래 예상 자유현금흐름(FCF)을 보수적인 할인율로 현재가치로 환산하여 산출한 기업의 내재가치입니다. 이 내재가치를 현재 주가와 비교하여 기업의 저평가 여부를 판단합니다.</td></tr>
+        <tr><td><b>DCF</b></td><td>할인된 현금흐름</td><td>미래 예상 자유현금흐름(FCF)을 보수적인 할인율로 현재 가치로 환산하여 산출한 기업의 내재가치입니다. 본 내재가치는 몬테카를로 시뮬레이션을 통해 여러 성장 시나리오를 고려하며, 95% 신뢰구간 범위 내에서 내재가치 변동성을 평가하여 기업의 저평가 여부를 보다 정밀하게 판단합니다.</td></tr>
         <tr><td><b>D/E</b></td><td>부채비율</td><td>자본 대비 부채의 비율로, 재무 건전성을 나타냅니다. 낮을수록 안정적입니다.</td></tr>
         <tr><td><b>CR</b></td><td>유동비율</td><td>유동자산이 유동부채를 얼마나 커버할 수 있는지를 보여줍니다.</td></tr>
         <tr><td><b>PBR</b></td><td>주가순자산비율</td><td>주가가 장부가치 대비 얼마나 높은지를 나타내며, 1보다 낮으면 저평가로 해석되기도 합니다.</td></tr>

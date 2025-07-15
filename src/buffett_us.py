@@ -27,7 +27,6 @@ from scipy.stats import norm
 from scipy.stats import skew, kurtosis
 from scipy.stats.mstats import gmean
 from datetime import datetime, timedelta
-from google.genai import types
 import google.generativeai as genai
 
 
@@ -1915,26 +1914,21 @@ excel_path = f'result_US_{formattedDate}.xlsx'
 date_kr = dt.datetime.strptime(formattedDate, '%Y%m%d').strftime('%-m월 %-d일')
 date_kr_month = dt.datetime.strptime(formattedDate, '%Y%m%d').strftime('%-m월')
 #########################################################################################################
-
-# Initialize client
-client = genai.Client(api_key=os.getenv['GEMINI_API_KEY'])
-
-# Prepare Google Search tool
-search_tool = types.Tool(google_search=types.GoogleSearch())
+# Configure API key
+client = genai.Client(api_key=os.getenv('GEMINI_API_KEY'))
 
 def generate_prompt(df_stocks: pd.DataFrame, df_news: pd.DataFrame) -> str:
     limit = 30
     top_stocks = df_stocks.sort_values(by='합계점수', ascending=False).head(limit)
     tickers = top_stocks['티커'].tolist()
 
-    # 뉴스 감정 지수 평균 + 최근 뉴스 요약 (기업명별)
     news_summary = []
     if {'기업명', '감정지수', '뉴스 요약'}.issubset(df_news.columns):
         grouped = df_news.groupby('기업명')
         for comp, group in grouped:
             avg_sent = group['감정지수'].mean()
             recent_summaries = group.sort_values(by='발행일', ascending=False)['뉴스 요약'].head(3).tolist()
-            summaries_text = ' / '.join([s for s in recent_summaries if s])  # 요약문 합침
+            summaries_text = ' / '.join([s for s in recent_summaries if s])
             news_summary.append(f"{comp}: 평균 감정지수 {avg_sent:.2f}, 최근 뉴스 요약: {summaries_text}")
 
     prompt = f"""
@@ -1945,28 +1939,21 @@ def generate_prompt(df_stocks: pd.DataFrame, df_news: pd.DataFrame) -> str:
 뉴스 요약 및 감정 지수:
 {chr(10).join(news_summary)}
 
-위 데이터를 바탕으로, 각 종목의 장기적인 경쟁 우위 정보를 인터넷 검색을 통해 찾아주세요.
+위 데이터를 바탕으로, 각 종목의 장기적인 경쟁 우위 정보를 찾아주세요.
 그리고 이 중 다음 한 달간 가장 상승 가능성이 높은 5개 티커를 선정하고, 
 각 종목별로 명확하고 타당한 근거를 함께 설명해 주세요.
 
-분석에는 최신 웹 검색 결과도 활용해 주세요.
 결과는 5개 티커와 그 이유를 간결하게 불릿 포인트로 알려 주세요.
 """
-
     return prompt.strip()
 
-
 def query_gemini(prompt: str) -> str:
-    response = client.models.generate_content(
+    response = client.chat.completions.create(
         model="gemini-2.5-flash",
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            tools=[search_tool],
-            response_modalities=["TEXT"],
-        ),
+        messages=[{"role": "user", "content": prompt}],
+        # No 'tools' parameter here because SDK does not support search tool integration now
     )
-    return response.text
-
+    return response.choices[0].message.content
 
 def main(df_stocks, df_news):
     prompt = generate_prompt(df_stocks, df_news)
@@ -1974,8 +1961,6 @@ def main(df_stocks, df_news):
 
     answer = query_gemini(prompt)
     return answer
-
-answer = main(df, news_df)
 
 #########################################################################################################
 

@@ -27,7 +27,8 @@ from scipy.stats import norm
 from scipy.stats import skew, kurtosis
 from scipy.stats.mstats import gmean
 from datetime import datetime, timedelta
-import google.generativeai as genai 
+from google import genai
+from google.genai import types
 
 
 ################ DEPENDENCIES ###########################
@@ -1912,10 +1913,13 @@ excel_path = f'result_US_{formattedDate}.xlsx'
 
 date_kr = dt.datetime.strptime(formattedDate, '%Y%m%d').strftime('%-m월 %-d일')
 date_kr_month = dt.datetime.strptime(formattedDate, '%Y%m%d').strftime('%-m월')
+date_kr_ymd = dt.datetime.strptime(formattedDate, '%Y%m%d').strftime('%Y년 %-m월 %-d일')  # Unix
+
 #########################################################################################################
 def generate_prompt(df_stocks: pd.DataFrame, df_news: pd.DataFrame) -> str:
-    limit = 50
-    top_stocks = df_stocks.sort_values(by='합계점수', ascending=False).head(limit)
+    top_limit = 50
+    ai_pick = 10
+    top_stocks = df_stocks.sort_values(by='합계점수', ascending=False).head(top_limit)
     tickers = top_stocks['티커'].tolist()
 
     news_summary = []
@@ -1928,21 +1932,21 @@ def generate_prompt(df_stocks: pd.DataFrame, df_news: pd.DataFrame) -> str:
             news_summary.append(f"{comp}: 평균 감정지수 {avg_sent:.2f}, 최근 뉴스 요약: {summaries_text}")
 
     prompt = f"""
-당신은 전문 주식 분석가입니다. 최근 주식 데이터와 뉴스 감정 지수 및 뉴스 요약 정보를 활용하여 다음 작업을 수행해 주세요.
+당신은 기업 분석 및 거시경제 분석에 능숙한 전문 주식 분석가입니다. 반드시 한국어로 답변해 주세요. {date_kr_ymd}기준 주식 데이터와 뉴스 감정 지수 및 뉴스 요약 정보를 활용하여 다음 작업을 수행해 주세요.
 
-주요 종목 목록 (장기 재무건정성 + 중장기 모멘텀 합계점수 순 상위 {limit}개 티커): {', '.join(tickers)}.
+주요 종목 목록 (장기 재무건정성 + 중장기 모멘텀 합계점수 순 상위 {top_limit}개 티커): {', '.join(tickers)}.
 
 뉴스 요약 및 감정 지수:
 {chr(10).join(news_summary)}
 
 
-위 데이터를 바탕으로, 각 종목의 장기적인 경쟁 우위 정보를 찾아주세요.
-그리고 이 중 다음 한 달간 가장 상승 가능성이 높은 5개 티커를 선정하고, 
+위 데이터를 바탕으로, {date_kr_ymd}기준 각 종목의 장기적인 경쟁 우위 정보와 투자 매력을 찾아주세요.
+그리고 이 중 다음 한 달간 가장 상승 가능성이 높은 {ai_pick}개 종목을 선정하고, 
 각 종목별로 명확하고 타당한 근거를 함께 설명해 주세요.
 
-결과는 5개 티커와 그 이유를 간결하게 불릿 포인트로 알려 주세요.
+결과는 {ai_pick}개 종목과 그 이유를 간결하게 불릿 포인트로 알려 주세요.
 
-추가로, 현재 거시경제 상황(예: 관세, 금리, 인플레이션 등 주요 이슈)과 미국 증시에 미치는 영향에 대한 간략한 요약도 포함해 주세요.
+추가로, {date_kr_ymd}기준 거시경제 상황(예: 관세, 금리, 인플레이션 등 주요 이슈)과 미국 증시에 미치는 영향에 대한 간략한 요약도 포함해 주세요.
 
 """
 
@@ -1950,12 +1954,26 @@ def generate_prompt(df_stocks: pd.DataFrame, df_news: pd.DataFrame) -> str:
 
 ##########################################################################################################
 # Initialize the client (picks up your API key automatically from env vars, or pass api_key explicitly)
-genai.configure(api_key=os.environ["GEMINI_API_KEY"])
+client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+
+
+# Define the grounding tool
+grounding_tool = types.Tool(
+    google_search=types.GoogleSearch()
+)
+
+# Configure generation settings
+config = types.GenerateContentConfig(
+    tools=[grounding_tool]
+)
 
 ##########################################################################################################
 def query_gemini(prompt: str) -> str:
-    model = genai.GenerativeModel(model_name="gemini-2.5-flash")
-    response = model.generate_content(prompt)
+    response = client.models.generate_content(
+    model="gemini-2.5-flash",
+    contents=prompt,
+    temperature=0.2,
+)
     return response.text
 
 

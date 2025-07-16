@@ -27,7 +27,7 @@ from scipy.stats import norm
 from scipy.stats import skew, kurtosis
 from scipy.stats.mstats import gmean
 from datetime import datetime, timedelta
-import google.generativeai as genai
+import google.generativeai as genai 
 
 
 ################ DEPENDENCIES ###########################
@@ -1403,6 +1403,7 @@ def get_news_for_tickers(tickers, api_token):
             "language": "en",
             "published_after": published_after,
             "limit": 5,  # Fetch extra to allow filtering
+            "sort": "relevance",
         }
 
         try:
@@ -1949,14 +1950,12 @@ def generate_prompt(df_stocks: pd.DataFrame, df_news: pd.DataFrame) -> str:
 
 ##########################################################################################################
 # Initialize the client (picks up your API key automatically from env vars, or pass api_key explicitly)
-client = genai.Client(api_key=os.environ['GEMINI_API_KEY'])
-
+genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 
 ##########################################################################################################
 def query_gemini(prompt: str) -> str:
-    response = client.models.generate_content(
-    model="gemini-2.5-flash", contents=prompt
-    )
+    model = genai.GenerativeModel(model_name="gemini-2.5-flash")
+    response = model.generate_content(prompt)
     return response.text
 
 

@@ -1304,7 +1304,7 @@ def process_ticker_quantitatives():
                 "B-Score": round(quantitative_buffett_score, 1),
                 "업종": industry,
                 "주가(1개월대비)": f"${currentPrice:,.2f}" + percentage_change,
-                "추정DCF": intrinsic_value_range if intrinsic_value_range is not None else 'N/A',
+                "추정DCF": (f"{intrinsic_value_range[0]:,.0f} - {intrinsic_value_range[1]:,.0f}" if intrinsic_value_range and intrinsic_value_range != (None, None) else 'N/A'),
                 "부채비율": round(debtToEquity, 2) if debtToEquity is not None else 'N/A',
                 "유동비율": round(currentRatio, 2) if currentRatio is not None else 'N/A',
                 "PBR": round(pbr,2) if pbr is not None else None,

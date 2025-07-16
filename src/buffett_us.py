@@ -1063,8 +1063,8 @@ def score_intrinsic_value(conf_lower, conf_upper, current_price, fcf_yield, teny
     score = 0
 
     if conf_lower is not None and conf_upper is not None and current_price is not None:
-        if current_price <= conf_upper:
-            score += 1  # price is within fair value range
+        if current_price < conf_upper:
+            score += 2  # price is within fair value range
             if current_price <= conf_lower:
                 score += 1  # price is at or below lower bound of fair value range
         else:

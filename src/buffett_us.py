@@ -1058,14 +1058,14 @@ def get_operating_income_qoq(ticker):
         print(f"[Error processing {ticker}]: {e}")
         return None
     
-def score_intrinsic_value(intrinsic_value, current_price, fcf_yield, tenyr_treasury_yield, fcf_cagr):
+def score_intrinsic_value(conf_lower, conf_upper, current_price, fcf_yield, tenyr_treasury_yield, fcf_cagr):
     score = 0
 
-    if intrinsic_value is not None and current_price is not None:
-        if intrinsic_value > current_price:
-            score += 2  # undervalued
-        elif intrinsic_value < current_price:
-            score -= 1  # overvalued
+    if conf_lower is not None and conf_upper is not None and current_price is not None:
+        if conf_lower <= current_price <= conf_upper:
+            score += 2  # price is within fair value range
+        else:
+            score -= 1  # price outside fair value range
 
     if fcf_yield is not None:
         if fcf_yield > tenyr_treasury_yield:
@@ -1089,22 +1089,21 @@ def monte_carlo_dcf_valuation(
     terminal_growth_rate,
     projection_years=5,
     num_simulations=10_000,
-    currency='$',
 ):
     if initial_fcf <= 0:
-        return None, None
+        return (None, None)
     if wacc <= terminal_growth_rate:
-        return None, None
+        return (None, None)
 
     if projection_years <= 0 or num_simulations <= 0:
-        return None, None
+        return (None, None)
 
     stock = yf.Ticker(ticker)
     info = stock.info
 
     shares_outstanding = info.get('sharesOutstanding')
     if not shares_outstanding or shares_outstanding <= 0:
-        return None, None
+        return (None, None)
 
 
     total_debt = info.get('totalDebt') or 0
@@ -1137,16 +1136,13 @@ def monte_carlo_dcf_valuation(
     equity_values = np.array(equity_values)
     fair_value_per_share = equity_values / shares_outstanding
 
-    mean_val = np.mean(fair_value_per_share)
-    median_val = np.median(fair_value_per_share)
-    std_val = np.std(fair_value_per_share)
+    # mean_val = np.mean(fair_value_per_share)
+    # median_val = np.median(fair_value_per_share)
+    # std_val = np.std(fair_value_per_share)
     conf_lower = np.percentile(fair_value_per_share, 2.5)
     conf_upper = np.percentile(fair_value_per_share, 97.5)
 
-    result = (
-        f"{currency}{conf_lower:,.0f} - {currency}{conf_upper:,.0f}"
-    )
-    return float(median_val), result
+    return (float(conf_lower), float(conf_upper))
 
 def classify_cyclicality(industry):
     """
@@ -1272,14 +1268,14 @@ def process_ticker_quantitatives():
 
             if initial_fcf is None:
                 # maybe skip valuation or set a default score
-                intrinsic_value, intrinsic_value_range = None, None
+                intrinsic_value_range = (None, None)
             else:
-                intrinsic_value, intrinsic_value_range = monte_carlo_dcf_valuation(
-                    ticker, initial_fcf, discount_rate, terminal_growth_rate, projection_years=5, num_simulations=10_000, currency='$'
+                intrinsic_value_range = monte_carlo_dcf_valuation(
+                    ticker, initial_fcf, discount_rate, terminal_growth_rate, projection_years=5, num_simulations=10_000
                 )
             
             
-            intrinsic_value_score = score_intrinsic_value(intrinsic_value, currentPrice, fcf_yield, tenyr_treasury_yield, fcf_cagr)
+            intrinsic_value_score = score_intrinsic_value(*intrinsic_value_range, currentPrice, fcf_yield, tenyr_treasury_yield, fcf_cagr)
             quantitative_buffett_score += intrinsic_value_score
             
             
@@ -1916,11 +1912,8 @@ excel_path = f'result_US_{formattedDate}.xlsx'
 date_kr = dt.datetime.strptime(formattedDate, '%Y%m%d').strftime('%-m월 %-d일')
 date_kr_month = dt.datetime.strptime(formattedDate, '%Y%m%d').strftime('%-m월')
 #########################################################################################################
-# Configure API key
-genai.configure(api_key=os.environ['GEMINI_API_KEY'])
-
 def generate_prompt(df_stocks: pd.DataFrame, df_news: pd.DataFrame) -> str:
-    limit = 30
+    limit = 50
     top_stocks = df_stocks.sort_values(by='합계점수', ascending=False).head(limit)
     tickers = top_stocks['티커'].tolist()
 
@@ -1941,20 +1934,31 @@ def generate_prompt(df_stocks: pd.DataFrame, df_news: pd.DataFrame) -> str:
 뉴스 요약 및 감정 지수:
 {chr(10).join(news_summary)}
 
+
 위 데이터를 바탕으로, 각 종목의 장기적인 경쟁 우위 정보를 찾아주세요.
 그리고 이 중 다음 한 달간 가장 상승 가능성이 높은 5개 티커를 선정하고, 
 각 종목별로 명확하고 타당한 근거를 함께 설명해 주세요.
 
 결과는 5개 티커와 그 이유를 간결하게 불릿 포인트로 알려 주세요.
+
+추가로, 현재 거시경제 상황(예: 관세, 금리, 인플레이션 등 주요 이슈)과 미국 증시에 미치는 영향에 대한 간략한 요약도 포함해 주세요.
+
 """
+
     return prompt.strip()
 
+##########################################################################################################
+# Initialize the client (picks up your API key automatically from env vars, or pass api_key explicitly)
+client = genai.Client(api_key=os.environ['GEMINI_API_KEY'])
+
+
+##########################################################################################################
 def query_gemini(prompt: str) -> str:
-    response = genai.chat.completions.create(
-        model="gemini-2.5-flash",
-        messages=[{"role": "user", "content": prompt}]
+    response = client.models.generate_content(
+    model="gemini-2.5-flash", contents=prompt
     )
-    return response.choices[0].message.content
+    return response.text
+
 
 def main(df_stocks, df_news):
     prompt = generate_prompt(df_stocks, df_news)
@@ -2040,7 +2044,7 @@ html_content = f"""
       </tbody>
     </table>
 
-    <h3 style="margin-top: 30px;"><strong>📊 {date_kr_month} AI 추천 종목</strong></h3>
+    <h3 style="margin-top: 30px;"><strong>📊 {date_kr_month} AI 추천 종목 및 거시경제 분석</strong></h3>
 
     <p>{answer}</p>
 

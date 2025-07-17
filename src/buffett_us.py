@@ -1975,7 +1975,6 @@ def query_gemini(prompt: str) -> str:
     response = client.models.generate_content(
     model="gemini-2.5-flash",
     contents=prompt,
-    temperature=0.2,
 )
     return response.text
 

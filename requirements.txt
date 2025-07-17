@@ -1,7 +1,8 @@
 yfinance == 0.2.64
 datetime == 5.5
+google==3.0.0
+google-genai==1.25.0
 fredapi == 0.5.2
-openai == 1.78.1
 python-dotenv == 1.1.0
 lxml == 5.4.0
 pykrx == 1.0.51
@@ -14,6 +15,5 @@ finvizfinance == 1.1.0
 scipy == 1.15.3
 XlsxWriter == 3.2.5
 ta==0.11.0
-google==3.0.0
 # pip install -r requirements.txt
 

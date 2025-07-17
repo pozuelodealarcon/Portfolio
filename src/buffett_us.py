@@ -2047,6 +2047,9 @@ msg.set_content(content)
 html_content = f"""
 <html>
   <body>
+
+    <p>무료로 구독하기: https://pozuelodealarcon.github.io/Portfolio/</p>
+    
     <p>귀하의 중장기 투자 참고를 위해 <b>{date_kr}</b> 기준, 
     시가총액 상위 <b>{limit}</b>개, 뉴욕증권거래소(NYSE), 나스닥(NASDAQ), 아멕스(AMEX)에 상장된 기업들의 최신 퀀트 데이터를 전달드립니다.</p>
 

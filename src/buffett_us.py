@@ -29,6 +29,7 @@ from scipy.stats.mstats import gmean
 from datetime import datetime, timedelta
 from google import genai
 from google.genai import types
+import json
 
 
 ################ DEPENDENCIES ###########################
@@ -36,21 +37,32 @@ from google.genai import types
 # pip install -r requirements.txt
 
 #########################################################
+recipients = ['chs_3411@naver.com', 'eljm2080@gmail.com', 'hyungsukchoi3411@gmail.com']
+
+# JSON에서 이메일 불러오기
+try:
+    with open('recipients.json', 'r') as f:
+        loaded_emails = json.load(f)
+        for email in loaded_emails:
+            if email not in recipients:
+                recipients.append(email)  # append 형태로 추가
+except (FileNotFoundError, json.JSONDecodeError):
+    print("⚠️ recipients.json 파일이 없거나 잘못되었습니다.")
+
+# 확인용 출력
+print(recipients)
 
 
 ################ PREDETERMINED FIELDS ###################
 
 EMAIL = os.environ['EMAIL_ADDRESS']
 PASSWORD = os.environ['EMAIL_PASSWORD']
-# Get the API key
 fmp_key = os.environ['FMP_API_KEY']
 marketaux_api = os.environ['MARKETAUX_API']
-recipients = ['chs_3411@naver.com', 'eljm2080@gmail.com', 'hyungsukchoi3411@gmail.com']
-
 NUM_THREADS = 2 #multithreading 
 
 country = 'US'
-limit=100 # 250 requests/day
+limit=100 # max 250 requests/day
 opt = 10 # top X tickers to optimize
 sp500 = True
 

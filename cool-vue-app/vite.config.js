@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 
-// https://vite.dev/config/
 export default defineConfig({
-  plugins: [vue()],
+  base: '/cool-vue-app/',  // 깃허브 리포지토리 이름, 예: '/cool-vue-app/'
+  plugins: [vue()]
 })

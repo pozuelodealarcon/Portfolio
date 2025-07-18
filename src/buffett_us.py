@@ -62,11 +62,37 @@ marketaux_api = os.environ['MARKETAUX_API']
 NUM_THREADS = 2 #multithreading 
 
 country = 'US'
-limit=100 # max 250 requests/day
-opt = 10 # top X tickers to optimize
+limit=200 # max 250 requests/day
 sp500 = True
 
+# top X tickers to optimize
+opt = 10 
+
+#for news
+top_limit = 50
+
+#for moat
+moat_limit = 50
 #########################################################
+
+
+##########################################################################################################
+# Initialize the client (picks up your API key automatically from env vars, or pass api_key explicitly)
+client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+
+
+# Define the grounding tool
+grounding_tool = types.Tool(
+    google_search=types.GoogleSearch()
+)
+
+# Configure generation settings
+config = types.GenerateContentConfig(
+    tools=[grounding_tool]
+)
+
+##########################################################################################################
+
 
 # print('May take up to few minutes...')
  
@@ -1076,11 +1102,11 @@ def score_intrinsic_value(conf_lower, conf_upper, current_price, fcf_yield, teny
 
     if conf_lower is not None and conf_upper is not None and current_price is not None:
         if current_price < conf_upper:
-            score += 2  # price is within fair value range
+            score += 1  # price is within fair value range
             if current_price <= conf_lower:
-                score += 1  # price is at or below lower bound of fair value range
+                score += 3  # price is at or below lower bound of fair value range
         else:
-            score -= 1  # price outside fair value range
+            score -= 2  # price outside fair value range
 
     if fcf_yield is not None:
         if fcf_yield > tenyr_treasury_yield:
@@ -1210,6 +1236,29 @@ def classify_cyclicality(industry):
 
     except Exception as e:
         return None
+
+def analyze_moat(ticker: str) -> str:
+    prompt = f"""
+당신은 기업 분석에 능숙한 전문 주식 애널리스트입니다. 반드시 한국어로 답변하십시오.
+
+티커 "{ticker}"에 해당하는 기업의 {date_kr_ymd} 기준 정보를 검색한 뒤 그 내용을 바탕으로 해당 기업의 **중장기 핵심 경쟁 우위(Moat)** 를 2~3줄 이내로 간결하게 요약해 주십시오.
+
+- 핵심 경쟁 우위 (예: 독점 기술, 브랜드 파워, 시장 점유율, 특허, 진입 장벽 등)
+- 향후에도 경쟁 우위가 유지될 수 있는 이유
+- 투자자로서 주목할 가치가 있는 요인
+
+간결하고 전문적인 문장으로 정리해 주세요.
+"""
+
+    return prompt.strip()
+
+def query_gemini(prompt: str) -> str:
+    response = client.models.generate_content(
+    model="gemini-2.5-flash",
+    contents=prompt,
+)
+    return response.text
+
     
 retried_once = set()
 q = Queue()
@@ -1394,6 +1443,40 @@ df = df.sort_values(by='합계점수', ascending=False)
 top_tickers = df['티커'].head(opt).tolist()
 top_tickers_news = df['티커'].tolist()
 
+#################################################################
+def generate_moat_summary(df: pd.DataFrame, moat_limit: int) -> pd.DataFrame:
+    top_tickers = df['티커'].head(moat_limit).tolist()
+
+    moat_data = []
+
+    for ticker in top_tickers:
+        try:
+            # 기업명 가져오기 (yfinance)
+            stock = yf.Ticker(ticker)
+            info = stock.info
+            company_name = info.get('shortName') or info.get('longName') or "기업명 없음"
+
+            # 프롬프트 생성 및 Gemini 질의
+            prompt = analyze_moat(ticker)
+            moat_text = query_gemini(prompt)
+
+            moat_data.append({
+                '기업명': company_name,
+                '경쟁 우위 분석': moat_text
+            })
+
+            # 요청 사이 딜레이 (선택적: Gemini 또는 API 제한 회피용)
+            time.sleep(1)
+
+        except Exception as e:
+            moat_data.append({
+                '기업명': f"❌ 오류: {str(e)}",
+                '경쟁 우위 분석': "분석 실패"
+            })
+
+    return pd.DataFrame(moat_data)
+
+moat_df = generate_moat_summary(df, moat_limit)
 #################################################################
 def get_news_for_tickers(tickers, api_token):
     all_news = []
@@ -1748,6 +1831,38 @@ def autofit_columns_and_wrap(ws, df: pd.DataFrame, workbook):
             except Exception:
                 ws.write(row, col, str(val), wrap_format)
 
+def autofit_columns_and_wrap_moat(ws, df: pd.DataFrame, workbook):
+
+    # 열 너비 설정 (픽셀 기준 → 문자 기준으로 변환)
+    pixel_widths = [92, 500]
+    char_widths = [round(p * 0.1428) for p in pixel_widths]  # = [13, 71]
+
+    # wrap + top-align 포맷
+    wrap_format = workbook.add_format({'text_wrap': True, 'valign': 'top'})
+
+    # 열 너비 및 헤더 설정
+    for i, col in enumerate(df.columns):
+        width = char_widths[i] if i < len(char_widths) else 20
+        ws.set_column(i, i, width)
+        ws.write(0, i, str(col), wrap_format)
+
+    # 데이터 셀 작성
+    for row in range(1, len(df) + 1):
+        for col in range(len(df.columns)):
+            val = df.iat[row - 1, col]
+
+            # NaN / inf / None 처리
+            if isinstance(val, float):
+                if math.isnan(val) or math.isinf(val):
+                    val = str(val)
+            elif val is None:
+                val = ""
+
+            try:
+                ws.write(row, col, val, wrap_format)
+            except Exception:
+                ws.write(row, col, str(val), wrap_format)
+
 
 with pd.ExcelWriter(filename, engine='xlsxwriter') as writer:
 
@@ -1764,6 +1879,17 @@ with pd.ExcelWriter(filename, engine='xlsxwriter') as writer:
             'columns': [{'header': col} for col in df_method.columns],
             'style': 'Table Style Medium 9'
         })
+
+    # 경쟁우위(Moat) 시트 저장 및 표 적용
+    moat_df.to_excel(writer, index=False, sheet_name='경쟁우위분석')
+    ws_moat = writer.sheets['경쟁우위분석']
+    (mr_moat, mc_moat) = moat_df.shape
+    ws_moat.add_table(0, 0, mr_moat, mc_moat - 1, {
+        'columns': [{'header': col} for col in moat_df.columns],
+        'style': 'Table Style Medium 9'
+    })
+    autofit_columns_and_wrap_moat(ws_moat, moat_df, writer.book)
+
 
     # 포트폴리오통계 시트도 엑셀 표로
     df_stats.to_excel(writer, index=False, sheet_name='포트폴리오통계')
@@ -1931,12 +2057,8 @@ date_kr_month = dt.datetime.strptime(formattedDate, '%Y%m%d').strftime('%-m월')
 date_kr_ymd = dt.datetime.strptime(formattedDate, '%Y%m%d').strftime('%Y년 %-m월 %-d일')  # Unix
 
 #########################################################################################################
-def generate_prompt(df_stocks: pd.DataFrame, df_news: pd.DataFrame) -> str:
-    top_limit = 50
-    ai_pick = 10
-    top_stocks = df_stocks.sort_values(by='합계점수', ascending=False).head(top_limit)
-    tickers = top_stocks['티커'].tolist()
-
+def generate_prompt(df_news: pd.DataFrame) -> str:
+    
     news_summary = []
     if {'기업명', '감정지수', '뉴스 요약'}.issubset(df_news.columns):
         grouped = df_news.groupby('기업명')
@@ -1950,66 +2072,49 @@ def generate_prompt(df_stocks: pd.DataFrame, df_news: pd.DataFrame) -> str:
 당신은 기업 분석과 거시경제 분석에 능숙한 전문 주식 분석가입니다.  
 반드시 한국어로 답변해 주세요.  
 
-{date_kr_ymd} 기준 주식 데이터, 뉴스 감정 지수 및 뉴스 요약 정보를 활용하여 다음 작업을 수행해 주십시오.
-
-주요 종목 목록 (장기 재무건전성 및 중장기 모멘텀 합계점수 상위 {top_limit}개 티커):  
-{', '.join(tickers)}  
+{date_kr_ymd} 기준 {limit}개 기업의 뉴스 감정 지수 및 뉴스 요약 정보를 아래에 제공하였습니다.  
+**아래 제공된 뉴스 요약만을 기반으로** 다음 작업을 수행해 주세요.  
+(임의로 추가하거나 생성하지 말고, 반드시 제공된 요약 내에서만 정보를 추출해 주세요.)
 
 뉴스 요약 및 감정 지수:  
 {chr(10).join(news_summary)}  
+ 
+이를 기반으로 이번 주 투자자들이 주목해야 할 **주요 기업 뉴스 및 거시경제 이슈**를 정리해 주십시오.
 
-위 데이터를 기반으로, {date_kr_ymd} 기준 총 {top_limit}개 종목 중에서  
-향후 한 달간 가장 상승 가능성이 높은 {ai_pick}개 종목을 선정해 주시기 바랍니다.  
+1. {date_kr_ymd} 기준 이번 주 주목할만한 기업 뉴스 (3~5개)  
+- 반드시 위 뉴스 요약에서 언급된 기업과 내용만 사용해 주세요.  
+- 기업명과 관련 뉴스 요약을 간결하고 핵심 위주로 정리해 주세요.  
+- 투자 관점에서 의미 있는 변화나 트렌드 중심으로 요약해 주세요.  
 
-선정 기준은 장기적인 경쟁 우위 정보와 투자 매력도를 종합적으로 고려해 주시고,  
-각 종목별로는 명확하고 타당한 근거를 간결하게 설명해 주세요.  
+예시 형식:  
+- 기업명: 핵심 뉴스 요약 및 의미
 
-- 종목명  
-- 주요 경쟁 우위 (예: 독점 기술, 시장 지배력, 브랜드 파워 등)  
-- 투자 매력 포인트 (예: 성장성, 수익성, 재무 안정성 등)  
-- 향후 상승 가능성을 뒷받침하는 최근 데이터나 뉴스  
+2. {date_kr_ymd} 기준 거시경제 환경 요약  
+- 관세, 금리, 인플레이션, 고용, 소비, 원-달러 환율 등 데이터 기반으로 간결 정리해 주세요.  
 
-요약 및 추천 이유를 간결하고 전문적으로 작성해 주시기 바랍니다.  
-
-추가로, {date_kr_ymd} 기준 거시경제 상황(예: 관세, 금리, 인플레이션 등 주요 이슈)과  
-미국 증시에 미치는 영향에 대한 간략한 요약도 포함해 주세요.
-
+3. 미국 증시에 미치는 영향  
+- 위 거시경제 환경이 미국 증시에 어떤 방향성 영향을 줄 수 있을지 분석해 주세요.  
+- 금리 방향성, 기술주/가치주 반응, 투자자 심리 변화 등을 간결하게 요약해 주세요.
 """
+
 
     return prompt.strip()
 
-##########################################################################################################
-# Initialize the client (picks up your API key automatically from env vars, or pass api_key explicitly)
-client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
-
-
-# Define the grounding tool
-grounding_tool = types.Tool(
-    google_search=types.GoogleSearch()
-)
-
-# Configure generation settings
-config = types.GenerateContentConfig(
-    tools=[grounding_tool]
-)
 
 ##########################################################################################################
-def query_gemini(prompt: str) -> str:
-    response = client.models.generate_content(
-    model="gemini-2.5-flash",
-    contents=prompt,
-)
-    return response.text
 
 
-def main(df_stocks, df_news):
-    prompt = generate_prompt(df_stocks, df_news)
+
+def main(df_news):
+    prompt = generate_prompt(df_news)
     print("Prompt sent to Gemini:\n", prompt)
 
     answer = query_gemini(prompt)
     return answer
 
-answer = main(df, news_df)
+
+
+answer = main(news_df)
 
 #########################################################################################################
 
@@ -2048,12 +2153,16 @@ html_content = f"""
 <html>
   <body>
 
-    <p>무료로 구독하기: https://pozuelodealarcon.github.io/Portfolio/</p>
+    <p><strong>지금 무료 구독하고 AI 투자 인사이트를 매주 받아보세요:</strong> <a href="https://pozuelodealarcon.github.io/Portfolio/" target="_blank">구독하러 가기</a></p>
     
     <p>귀하의 중장기 투자 참고를 위해 <b>{date_kr}</b> 기준, 
     시가총액 상위 <b>{limit}</b>개, 뉴욕증권거래소(NYSE), 나스닥(NASDAQ), 아멕스(AMEX)에 상장된 기업들의 최신 퀀트 데이터를 전달드립니다.</p>
 
     <p>각 기업의 재무 점수는 <b>B-Score</b>, 중장기 모멘텀을 포함한 총점수는 <b>종합점수</b> 항목을 참고해 주시기 바랍니다.</p>
+
+    <h3 style="margin-top: 30px;"><strong>{date_kr} AI 선정 주요 뉴스 및 거시경제 분석</strong></h3>
+
+    <p>{answer}</p>
 
     <h3>📌 주요 재무지표 해설</h3>
     <table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; font-family: sans-serif;">
@@ -2089,17 +2198,13 @@ html_content = f"""
       </tbody>
     </table>
 
-    <h3 style="margin-top: 30px;"><strong>📊 {date_kr_month} AI 추천 종목 및 거시경제 분석</strong></h3>
-
-    <p>{answer}</p>
-
     <p style="margin-top: 20px; font-size: 14px; color: #444;">
     본 자료는 <strong>워런 버핏의 '가치투자'</strong> (기업의 내재가치보다 시장 가격이 낮을 때 매수해, 가격이 가치에 수렴할 때 차익을 얻는 투자 방식) 철학을 기반으로,<br>
     기업의 재무 건전성을 수치화하여 평가한 결과입니다.<br>
     투자 판단 시에는 정성적 요소에 대한 별도의 면밀한 검토도 함께 병행하시기를 권장드립니다.
     </p>
 
-    <p><em>해당 메일은 매주 월, 수, 금, 일요일 오전 8시에 자동 발송되며, 안정적이고 현명한 투자를 위한 참고 자료로 제공됩니다.</em></p>
+    <p><em>해당 메일은 매주 월, 금 오전 8시에 자동 발송되며, 안정적이고 현명한 투자를 위한 참고 자료로 제공됩니다.</em></p>
 
     <p><b>귀하의 성공적인 투자를 응원합니다.</b></p>
   </body>

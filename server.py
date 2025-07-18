@@ -34,5 +34,7 @@ def add_email():
     save_recipients(recipients)
     return jsonify({'message': f'✅ Email added: {email}'})
 
+# ✅ Railway-compatible entrypoint
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 8000))
+    app.run(host='0.0.0.0', port=port)

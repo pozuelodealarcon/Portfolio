@@ -17,4 +17,5 @@ XlsxWriter == 3.2.5
 ta==0.11.0
 flask
 flask-cors
+PyGithub
 

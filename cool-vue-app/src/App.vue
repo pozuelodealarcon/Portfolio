@@ -22,7 +22,7 @@ const message = ref('')
 
 const submitEmail = async () => {
   try {
-    const response = await fetch('https://vigilant-space-waddle-r449wgxwwv57hxvvq-5000.app.github.dev/add-email', {
+    const response = await fetch('https://portfolio-production-6e97.up.railway.app/add-email', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -30,11 +30,11 @@ const submitEmail = async () => {
       body: JSON.stringify({ email: email.value }),
     })
     const data = await response.json()
-    message.value = data.message || 'Subscribed successfully!'
+    message.value = data.message || '✅ 구독이 완료되었습니다.'
     email.value = ''
   } catch (err) {
-    message.value = 'Error submitting email.'
-    console.error(err)
+    message.value = '⚠️ 이메일 구독 중 오류가 발생했습니다.'
+    console.error('❌ Fetch Error:', err)
   }
 }
 

@@ -4,7 +4,7 @@ import json
 import os
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/*": {"origins": "*"}})  # 모든 경로, 모든 출처 허용
 
 RECIPIENT_FILE = 'recipients.json'
 
@@ -34,10 +34,10 @@ def add_email():
     save_recipients(recipients)
     return jsonify({'message': f'✅ Email added: {email}'})
 
-# ✅ Railway-compatible entrypoint
 if __name__ == '__main__':
-    # port = int(os.environ.get("PORT", 8000))
-    app.run(host='0.0.0.0')
+    port = int(os.environ.get("PORT", 8000))  # Railway가 할당하는 포트 가져오기, 없으면 8000 기본값
+    app.run(host='0.0.0.0', port=port)
+
 
 
 

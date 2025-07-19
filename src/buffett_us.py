@@ -30,6 +30,7 @@ from datetime import datetime, timedelta
 from google import genai
 from google.genai import types
 import json
+import markdown
 
 
 ################ DEPENDENCIES ###########################
@@ -2149,7 +2150,7 @@ html_content = f"""
 
     <h3 style="margin-top: 30px;"><strong>{date_kr} AI 선정 주요 뉴스 및 거시경제 분석</strong></h3>
 
-    <p>{answer}</p>
+    {markdown.markdown(answer)}
 
     <h3>📌 주요 재무지표 해설</h3>
     <table border="1" cellpadding="8" cellspacing="0" style="border-collapse: collapse; font-family: sans-serif;">
@@ -2192,8 +2193,6 @@ html_content = f"""
     </p>
 
     <p><em>해당 메일은 매주 월,수,금 오전 8시에 자동 발송됩니다.</em></p>
-
-    <p><b>귀하의 성공적인 투자를 응원합니다.</b></p>
   </body>
 </html>
 """

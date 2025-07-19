@@ -18,4 +18,4 @@ ta==0.11.0
 flask
 flask-cors
 PyGithub
-
+markdown==3.8.2

@@ -269,7 +269,7 @@ def buffett_score (de, cr, pbr, per, ind_per, roe, ind_roe, roa, ind_roa, eps, d
          
     return score
 
-def get_fcf_yield_and_cagr(ticker, api_key="YOUR_API_KEY"):
+def get_fcf_yield_and_cagr(ticker, yf_ticker, api_key="YOUR_API_KEY"):
     def try_fmp(ticker, api_key):
         try:
             # 1. Market cap
@@ -314,13 +314,12 @@ def get_fcf_yield_and_cagr(ticker, api_key="YOUR_API_KEY"):
 
     def try_yf(ticker):
         try:
-            ticker_obj = yf.Ticker(ticker)
-
-            market_cap = ticker_obj.info.get('marketCap')
+            
+            market_cap = ticker.info.get('marketCap')
             if market_cap is None or market_cap == 0:
                 return (None, None, [])
 
-            cashflow_df = ticker_obj.cashflow
+            cashflow_df = ticker.cashflow
             if cashflow_df.empty or 'Free Cash Flow' not in cashflow_df.index:
                 return (None, None, [])
 
@@ -345,15 +344,13 @@ def get_fcf_yield_and_cagr(ticker, api_key="YOUR_API_KEY"):
             return (None, None, [])
 
 
-    # 2. Fallback: try yfinance
-    result = try_yf(ticker)
+    result = try_yf(yf_ticker)
     if result is not None and (
         result[0] is not None or result[1] is not None or (result[2] and len(result[2]) > 0)
     ):
         return result
 
 
-    # 1. Try FMP first
     result = try_fmp(ticker, api_key)
     # FMP 결과가 모두 None/빈 리스트면 yfinance 시도
     if result is not None and (
@@ -438,7 +435,7 @@ def get_trading_volume_vs_avg20(ticker_symbol: str) -> float:
 
 def has_stable_dividend_growth_cagr(ticker):
     try:
-        stock = yf.Ticker(ticker)
+        stock = ticker
         divs = stock.dividends
 
         if divs.empty:
@@ -485,8 +482,8 @@ def has_stable_dividend_growth_cagr(ticker):
 
 def has_stable_eps_growth_cagr(ticker):
     try:
-        ticker_obj = yf.Ticker(ticker)
-        income_stmt = ticker_obj.financials  # Annual financials DataFrame
+        
+        income_stmt = ticker.financials  # Annual financials DataFrame
 
         if "Diluted EPS" not in income_stmt.index:
             return None
@@ -534,7 +531,7 @@ def has_stable_eps_growth_cagr(ticker):
     
 # gets the most recent interest coverage ratio available
 def get_interest_coverage_ratio(ticker):
-    financials = yf.Ticker(ticker).financials # Annual financials, columns = dates (most recent first)
+    financials = ticker.financials # Annual financials, columns = dates (most recent first)
     ratio = None
     if not financials.columns.empty:
         for date in financials.columns:
@@ -558,8 +555,7 @@ def get_interest_coverage_ratio(ticker):
 def get_esg_score(ticker):
     ans = ''
     try:
-        ticker_obj = yf.Ticker(ticker)
-        esg = ticker_obj.sustainability
+        esg = ticker.sustainability
         if esg is None or esg.empty:
             return ''
 
@@ -713,16 +709,16 @@ df_per = download_industry_per()
 df_roe = download_industry_roe()
 df_roa = download_industry_roa()
 
-def get_industry_per(ind, ticker):
-    spy = yf.Ticker('SPY')
-    spy_info = spy.info
-    per = spy_info.get('trailingPE')
+def get_industry_per(ind):
     try: 
         if ind is not None:
             ans = float(df_per.filter(pl.col('Industry') == ind).select("P/E Ratio").item())
             return ans
         return per
     except Exception:
+        spy = yf.Ticker('SPY')
+        spy_info = spy.info
+        per = spy_info.get('trailingPE')
         return per
 
 def get_industry_roe(ind):
@@ -1024,8 +1020,7 @@ def score_momentum(ma, ma_lt, ret, ret60, rsi, macd):
 
 def get_operating_income_yoy(ticker):
     try:
-        ticker_obj = yf.Ticker(ticker)
-        financials = ticker_obj.financials
+        financials = ticker.financials
 
         # Check if 'Operating Income' is in the DataFrame
         if "Operating Income" not in financials.index:
@@ -1124,7 +1119,7 @@ def score_intrinsic_value(conf_lower, conf_upper, current_price, fcf_yield, teny
 
 
 def monte_carlo_dcf_valuation(
-    ticker,
+    info,
     initial_fcf,
     wacc,
     terminal_growth_rate,
@@ -1138,9 +1133,6 @@ def monte_carlo_dcf_valuation(
 
     if projection_years <= 0 or num_simulations <= 0:
         return (None, None)
-
-    stock = yf.Ticker(ticker)
-    info = stock.info
 
     shares_outstanding = info.get('sharesOutstanding')
     if not shares_outstanding or shares_outstanding <= 0:
@@ -1273,8 +1265,8 @@ def process_ticker_quantitatives():
     while not q.empty():
         ticker = q.get()
         try:
-
-            info = yf.Ticker(ticker).info
+            yf_ticker = yf.Ticker(ticker)
+            info = yf_ticker.info
             beta = info.get("beta", None)
             name = info.get("shortName", ticker)
             industry = info.get("industry", None)
@@ -1288,7 +1280,7 @@ def process_ticker_quantitatives():
             per = info.get('trailingPE', None) # 초점: 수익성, over/undervalue? 저per 종목 선별, 10-20전후(혹은 산업평균)로 낮고 높음 구분. 주가가 그 기업의 이익에 비해 과대/과소평가되어 있다는 의미
                                                                        # low per could be undervalued or company in trouble, IT, 바이오 등 성장산업은 자연스레 per이 높게 형성
                                                                              # low per could be undervalued or company in trouble, IT, 바이오 등 성장산업은 자연스레 per이 높게 형성
-            industry_per = get_industry_per(industry, ticker)
+            industry_per = get_industry_per(industry)
             industry_per = round(industry_per) if industry_per is not None else industry_per
             industry_roe = get_industry_roe(industry)
             industry_roa = get_industry_roa(industry)
@@ -1298,14 +1290,14 @@ def process_ticker_quantitatives():
             #ROE가 높고 ROA는 낮다면? → 부채를 많이 이용해 수익을 낸 기업일 수 있음. ROE와 ROA 모두 높다면? → 자산과 자본 모두 효율적으로 잘 운용하고 있다는 의미.
             #A = L + E
             
-            icr = get_interest_coverage_ratio(ticker)
-            eps_growth = has_stable_eps_growth_cagr(ticker) # earnings per share, the higher the better, buffett looks for stable EPS growth
+            icr = get_interest_coverage_ratio(yf_ticker)
+            eps_growth = has_stable_eps_growth_cagr(yf_ticker) # earnings per share, the higher the better, buffett looks for stable EPS growth
             # eps_growth_quart = has_stable_eps_growth_quarterly(ticker) 
-            div_growth = has_stable_dividend_growth_cagr(ticker) # buffett looks for stable dividend growth for at least 10 years
+            div_growth = has_stable_dividend_growth_cagr(yf_ticker) # buffett looks for stable dividend growth for at least 10 years
             # bvps_growth = bvps_undervalued(info.get('bookValue', None), currentPrice)
             
-            operating_income_yoy = get_operating_income_yoy(ticker)
-            operating_income_qoq = get_operating_income_qoq(ticker)
+            operating_income_yoy = get_operating_income_yoy(yf_ticker)
+            operating_income_qoq = get_operating_income_qoq(yf_ticker)
             
             ma = df_batch_result.loc[df_batch_result['Ticker'] == ticker, 'ma_crossover'].values[0]
             ma_lt = df_batch_result.loc[df_batch_result['Ticker'] == ticker, 'ma_crossover_lt'].values[0]
@@ -1316,10 +1308,10 @@ def process_ticker_quantitatives():
 
             momentum_score = score_momentum(ma, ma_lt, ret20, ret60, rsi, macd)
             # vol = get_trading_volume_vs_avg20(ticker)
-            esg = get_esg_score(ticker)
+            esg = get_esg_score(yf_ticker)
         
             quantitative_buffett_score = buffett_score(debtToEquity, currentRatio, pbr, per, industry_per, roe, industry_roe, roa, industry_roa, eps_growth, div_growth, icr, operating_income_yoy, operating_income_qoq)
-            fcf_yield, fcf_cagr, fcf_list = get_fcf_yield_and_cagr(ticker, api_key=fmp_key)
+            fcf_yield, fcf_cagr, fcf_list = get_fcf_yield_and_cagr(ticker, yf_ticker, api_key=fmp_key)
             tenyr_treasury_yield = get_10yr_treasury_yield()
             discount_rate = (tenyr_treasury_yield+(beta*5.0))/100.0 if beta is not None else (tenyr_treasury_yield+5.0)/100.0
             terminal_growth_rate = 0.02 #0.03
@@ -1335,7 +1327,7 @@ def process_ticker_quantitatives():
                 intrinsic_value_range = (None, None)
             else:
                 intrinsic_value_range = monte_carlo_dcf_valuation(
-                    ticker, initial_fcf, discount_rate, terminal_growth_rate, projection_years=5, num_simulations=10_000
+                    info, initial_fcf, discount_rate, terminal_growth_rate, projection_years=5, num_simulations=10_000
                 )
             
             

@@ -1,5 +1,6 @@
 name: Send Buffett Excel at 8AM KST
 
+
 on:
   schedule:
     - cron: '0 23 * * 1,5'  # 매주 월~금 23:00 UTC = KST 08:00 (다음날 5PM)
@@ -30,10 +31,8 @@ jobs:
           FMP_API_KEY: ${{ secrets.FMP_API_KEY }}
           MARKETAUX_API: ${{ secrets.MARKETAUX_API }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}  # Pass it to bash via custom name
-          GIT_PAT: ${{ secrets.GIT_PAT }}  # GitHub Personal Access Token
         run: |
           export GEMINI_API_KEY=$GEMINI_API_KEY
-          export GIT_PAT=$GIT_PAT
           python src/buffett_us.py
 
   update-cache:

@@ -4,12 +4,22 @@ import os
 import requests
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from dotenv import load_dotenv
+import os
+
+# .env 파일에서 환경변수 로드
+load_dotenv()
+
+# GIT_PAT 가져오기
+GITHUB_TOKEN = os.getenv('GIT_PAT')
+
+if not GITHUB_TOKEN:
+    raise ValueError("⚠️ GIT_PAT 환경 변수가 설정되지 않았습니다.")
 
 app = Flask(__name__, static_folder="cool-vue-app/dist", static_url_path="")
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 RECIPIENT_FILE = 'recipients.json'
-GITHUB_TOKEN = os.environ['GIT_PAT']  # GitHub Personal Access Token``
 REPO = 'pozuelodealarcon/Portfolio'
 BRANCH = 'main'  # 기본 브랜치명
 

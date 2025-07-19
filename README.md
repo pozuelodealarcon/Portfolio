@@ -16,7 +16,7 @@
 * Momentum scoring based on technical indicators (RSI, MACD, moving averages, etc.)
 * Portfolio optimization using Modern Portfolio Theory (Sharpe, Sortino, CVaR, variance minimization)
 * Queries Marketaux API for the latest news
-* **DCF intrinsic value evaluation based on 10,000 Monte Carlo Simulation per ticker**
+* **DCF intrinsic value evaluation based on 10,000 Monte Carlo simulations per ticker**
 * **AI-powered macroeconomic and news sentiment analysis using Gemini 2.5 Flash**
 * **Vue.js frontend for subscription web and Flask API backend running on Railway**
 * Results saved to Excel and automatically emailed to subscribers

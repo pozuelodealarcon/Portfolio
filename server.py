@@ -4,6 +4,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import base64
 import requests
+import pandas as pd
 
 app = Flask(__name__, static_folder="cool-vue-app/dist", static_url_path="")
 CORS(app, resources={r"/*": {"origins": "*"}})
@@ -79,6 +80,11 @@ def subscribe():
     else:
         return jsonify({"message": f"❌ GitHub 업로드 실패: {msg}"}), 500
 
+@app.route('/top-tickers')
+def top_tickers():
+    df = pd.read_excel("deep_fund.xlsx", sheet_name="종목분석")  # 예: 시트 이름
+    tickers = df.head(10)["종목"].tolist()  # 혹은 "Symbol" 컬럼
+    return jsonify({"tickers": tickers})
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 8080))

@@ -1786,7 +1786,7 @@ for method, data in portfolio_data.items():
     stats_rows.append(stats_dict)
 df_stats = pd.DataFrame(stats_rows)
 
-filename = f"result_{country}_{formattedDate}.xlsx"
+filename = 'deep_fund.xlsx'
 
 def autofit_columns_and_wrap(ws, df: pd.DataFrame, workbook):
     # 픽셀 -> 문자 수 환산 (0.1428 배율 기준)
@@ -2039,10 +2039,7 @@ with pd.ExcelWriter(filename, engine='xlsxwriter') as writer:
 ##########################################################################################################
 time.sleep(3)
 
-excel_path = f'result_US_{formattedDate}.xlsx'
-
-
-
+excel_path = 'deep_fund.xlsx'
 
 #########################################################################################################
 def generate_prompt(df_news: pd.DataFrame) -> str:

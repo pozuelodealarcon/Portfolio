@@ -35,6 +35,22 @@ jobs:
           export GEMINI_API_KEY=$GEMINI_API_KEY
           python src/buffett_us.py
 
+      - name: Commit and push excel file
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # 1. 변경사항 먼저 커밋
+          git add deep_fund.xlsx
+          git commit -m "Update/Overwrite excel file at $(date +'%Y-%m-%d %H:%M:%S')" || echo "No changes to commit"
+
+          # 2. 원격 fetch 후 rebase
+          git fetch origin main # 최신 변경사항을 가져오기만 함 (내 작업에는 영향 없음)
+          git rebase origin/main || echo "Rebase failed" # 내 코드 정리해서 최신 위에 얹기
+
+          # 3. 푸시
+          git push origin main #push
+
   update-cache:
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'schedule' && startsWith(github.event.schedule, '0 23 * * 6'))

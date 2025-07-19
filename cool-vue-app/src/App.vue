@@ -1,8 +1,13 @@
 <template>
   <div class="wrapper">
-    <div class="ticker-box">
-      <h2>🔥 이번주 Top 10 추천 종목</h2>
-      <ul>
+    <div class="report-box">
+      <h1>📈 DeepFund AI 리포트</h1>
+      <p class="description">
+        실적 기반 퀀트 알고리즘이 선정한 이번달 Top 10 가치 종목입니다.<br />
+        더 자세한 투자 인사이트와 분석이 궁금하다면 이메일을 등록하세요.
+      </p>
+
+      <ul class="ticker-list">
         <li
           v-for="(ticker, index) in tickers"
           :key="index"
@@ -12,18 +17,19 @@
           {{ tickers.length - index }}. {{ ticker }}
         </li>
       </ul>
-    </div>
 
-    <form class="subscribe-form" @submit.prevent="submitEmail">
-      <input
-        v-model="email"
-        type="email"
-        placeholder="이메일 입력"
-        required
-      />
-      <button type="submit">구독</button>
-      <p v-if="message">{{ message }}</p>
-    </form>
+      <form class="subscribe-form" @submit.prevent="submitEmail">
+        <input
+          v-model="email"
+          type="email"
+          placeholder="이메일 입력"
+          required
+        />
+        <button type="submit">구독</button>
+      </form>
+
+      <p v-if="message" class="feedback">{{ message }}</p>
+    </div>
   </div>
 </template>
 
@@ -66,46 +72,50 @@ const submitEmail = async () => {
 <style scoped>
 .wrapper {
   display: flex;
-  flex-direction: column;
-  align-items: center;
   justify-content: center;
+  align-items: center;
   min-height: 100vh;
-  padding: 40px 20px;
-  background: #f9f9f9;
+  padding: 30px 20px;
+  background: #f3f6fa;
   font-family: 'Segoe UI', sans-serif;
-  position: relative;
 }
 
-.ticker-box {
+.report-box {
   background: white;
-  padding: 30px 40px;
-  border-radius: 16px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-  text-align: center;
-  width: 100%;
+  border-radius: 20px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.06);
+  padding: 40px;
   max-width: 500px;
-  margin-bottom: 60px;
+  width: 100%;
+  text-align: center;
 }
 
-.ticker-box h2 {
-  margin-bottom: 20px;
-  font-size: 1.5rem;
-  color: #333;
+h1 {
+  font-size: 1.8rem;
+  margin-bottom: 12px;
+  color: #0d1b2a;
 }
 
-.ticker-box ul {
+.description {
+  font-size: 0.95rem;
+  color: #4a4a4a;
+  margin-bottom: 30px;
+  line-height: 1.6;
+}
+
+.ticker-list {
   list-style: none;
   padding: 0;
-  margin: 0;
+  margin: 0 0 30px;
 }
 
-.ticker-box li {
-  font-size: 1.25rem;
+.ticker-list li {
+  font-size: 1.2rem;
   font-weight: 600;
   color: #007bff;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
   opacity: 0;
-  animation: fadeInUp 0.5s forwards;
+  animation: fadeInUp 0.6s forwards;
 }
 
 @keyframes fadeInUp {
@@ -120,34 +130,27 @@ const submitEmail = async () => {
 }
 
 .subscribe-form {
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: white;
-  padding: 12px 20px;
-  border-radius: 40px;
-  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
   display: flex;
+  justify-content: center;
   gap: 10px;
-  align-items: center;
+  margin-top: 10px;
 }
 
 .subscribe-form input {
+  padding: 8px 14px;
   border: 1px solid #ccc;
   border-radius: 20px;
-  padding: 8px 14px;
-  outline: none;
-  width: 200px;
   font-size: 0.9rem;
+  width: 60%;
+  outline: none;
 }
 
 .subscribe-form button {
+  padding: 8px 18px;
   background: #007bff;
   color: white;
   border: none;
   border-radius: 20px;
-  padding: 8px 16px;
   cursor: pointer;
   font-weight: 600;
 }
@@ -156,9 +159,9 @@ const submitEmail = async () => {
   background: #0056b3;
 }
 
-.subscribe-form p {
+.feedback {
+  margin-top: 12px;
   font-size: 0.85rem;
-  margin: 0;
-  color: #333;
+  color: #444;
 }
 </style>

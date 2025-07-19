@@ -17,24 +17,44 @@ GITHUB_REPO = 'pozuelodealarcon/Portfolio'
 def update_recipients_on_github(new_email):
     g = Github(GITHUB_TOKEN)
     repo = g.get_repo(GITHUB_REPO)
-    try:
-        contents = repo.get_contents(RECIPIENT_FILE)
-        data = json.loads(contents.decoded_content.decode())
-    except Exception:
-        # 파일이 없으면 빈 리스트부터 시작
-        data = []
 
-    if new_email not in data:
-        data.append(new_email)
-        updated_content = json.dumps(data, indent=2)
-        repo.update_file(
-            path=RECIPIENT_FILE,
-            message=f"Add email {new_email}",
-            content=updated_content,
-            sha=contents.sha if 'contents' in locals() else None
-        )
-        return True
-    return False
+    # 기본 초기값
+    path = RECIPIENT_FILE
+    data = []
+
+    try:
+        contents = repo.get_contents(path)
+        data = json.loads(contents.decoded_content.decode())
+
+        if new_email not in data:
+            data.append(new_email)
+            updated_content = json.dumps(data, indent=2)
+            repo.update_file(
+                path=path,
+                message=f"Add email {new_email}",
+                content=updated_content,
+                sha=contents.sha
+            )
+            return True
+        else:
+            return False
+
+    except Exception as e:
+        # 파일이 없는 경우 (404), 새로 생성
+        if hasattr(e, 'status') and e.status == 404:
+            print(f"File not found on GitHub, creating new: {path}")
+            data = [new_email]
+            updated_content = json.dumps(data, indent=2)
+            repo.create_file(
+                path=path,
+                message=f"Create recipients file and add {new_email}",
+                content=updated_content
+            )
+            return True
+        else:
+            print(f"GitHub API error: {e}")
+            raise
+
 
 @app.route('/add-email', methods=['POST'])
 

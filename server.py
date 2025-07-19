@@ -4,7 +4,8 @@ import json
 import os
 from github import Github  # PyGithub
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder="cool-vue-app/dist", static_url_path="")
+
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 RECIPIENT_FILE = 'recipients.json'
@@ -36,6 +37,7 @@ def update_recipients_on_github(new_email):
     return False
 
 @app.route('/add-email', methods=['POST'])
+
 def add_email():
     email = request.json.get('email')
     if not email:
@@ -57,6 +59,11 @@ def add_email():
         return jsonify({'message': f'✅ Email added and pushed to GitHub: {email}'})
     else:
         return jsonify({'message': f'✅ Email added locally (already in GitHub): {email}'})
+
+@app.route('/')
+def serve_vue():
+    return app.send_static_file('index.html')
+
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 8000))

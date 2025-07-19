@@ -7,6 +7,14 @@
         더 자세한 투자 인사이트와 분석이 궁금하다면 이메일을 등록하세요.
       </p>
 
+      <!-- 헤더 -->
+      <div class="list-header">
+        <span class="rank">순위</span>
+        <span class="ticker">종목명</span>
+        <span class="change">주가(1개월대비)</span>
+      </div>
+
+      <!-- 종목 리스트 -->
       <ul class="ticker-list">
         <li
           v-for="(item, index) in tickers"
@@ -25,6 +33,7 @@
         </li>
       </ul>
 
+      <!-- 구독 폼 -->
       <form class="subscribe-form" @submit.prevent="submitEmail">
         <input
           v-model="email"
@@ -51,8 +60,7 @@ onMounted(async () => {
   try {
     const res = await fetch('https://portfolio-production-54cf.up.railway.app/top-tickers')
     const data = await res.json()
-    // data.tickers는 { ticker, change } 객체 배열 형태라고 가정
-    tickers.value = data.tickers.reverse()
+    tickers.value = data.tickers.reverse() // 10위부터 1위
   } catch (e) {
     console.error('❌ 티커 로드 실패:', e)
   }
@@ -83,7 +91,7 @@ const submitEmail = async () => {
   min-height: 100vh;
   padding: 30px 20px;
   background: #f3f6fa;
-  font-family: 'Montserrat', 'Segoe UI', sans-serif;
+  font-family: 'Pretendard', 'Montserrat', 'Segoe UI', sans-serif;
 }
 
 .report-box {
@@ -91,7 +99,7 @@ const submitEmail = async () => {
   border-radius: 20px;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
   padding: 50px 45px 45px;
-  max-width: 520px;
+  max-width: 560px;
   width: 100%;
   text-align: center;
 }
@@ -113,15 +121,36 @@ h1 {
   letter-spacing: -0.01em;
 }
 
+.list-header {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: 800;
+  font-size: 1rem;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #dee2e6;
+  margin-bottom: 10px;
+  color: #495057;
+}
+
+.list-header .rank,
+.list-header .ticker,
+.list-header .change {
+  flex: 1;
+  text-align: center;
+}
+
 .ticker-list {
   list-style: none;
   padding: 0;
   margin: 0 0 40px;
+  display: flex;
+  flex-direction: column-reverse; /* 핵심! */
 }
 
 .ticker-list li {
   font-weight: 700;
-  font-size: 1.3rem;
+  font-size: 1.2rem;
   color: #007bff;
   margin-bottom: 14px;
   opacity: 0;
@@ -133,26 +162,26 @@ h1 {
 }
 
 .rank {
+  flex: 1;
   color: #001f4d;
   font-weight: 900;
-  width: 28px;
-  text-align: right;
+  text-align: center;
   font-family: 'Courier New', monospace;
 }
 
 .ticker {
-  flex-grow: 1;
-  text-align: left;
+  flex: 1;
+  text-align: center;
   color: #004085;
-  letter-spacing: 0.02em;
-  font-variant: small-caps;
+  letter-spacing: 0.01em;
+  font-variant: normal;
 }
 
 .change {
-  min-width: 70px;
+  flex: 1;
   font-weight: 600;
-  font-size: 1.1rem;
-  text-align: right;
+  font-size: 1.05rem;
+  text-align: center;
   border-radius: 10px;
   padding: 4px 10px;
   user-select: none;

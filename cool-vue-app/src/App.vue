@@ -9,9 +9,9 @@
 
       <!-- 헤더 -->
       <div class="list-header">
-        <span class="rank">순위</span>
-        <span class="ticker">종목명</span>
-        <span class="change">주가 (1개월대비)</span>
+        <span class="rank_col">순위</span>
+        <span class="ticker_col">종목명</span>
+        <span class="change_col">주가 (1개월대비)</span>
       </div>
 
       <!-- 종목 리스트 -->
@@ -96,6 +96,8 @@ const submitEmail = async () => {
   font-family: 'Inter', 'Noto Sans KR', sans-serif;
 }
 
+
+
 .report-box {
   background: #ffffff;
   border-radius: 24px;
@@ -128,7 +130,7 @@ h1 {
   align-items: center;
   font-family: 'Noto Sans KR', sans-serif;
   font-weight: 700;
-  font-size: 0.95rem;
+  font-size: 0.90rem;
   border-bottom: 2px solid #e3e8ef;
   padding-bottom: 10px;
   margin-bottom: 12px;
@@ -186,6 +188,36 @@ h1 {
   border-radius: 12px;
   font-weight: 600;
   transition: all 0.2s ease-in-out;
+}
+
+.rank_col {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: linear-gradient(145deg, #f2f6fc, #e6edf7);
+  padding: 40px 20px;
+  font-family: 'Inter', 'Noto Sans KR', sans-serif;
+}
+
+.ticker_col {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: linear-gradient(145deg, #f2f6fc, #e6edf7);
+  padding: 40px 20px;
+  font-family: 'Inter', 'Noto Sans KR', sans-serif;
+}
+
+.change_col {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: linear-gradient(145deg, #f2f6fc, #e6edf7);
+  padding: 40px 20px;
+  font-family: 'Inter', 'Noto Sans KR', sans-serif;
 }
 
 .change.positive {

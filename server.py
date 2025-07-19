@@ -1,8 +1,11 @@
-from flask import Flask, request, jsonify
-import json
 import os
+import json
+from flask import Flask, request, jsonify
+from flask_cors import CORS
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder="cool-vue-app/dist", static_url_path="")
+CORS(app, resources={r"/*": {"origins": "*"}})
+
 RECIPIENT_FILE = 'recipients.json'
 
 @app.route('/add-email', methods=['POST'])
@@ -25,5 +28,10 @@ def add_email():
 
     return jsonify({'message': f'✅ 이메일이 로컬에 저장되었습니다: {email}'})
 
+@app.route('/')
+def serve_vue():
+    return app.send_static_file('index.html')
+
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8000)
+    port = int(os.environ.get("PORT", 8000))
+    app.run(host='0.0.0.0', port=port)

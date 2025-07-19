@@ -32,6 +32,11 @@ def add_email():
 def serve_vue():
     return app.send_static_file('index.html')
 
+@app.route('/')
+def hourly_job():
+    print("⏰ Hourly job ran - nothing to do here")
+    return "Hourly job ran", 200
+
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 8000))
     app.run(host='0.0.0.0', port=port)

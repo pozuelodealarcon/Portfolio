@@ -1018,31 +1018,26 @@ def score_momentum(ma, ma_lt, ret, ret60, rsi, macd):
         score += 20
     return score
 
-def get_operating_income_yoy(ticker):
+def get_operating_income_yoy(ticker_obj):
     try:
-        financials = ticker.financials
+        financials = ticker_obj.financials
 
-        # Check if 'Operating Income' is in the DataFrame
         if "Operating Income" not in financials.index:
             return None
 
-        # Extract and clean
         operating_income = financials.loc["Operating Income"].dropna()
 
-        # Ensure enough data and sort oldest to newest
         if len(operating_income) < 3:
             return None
 
         income_values = operating_income[::-1].values.tolist()
 
-        # Check if non-decreasing
         if all(later >= earlier for earlier, later in zip(income_values, income_values[1:])):
             return True
 
         oi_start = income_values[0]
         oi_end = income_values[-1]
 
-        # Check for valid values
         if oi_start is None or oi_end is None or oi_start <= 0 or oi_end <= 0:
             return False
 
@@ -1052,19 +1047,15 @@ def get_operating_income_yoy(ticker):
         return cagr
 
     except Exception as e:
-        print(f"[Error processing {ticker}]: {e}")
         return None
 
-def get_operating_income_qoq(ticker):
+def get_operating_income_qoq(ticker_obj):
     try:
-        ticker_obj = yf.Ticker(ticker)
         financials = ticker_obj.quarterly_financials
 
-        # Check if 'Operating Income' exists
         if "Operating Income" not in financials.index:
             return None
 
-        # Drop NaNs and sort from oldest to newest
         operating_income = financials.loc["Operating Income"].dropna()[::-1]
 
         if len(operating_income) < 3:
@@ -1072,25 +1063,23 @@ def get_operating_income_qoq(ticker):
 
         income_values = operating_income.values.tolist()
 
-        # Check for strictly non-decreasing trend
         if all(later >= earlier for earlier, later in zip(income_values, income_values[1:])):
             return True
 
         oi_start = income_values[0]
         oi_end = income_values[-1]
 
-        # Validate for meaningful CAGR
         if oi_start is None or oi_end is None or oi_start <= 0 or oi_end <= 0:
             return False
 
-        periods = len(income_values) - 1  # number of quarters
+        periods = len(income_values) - 1
         qoq_cagr = (oi_end / oi_start) ** (1 / periods) - 1
 
         return qoq_cagr
 
     except Exception as e:
-        print(f"[Error processing {ticker}]: {e}")
         return None
+
     
 def score_intrinsic_value(conf_lower, conf_upper, current_price, fcf_yield, tenyr_treasury_yield, fcf_cagr):
     score = 0
@@ -1275,7 +1264,6 @@ def process_ticker_quantitatives():
             debtToEquity = info.get('debtToEquity', None) # < 0.5
             debtToEquity = debtToEquity/100 if debtToEquity is not None else None
             currentRatio = info.get('currentRatio', None) # 초점: 회사의 단기 유동성, > 1.5 && < 2.5
-            shares_outstanding = info.get('sharesOutstanding')
             pbr = info.get('priceToBook', None) # 초점: 자산가치, 저pbr종목은 저평가된 자산 가치주로 간주. 장기 수익률 설명력 높음 < 1.5 (=being traded at 1.5 times its book value (asset-liab))
             per = info.get('trailingPE', None) # 초점: 수익성, over/undervalue? 저per 종목 선별, 10-20전후(혹은 산업평균)로 낮고 높음 구분. 주가가 그 기업의 이익에 비해 과대/과소평가되어 있다는 의미
                                                                        # low per could be undervalued or company in trouble, IT, 바이오 등 성장산업은 자연스레 per이 높게 형성

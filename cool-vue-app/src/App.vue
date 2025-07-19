@@ -24,7 +24,7 @@ const message = ref('')
 
 const submitEmail = async () => {
   try {
-    const response = await fetch('https://portfolio-production-54cf.up.railway.app/add-email', {
+    const response = await fetch('https://portfolio-production-54cf.up.railway.app/subscribe', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

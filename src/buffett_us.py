@@ -1859,6 +1859,16 @@ with pd.ExcelWriter(filename, engine='xlsxwriter') as writer:
       # 종목분석 시트 먼저 생성해야 함
     df.to_excel(writer, index=False, sheet_name='종목분석')  # df_analysis는 종목분석 데이터프레임
 
+    # 경쟁우위(Moat) 시트 저장 및 표 적용
+    moat_df.to_excel(writer, index=False, sheet_name='경쟁우위분석')
+    ws_moat = writer.sheets['경쟁우위분석']
+    (mr_moat, mc_moat) = moat_df.shape
+    ws_moat.add_table(0, 0, mr_moat, mc_moat - 1, {
+        'columns': [{'header': col} for col in moat_df.columns],
+        'style': 'Table Style Medium 9'
+    })
+    autofit_columns_and_wrap_moat(ws_moat, moat_df, writer.book)
+    
     # 기존 포트폴리오비중 시트 대신 각 기준별로 나눠서 저장 (엑셀 표로)
     for method in ['CVaR', 'Sortino', 'Variance', 'Sharpe']:
         df_method = df_weights[df_weights['최적화 기준'] == method]
@@ -1870,15 +1880,6 @@ with pd.ExcelWriter(filename, engine='xlsxwriter') as writer:
             'style': 'Table Style Medium 9'
         })
 
-    # 경쟁우위(Moat) 시트 저장 및 표 적용
-    moat_df.to_excel(writer, index=False, sheet_name='경쟁우위분석')
-    ws_moat = writer.sheets['경쟁우위분석']
-    (mr_moat, mc_moat) = moat_df.shape
-    ws_moat.add_table(0, 0, mr_moat, mc_moat - 1, {
-        'columns': [{'header': col} for col in moat_df.columns],
-        'style': 'Table Style Medium 9'
-    })
-    autofit_columns_and_wrap_moat(ws_moat, moat_df, writer.book)
 
 
     # 포트폴리오통계 시트도 엑셀 표로

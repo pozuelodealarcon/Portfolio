@@ -3,14 +3,14 @@
     <div class="report-box">
       <h1>📈 DeepFund AI 리포트</h1>
       <p class="description">
-        실적 기반 퀀트 알고리즘이 선정한 이번달 Top 10 가치 종목입니다.<br />
-        더 자세한 투자 인사이트와 분석이 궁금하다면 무료 뉴스레터를 구독하세요.
+        워렌 버핏의 보수적인 투자 철학 기반 퀀트 알고리즘이 선정한 이번달 Top 10 가치 종목입니다.<br />
+        더 자세한 투자 인사이트와 분석이 궁금하다면 무료 뉴스레터를 구독해보세요.
       </p>
 
       <!-- 헤더 -->
-      <div class="column-header">
+      <div class="list-header">
         <span class="rank">순위</span>
-        <span class="ticker">종목</span>
+        <span class="ticker">종목명</span>
         <span class="change">주가 (1개월대비)</span>
       </div>
 
@@ -22,7 +22,7 @@
           :style="{ animationDelay: `${index * 0.3}s` }"
           class="fade-in"
         >
-          <span class="rank">{{ index + 1 }}</span>
+          <span class="rank">{{ tickers.length - index }}.</span>
           <span class="ticker">{{ item.ticker }}</span>
           <span
             class="change"
@@ -33,7 +33,7 @@
         </li>
       </ul>
 
-      <!-- 이메일 폼 -->
+      <!-- 구독 폼 -->
       <form class="subscribe-form" @submit.prevent="submitEmail">
         <input
           v-model="email"
@@ -60,7 +60,7 @@ onMounted(async () => {
   try {
     const res = await fetch('https://portfolio-production-54cf.up.railway.app/top-tickers')
     const data = await res.json()
-    tickers.value = data.tickers.reverse() // 10위부터 1위로 역순
+    tickers.value = data.tickers.reverse() // 10위부터 1위
   } catch (e) {
     console.error('❌ 티커 로드 실패:', e)
   }
@@ -83,9 +83,10 @@ const submitEmail = async () => {
 }
 </script>
 
-<style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600&family=Montserrat:wght@500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@700&display=swap');
 
+<style scoped>
 .wrapper {
   display: flex;
   justify-content: center;
@@ -93,7 +94,7 @@ const submitEmail = async () => {
   min-height: 100vh;
   padding: 30px 20px;
   background: #f3f6fa;
-  font-family: 'Montserrat', sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 
 .report-box {
@@ -101,7 +102,7 @@ const submitEmail = async () => {
   border-radius: 20px;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
   padding: 50px 45px 45px;
-  max-width: 540px;
+  max-width: 560px;
   width: 100%;
   text-align: center;
 }
@@ -112,6 +113,7 @@ h1 {
   font-weight: 700;
   color: #0a1f44;
   letter-spacing: -0.02em;
+  font-family: 'Inter', sans-serif;
 }
 
 .description {
@@ -121,63 +123,79 @@ h1 {
   line-height: 1.7;
   font-weight: 500;
   letter-spacing: -0.01em;
-  font-family: 'Noto Sans KR', sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 
-.column-header {
-  font-family: 'Noto Sans KR', sans-serif;
-  font-weight: 600;
-  font-size: 1rem;
-  color: #2d3748;
+/* 한글 컬럼 헤더는 Noto Sans KR */
+.list-header {
   display: flex;
   justify-content: center;
-  gap: 40px;
+  align-items: center;
+  font-family: 'Noto Sans KR', sans-serif;
+  font-weight: 800;
+  font-size: 1rem;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #dee2e6;
   margin-bottom: 10px;
+  color: #495057;
 }
 
+.list-header .rank,
+.list-header .ticker,
+.list-header .change {
+  flex: 1;
+  text-align: center;
+}
+
+/* 티커 리스트 애니메이션 순서 및 텍스트 */
 .ticker-list {
   list-style: none;
   padding: 0;
   margin: 0 0 40px;
+  display: flex;
+  flex-direction: column-reverse;
 }
 
 .ticker-list li {
-  font-family: 'Montserrat', sans-serif;
-  font-weight: 600;
-  font-size: 1.15rem;
+  font-weight: 700;
+  font-size: 1.2rem;
   color: #007bff;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
   opacity: 0;
   animation: fadeInUp 0.6s forwards;
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 40px;
+  gap: 15px;
+  font-family: 'Inter', sans-serif;
 }
 
 .rank {
+  flex: 1;
   color: #001f4d;
-  width: 38px;
-  text-align: right;
-  font-weight: 700;
-  font-family: 'Courier New', monospace;
+  font-weight: 900;
+  text-align: center;
+  font-family: 'Inter', sans-serif;
 }
 
 .ticker {
-  flex-grow: 1;
-  text-align: left;
+  flex: 1;
+  text-align: center;
   color: #004085;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
+  font-variant: normal;
+  font-family: 'Inter', sans-serif;
 }
 
 .change {
-  min-width: 80px;
+  flex: 1;
   font-weight: 600;
-  font-size: 1rem;
-  text-align: right;
+  font-size: 1.05rem;
+  text-align: center;
   border-radius: 10px;
   padding: 4px 10px;
   user-select: none;
+  font-family: 'Inter', sans-serif;
 }
 
 .change.positive {
@@ -206,6 +224,7 @@ h1 {
   justify-content: center;
   gap: 12px;
   margin-top: 15px;
+  font-family: 'Inter', sans-serif;
 }
 
 .subscribe-form input {
@@ -216,6 +235,7 @@ h1 {
   width: 65%;
   outline: none;
   transition: border-color 0.25s ease;
+  font-family: 'Inter', sans-serif;
 }
 
 .subscribe-form input:focus {
@@ -232,6 +252,7 @@ h1 {
   font-weight: 700;
   font-size: 1rem;
   transition: background-color 0.3s ease;
+  font-family: 'Inter', sans-serif;
 }
 
 .subscribe-form button:hover {
@@ -242,5 +263,6 @@ h1 {
   margin-top: 14px;
   font-size: 0.9rem;
   color: #333;
+  font-family: 'Inter', sans-serif;
 }
 </style>

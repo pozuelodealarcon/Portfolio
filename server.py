@@ -15,38 +15,37 @@ GITHUB_REPO = 'pozuelodealarcon/Portfolio'
 def update_recipients_on_github(new_email):
     g = Github(GITHUB_TOKEN)
     repo = g.get_repo(GITHUB_REPO)
+
     try:
-        contents = repo.get_contents(RECIPIENT_FILE)
+        contents = repo.get_contents(RECIPIENT_FILE, ref="main")
         data = json.loads(contents.decoded_content.decode())
         sha = contents.sha
     except Exception as e:
-        print(f"[WARN] get_contents 실패: {e}")
-        # 파일이 없으면 생성 시도 (처음 한번만)
-        try:
-            initial_data = [new_email]
-            repo.create_file(
-                path=RECIPIENT_FILE,
-                message=f"Create recipients.json with {new_email}",
-                content=json.dumps(initial_data, indent=2)
-            )
-            return True
-        except Exception as ce:
-            print(f"[ERROR] create_file 실패: {ce}")
-            return False
+        print(f"[WARN] get_contents 실패, 새 파일 생성 시도: {e}")
+        data = []
+        sha = None
 
     if new_email not in data:
         data.append(new_email)
         updated_content = json.dumps(data, indent=2)
         try:
-            repo.update_file(
-                path=RECIPIENT_FILE,
-                message=f"Add email {new_email}",
-                content=updated_content,
-                sha=sha
-            )
+            if sha:
+                repo.update_file(
+                    path=RECIPIENT_FILE,
+                    message=f"Add email {new_email}",
+                    content=updated_content,
+                    sha=sha
+                )
+            else:
+                repo.create_file(
+                    path=RECIPIENT_FILE,
+                    message=f"Create recipients.json with {new_email}",
+                    content=updated_content
+                )
+            print("[INFO] GitHub에 성공적으로 업데이트 했습니다.")
             return True
         except Exception as e:
-            print(f"[ERROR] update_file 실패: {e}")
+            print(f"[ERROR] update/create 실패: {e}")
             return False
     else:
         print(f"[INFO] 이미 존재하는 이메일: {new_email}")

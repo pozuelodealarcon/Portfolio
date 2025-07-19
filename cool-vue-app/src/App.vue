@@ -83,68 +83,63 @@ const submitEmail = async () => {
 }
 </script>
 
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+KR:wght@500;700&family=Courier+Prime&display=swap');
+
 <style scoped>
 .wrapper {
   display: flex;
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  padding: 30px 20px;
-  background: #f3f6fa;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(145deg, #f2f6fc, #e6edf7);
+  padding: 40px 20px;
+  font-family: 'Inter', 'Noto Sans KR', sans-serif;
 }
 
 .report-box {
-  background: white;
-  border-radius: 20px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.06);
-  padding: 40px;
-  max-width: 500px;
+  background: #ffffff;
+  border-radius: 24px;
+  box-shadow: 0 15px 45px rgba(0, 0, 0, 0.08);
+  padding: 48px 32px;
+  max-width: 540px;
   width: 100%;
   text-align: center;
 }
 
 h1 {
-  font-size: 1.8rem;
-  margin-bottom: 12px;
-  color: #0d1b2a;
+  font-family: 'Noto Sans KR', sans-serif;
+  font-size: 1.9rem;
+  margin-bottom: 14px;
+  color: #1e2a38;
   font-weight: 700;
-  letter-spacing: -0.02em;
 }
 
 .description {
-  font-size: 1rem;
-  color: #4a4a4a;
-  margin-bottom: 30px;
-  line-height: 1.6;
+  font-size: 0.82rem;
+  color: #5c5c5c;
+  margin-bottom: 32px;
+  line-height: 1.7;
   font-weight: 500;
-  letter-spacing: -0.01em;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-/* 컬럼 헤더 - 한글용 Noto Sans KR */
 .list-header {
   display: flex;
   justify-content: center;
   align-items: center;
   font-family: 'Noto Sans KR', sans-serif;
-  font-weight: 800;
-  font-size: 1rem;
+  font-weight: 700;
+  font-size: 0.95rem;
+  border-bottom: 2px solid #e3e8ef;
   padding-bottom: 10px;
-  border-bottom: 2px solid #dee2e6;
-  margin-bottom: 10px;
-  color: #495057;
+  margin-bottom: 12px;
+  color: #3b3b3b;
 }
 
-.list-header .rank,
-.list-header .ticker,
-.list-header .change {
+.list-header span {
   flex: 1;
   text-align: center;
 }
 
-/* 리스트 */
 .ticker-list {
   list-style: none;
   padding: 0;
@@ -154,59 +149,59 @@ h1 {
 }
 
 .ticker-list li {
-  font-weight: 600;
-  font-size: 1.25rem;
-  color: #007bff;
-  margin-bottom: 14px;
-  opacity: 0;
-  animation: fadeInUp 0.6s forwards;
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 15px;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  gap: 14px;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #0066cc;
+  margin-bottom: 16px;
+  opacity: 0;
+  animation: fadeInSlide 0.6s forwards;
+  font-family: 'Inter', sans-serif;
 }
 
 .rank {
   flex: 1;
-  color: #001f4d;
-  font-weight: 900;
+  color: #2d3e50;
+  font-weight: 800;
   text-align: center;
-  font-family: 'Courier New', monospace;
+  font-family: 'Courier Prime', monospace;
+  font-size: 1.1rem;
 }
 
 .ticker {
   flex: 1;
   text-align: center;
-  color: #004085;
+  color: #114477;
   letter-spacing: 0.01em;
-  font-variant: normal;
 }
 
 .change {
   flex: 1;
-  font-weight: 600;
   font-size: 1.1rem;
   text-align: center;
-  border-radius: 10px;
-  padding: 4px 10px;
-  user-select: none;
+  padding: 5px 12px;
+  border-radius: 12px;
+  font-weight: 600;
+  transition: all 0.2s ease-in-out;
 }
 
 .change.positive {
-  background-color: #d4edda;
-  color: #155724;
+  background-color: #e2f4e9;
+  color: #1e7b45;
 }
 
 .change.negative {
-  background-color: #f8d7da;
-  color: #721c24;
+  background-color: #fdecea;
+  color: #c0392b;
 }
 
-@keyframes fadeInUp {
+@keyframes fadeInSlide {
   from {
     opacity: 0;
-    transform: translateY(18px);
+    transform: translateY(12px);
   }
   to {
     opacity: 1;
@@ -214,50 +209,52 @@ h1 {
   }
 }
 
+/* 구독 폼 */
 .subscribe-form {
   display: flex;
   justify-content: center;
-  gap: 12px;
-  margin-top: 15px;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  gap: 10px;
+  margin-top: 18px;
+  flex-wrap: wrap;
 }
 
 .subscribe-form input {
-  padding: 10px 16px;
-  border: 1px solid #c1c7d0;
-  border-radius: 22px;
+  padding: 10px 18px;
+  border: 1px solid #ccd6e0;
+  border-radius: 20px;
   font-size: 1rem;
   width: 65%;
-  outline: none;
+  max-width: 280px;
+  font-family: 'Inter', sans-serif;
   transition: border-color 0.25s ease;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 .subscribe-form input:focus {
   border-color: #007bff;
+  outline: none;
 }
 
 .subscribe-form button {
-  padding: 10px 26px;
-  background: #007bff;
+  padding: 10px 22px;
+  background: linear-gradient(135deg, #007bff, #0056b3);
   color: white;
   border: none;
   border-radius: 22px;
   cursor: pointer;
   font-weight: 700;
   font-size: 1rem;
-  transition: background-color 0.3s ease;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  transition: background 0.3s ease;
+  font-family: 'Inter', sans-serif;
 }
 
 .subscribe-form button:hover {
-  background: #0056b3;
+  background: linear-gradient(135deg, #0056b3, #003e91);
 }
 
 .feedback {
-  margin-top: 14px;
-  font-size: 0.9rem;
+  margin-top: 16px;
+  font-size: 0.85rem;
   color: #333;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 </style>

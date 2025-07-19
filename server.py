@@ -26,7 +26,7 @@ def add_email():
     with open(RECIPIENT_FILE, 'w') as f:
         json.dump(recipients, f, indent=2)
 
-    return jsonify({'message': f'✅ 이메일이 로컬에 저장되었습니다: {email}'})
+    return jsonify({'message': f'✅ 구독이 정상 처리되었습니다: {email}'})
 
 @app.route('/')
 def serve_vue():

@@ -1,6 +1,6 @@
 # 🇺🇸 Quantitative Investment Analysis and Optimization Tool with Buffett Methodology
 
-([Subscribe for free](https://pozuelodealarcon.github.io/Portfolio/))
+([Subscribe for free](https://portfolio-production-6e97.up.railway.app/))
 
 📈 **A program that combines Warren Buffett’s investment philosophy with modern quantitative strategies**  
 to analyze U.S. stocks and automatically generate optimized portfolios for mid-term and long-term value investment

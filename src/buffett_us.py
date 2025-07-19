@@ -2153,7 +2153,7 @@ html_content = f"""
 <html>
   <body>
 
-    <p><strong>지금 무료 구독하고 AI 투자 인사이트를 매주 받아보세요:</strong> <a href="https://pozuelodealarcon.github.io/Portfolio/" target="_blank">구독하러 가기</a></p>
+    <p><strong>지금 무료 구독하고 AI 투자 인사이트를 매주 받아보세요:</strong> <a href="https://portfolio-production-6e97.up.railway.app/" target="_blank">구독하러 가기</a></p>
     
     <p>귀하의 중장기 투자 참고를 위해 <b>{date_kr}</b> 기준, 
     시가총액 상위 <b>{limit}</b>개, 뉴욕증권거래소(NYSE), 나스닥(NASDAQ), 아멕스(AMEX)에 상장된 기업들의 최신 퀀트 데이터를 전달드립니다.</p>

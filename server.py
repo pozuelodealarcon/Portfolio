@@ -82,8 +82,24 @@ def subscribe():
 
 @app.route('/top-tickers')
 def top_tickers():
-    df = pd.read_excel("deep_fund.xlsx", sheet_name="종목분석")  # 예: 시트 이름
-    tickers = df.head(10)["종목"].tolist()  # 혹은 "Symbol" 컬럼
+    df = pd.read_excel("deep_fund.xlsx", sheet_name="종목분석")
+    
+    df_top = df.head(15)
+    unique_tickers = []
+    tickers = []
+
+    for _, row in df_top.iterrows():
+        ticker = row['종목']
+        if ticker not in unique_tickers:
+            unique_tickers.append(ticker)
+            tickers.append({
+                "ticker": str(ticker),
+                "change": str(row['주가(1개월대비)'])
+            })
+        if len(tickers) == 10:
+            break
+
+
     return jsonify({"tickers": tickers})
 
 if __name__ == '__main__':

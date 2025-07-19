@@ -9,12 +9,19 @@
 
       <ul class="ticker-list">
         <li
-          v-for="(ticker, index) in tickers"
-          :key="index"
-          :style="{ animationDelay: `${(tickers.length - index) * 0.3}s` }"
+          v-for="(item, index) in tickers"
+          :key="item.ticker"
+          :style="{ animationDelay: `${index * 0.3}s` }"
           class="fade-in"
         >
-          {{ tickers.length - index }}. {{ ticker }}
+          <span class="rank">{{ tickers.length - index }}.</span>
+          <span class="ticker">{{ item.ticker }}</span>
+          <span
+            class="change"
+            :class="{ positive: item.change.startsWith('+'), negative: item.change.startsWith('-') }"
+          >
+            {{ item.change }}
+          </span>
         </li>
       </ul>
 
@@ -44,7 +51,8 @@ onMounted(async () => {
   try {
     const res = await fetch('https://portfolio-production-54cf.up.railway.app/top-tickers')
     const data = await res.json()
-    tickers.value = data.tickers.reverse() // 10위부터 1위
+    // data.tickers는 { ticker, change } 객체 배열 형태라고 가정
+    tickers.value = data.tickers.reverse()
   } catch (e) {
     console.error('❌ 티커 로드 실패:', e)
   }
@@ -54,9 +62,7 @@ const submitEmail = async () => {
   try {
     const response = await fetch('https://portfolio-production-54cf.up.railway.app/subscribe', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: email.value }),
     })
     const data = await response.json()
@@ -77,51 +83,95 @@ const submitEmail = async () => {
   min-height: 100vh;
   padding: 30px 20px;
   background: #f3f6fa;
-  font-family: 'Segoe UI', sans-serif;
+  font-family: 'Montserrat', 'Segoe UI', sans-serif;
 }
 
 .report-box {
   background: white;
   border-radius: 20px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.06);
-  padding: 40px;
-  max-width: 500px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
+  padding: 50px 45px 45px;
+  max-width: 520px;
   width: 100%;
   text-align: center;
 }
 
 h1 {
-  font-size: 1.8rem;
-  margin-bottom: 12px;
-  color: #0d1b2a;
+  font-size: 2.4rem;
+  margin-bottom: 10px;
+  font-weight: 700;
+  color: #0a1f44;
+  letter-spacing: -0.02em;
 }
 
 .description {
-  font-size: 0.95rem;
+  font-size: 1.05rem;
   color: #4a4a4a;
-  margin-bottom: 30px;
-  line-height: 1.6;
+  margin-bottom: 35px;
+  line-height: 1.7;
+  font-weight: 500;
+  letter-spacing: -0.01em;
 }
 
 .ticker-list {
   list-style: none;
   padding: 0;
-  margin: 0 0 30px;
+  margin: 0 0 40px;
 }
 
 .ticker-list li {
-  font-size: 1.2rem;
-  font-weight: 600;
+  font-weight: 700;
+  font-size: 1.3rem;
   color: #007bff;
-  margin-bottom: 10px;
+  margin-bottom: 14px;
   opacity: 0;
   animation: fadeInUp 0.6s forwards;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 15px;
+}
+
+.rank {
+  color: #001f4d;
+  font-weight: 900;
+  width: 28px;
+  text-align: right;
+  font-family: 'Courier New', monospace;
+}
+
+.ticker {
+  flex-grow: 1;
+  text-align: left;
+  color: #004085;
+  letter-spacing: 0.02em;
+  font-variant: small-caps;
+}
+
+.change {
+  min-width: 70px;
+  font-weight: 600;
+  font-size: 1.1rem;
+  text-align: right;
+  border-radius: 10px;
+  padding: 4px 10px;
+  user-select: none;
+}
+
+.change.positive {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.change.negative {
+  background-color: #f8d7da;
+  color: #721c24;
 }
 
 @keyframes fadeInUp {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(18px);
   }
   to {
     opacity: 1;
@@ -132,27 +182,34 @@ h1 {
 .subscribe-form {
   display: flex;
   justify-content: center;
-  gap: 10px;
-  margin-top: 10px;
+  gap: 12px;
+  margin-top: 15px;
 }
 
 .subscribe-form input {
-  padding: 8px 14px;
-  border: 1px solid #ccc;
-  border-radius: 20px;
-  font-size: 0.9rem;
-  width: 60%;
+  padding: 10px 16px;
+  border: 1px solid #c1c7d0;
+  border-radius: 22px;
+  font-size: 1rem;
+  width: 65%;
   outline: none;
+  transition: border-color 0.25s ease;
+}
+
+.subscribe-form input:focus {
+  border-color: #007bff;
 }
 
 .subscribe-form button {
-  padding: 8px 18px;
+  padding: 10px 26px;
   background: #007bff;
   color: white;
   border: none;
-  border-radius: 20px;
+  border-radius: 22px;
   cursor: pointer;
-  font-weight: 600;
+  font-weight: 700;
+  font-size: 1rem;
+  transition: background-color 0.3s ease;
 }
 
 .subscribe-form button:hover {
@@ -160,8 +217,8 @@ h1 {
 }
 
 .feedback {
-  margin-top: 12px;
-  font-size: 0.85rem;
-  color: #444;
+  margin-top: 14px;
+  font-size: 0.9rem;
+  color: #333;
 }
 </style>

@@ -2,41 +2,84 @@ import os
 import json
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+import base64
+import requests
 
 app = Flask(__name__, static_folder="cool-vue-app/dist", static_url_path="")
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 RECIPIENT_FILE = 'recipients.json'
 
-@app.route('/add-email', methods=['POST'])
-def add_email():
-    email = request.json.get('email')
-    if not email:
-        return jsonify({'message': '⚠️ 이메일이 유효하지 않습니다.'}), 400
-
-    recipients = []
-    if os.path.exists(RECIPIENT_FILE):
-        with open(RECIPIENT_FILE, 'r') as f:
-            recipients = json.load(f)
-
-    if email in recipients:
-        return jsonify({'message': '⚠️ 이미 등록된 이메일입니다.'}), 400
-
-    recipients.append(email)
-    with open(RECIPIENT_FILE, 'w') as f:
-        json.dump(recipients, f, indent=2)
-
-    return jsonify({'message': f'✅ 구독이 정상 처리되었습니다: {email}'})
-
 @app.route('/')
 def serve_vue():
     return app.send_static_file('index.html')
 
-@app.route('/')
-def hourly_job():
-    print("⏰ Hourly job ran - nothing to do here")
-    return "Hourly job ran", 200
+def push_recipients_json():
+    repo = "pozuelodealarcon/Portfolio"
+    path = "recipients.json"
+    branch = "main"
+    token = os.getenv("GITHUB_TOKEN")
+
+    if not token:
+        return False, "GITHUB_TOKEN이 설정되지 않았습니다."
+
+    with open(path, "r") as f:
+        content = f.read()
+    b64_content = base64.b64encode(content.encode()).decode()
+
+    url = f"https://api.github.com/repos/{repo}/contents/{path}"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github.v3+json"
+    }
+    r = requests.get(url, headers=headers)
+    if r.status_code == 200:
+        sha = r.json()["sha"]
+    else:
+        sha = None
+
+    data = {
+        "message": "Update recipients.json from Railway",
+        "content": b64_content,
+        "branch": branch
+    }
+    if sha:
+        data["sha"] = sha
+
+    r = requests.put(url, headers=headers, json=data)
+    if r.status_code in [200, 201]:
+        return True, "업데이트 성공"
+    else:
+        return False, f"{r.status_code} - {r.text}"
+
+
+@app.route("/subscribe", methods=["POST"])
+def subscribe():
+    email = request.json.get("email")
+    if not email:
+        return jsonify({"message": "⚠️ 유효한 이메일이 아닙니다."}), 400
+
+    if not os.path.exists("recipients.json"):
+        with open("recipients.json", "w") as f:
+            json.dump([], f)
+
+    with open("recipients.json", "r+") as f:
+        data = json.load(f)
+        if email in data:
+            return jsonify({"message": "⚠️ 이미 등록된 이메일입니다."}), 400
+        data.append(email)
+        f.seek(0)
+        json.dump(data, f, indent=2)
+        f.truncate()
+
+    # Push to GitHub
+    success, msg = push_recipients_json()
+    if success:
+        return jsonify({"message": f"✅ 구독 완료: {email}"})
+    else:
+        return jsonify({"message": f"❌ GitHub 업로드 실패: {msg}"}), 500
+
 
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 8000))
+    port = int(os.environ.get("PORT", 8080))
     app.run(host='0.0.0.0', port=port)

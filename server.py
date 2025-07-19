@@ -9,7 +9,7 @@ app = Flask(__name__, static_folder="cool-vue-app/dist", static_url_path="")
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 RECIPIENT_FILE = 'recipients.json'
-GITHUB_TOKEN = os.environ.get('GITHUB_PAT')
+GITHUB_TOKEN = os.environ['GIT_PAT']  # GitHub Personal Access Token``
 REPO = 'pozuelodealarcon/Portfolio'
 BRANCH = 'main'  # 기본 브랜치명
 

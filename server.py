@@ -1,56 +1,58 @@
-from flask import Flask, request, jsonify
-from flask_cors import CORS
+import base64
 import json
 import os
-from github import Github  # PyGithub
+import requests
+from flask import Flask, request, jsonify
+from flask_cors import CORS
 
 app = Flask(__name__, static_folder="cool-vue-app/dist", static_url_path="")
-
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 RECIPIENT_FILE = 'recipients.json'
 GITHUB_TOKEN = os.environ.get('GITHUB_PAT')
-GITHUB_REPO = 'pozuelodealarcon/Portfolio'
+REPO = 'pozuelodealarcon/Portfolio'
+BRANCH = 'main'  # 기본 브랜치명
 
-def update_recipients_on_github(new_email):
-    g = Github(GITHUB_TOKEN)
-    repo = g.get_repo(GITHUB_REPO)
+def get_file_sha():
+    url = f'https://api.github.com/repos/{REPO}/contents/{RECIPIENT_FILE}?ref={BRANCH}'
+    headers = {'Authorization': f'token {GITHUB_TOKEN}'}
+    res = requests.get(url, headers=headers)
+    if res.status_code == 200:
+        return res.json()['sha'], res.json()['content']
+    return None, None
 
-    try:
-        contents = repo.get_contents(RECIPIENT_FILE, ref="main")
-        data = json.loads(contents.decoded_content.decode())
-        sha = contents.sha
-    except Exception as e:
-        print(f"[WARN] get_contents 실패, 새 파일 생성 시도: {e}")
-        data = []
-        sha = None
+def update_or_create_file(new_email):
+    sha, content_b64 = get_file_sha()
+    headers = {'Authorization': f'token {GITHUB_TOKEN}'}
 
-    if new_email not in data:
-        data.append(new_email)
-        updated_content = json.dumps(data, indent=2)
-        try:
-            if sha:
-                repo.update_file(
-                    path=RECIPIENT_FILE,
-                    message=f"Add email {new_email}",
-                    content=updated_content,
-                    sha=sha
-                )
-            else:
-                repo.create_file(
-                    path=RECIPIENT_FILE,
-                    message=f"Create recipients.json with {new_email}",
-                    content=updated_content
-                )
-            print("[INFO] GitHub에 성공적으로 업데이트 했습니다.")
-            return True
-        except Exception as e:
-            print(f"[ERROR] update/create 실패: {e}")
-            return False
+    if content_b64:
+        decoded = base64.b64decode(content_b64).decode()
+        data = json.loads(decoded)
     else:
-        print(f"[INFO] 이미 존재하는 이메일: {new_email}")
-        return False
+        data = []
 
+    if new_email in data:
+        return False, '이미 존재하는 이메일입니다.'
+
+    data.append(new_email)
+    new_content = json.dumps(data, indent=2)
+    encoded_content = base64.b64encode(new_content.encode()).decode()
+
+    payload = {
+        "message": f"Add email {new_email}",
+        "content": encoded_content,
+        "branch": BRANCH,
+    }
+    if sha:
+        payload["sha"] = sha
+
+    put_url = f'https://api.github.com/repos/{REPO}/contents/{RECIPIENT_FILE}'
+    response = requests.put(put_url, headers=headers, data=json.dumps(payload))
+
+    if response.status_code in [200, 201]:
+        return True, 'GitHub에 이메일이 성공적으로 추가되었습니다.'
+    else:
+        return False, f'GitHub 업데이트 실패: {response.status_code} {response.text}'
 
 @app.route('/add-email', methods=['POST'])
 def add_email():
@@ -63,29 +65,23 @@ def add_email():
     if os.path.exists(RECIPIENT_FILE):
         with open(RECIPIENT_FILE, 'r') as f:
             recipients = json.load(f)
-
     if email in recipients:
         return jsonify({'message': '⚠️ 이미 등록된 이메일입니다.'}), 400
-
     recipients.append(email)
     with open(RECIPIENT_FILE, 'w') as f:
         json.dump(recipients, f, indent=2)
 
     # GitHub 업데이트 시도
-    if update_recipients_on_github(email):
-        return jsonify({'message': f'✅ Email added and pushed to GitHub: {email}'})
+    success, msg = update_or_create_file(email)
+    if success:
+        return jsonify({'message': f'✅ {msg}'})
     else:
-        return jsonify({'message': f'✅ Email added locally (already in GitHub): {email}'})
+        return jsonify({'message': f'⚠️ {msg}'}), 500
 
-# Vue SPA 정적파일 제공
-@app.route('/', defaults={'path': ''})
-@app.route('/<path:path>')
-def serve_vue(path):
-    if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
-        return app.send_static_file(path)
-    else:
-        return app.send_static_file('index.html')
+@app.route('/')
+def serve_vue():
+    return app.send_static_file('index.html')
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 8000))
+    port = int(os.environ.get("PORT", 8000))
     app.run(host='0.0.0.0', port=port)

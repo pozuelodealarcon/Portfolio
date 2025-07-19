@@ -103,6 +103,10 @@ formattedDate = (dt.datetime.today() - dt.timedelta(days = weekend)).strftime("%
 three_months_approx = dt.datetime.today() - dt.timedelta(days=90)
 formattedDate_3m_ago =  three_months_approx.strftime("%Y%m%d")
 
+date_kr = dt.datetime.strptime(formattedDate, '%Y%m%d').strftime('%-m월 %-d일')
+date_kr_month = dt.datetime.strptime(formattedDate, '%Y%m%d').strftime('%-m월')
+date_kr_ymd = dt.datetime.strptime(formattedDate, '%Y%m%d').strftime('%Y년 %-m월 %-d일')  # Unix
+
 esg_dict = {
     'LAG_PERF': '미흡',
     'AVG_PERF': '보통',
@@ -1222,7 +1226,7 @@ def analyze_moat(ticker: str) -> str:
     prompt = f"""
 당신은 기업 분석에 능숙한 전문 주식 애널리스트입니다. 반드시 한국어로 답변하십시오.
 
-티커 "{ticker}"에 해당하는 기업의 {date_kr_ymd} 기준 정보를 검색한 뒤 그 내용을 바탕으로 해당 기업의 **중장기 핵심 경쟁 우위(Moat)** 를 2~3줄 이내로 간결하게 요약해 주십시오.
+{date_kr_ymd} 기준 티커 "{ticker}"에 해당하는 기업의 정보를 검색한 뒤 그 내용을 바탕으로 해당 기업의 **중장기 핵심 경쟁 우위(Moat)** 를 2~3줄 이내로 간결하게 요약해 주십시오.
 
 - 핵심 경쟁 우위 (예: 독점 기술, 브랜드 파워, 시장 점유율, 특허, 진입 장벽 등)
 - 향후에도 경쟁 우위가 유지될 수 있는 이유
@@ -2038,9 +2042,7 @@ time.sleep(3)
 excel_path = f'result_US_{formattedDate}.xlsx'
 
 
-date_kr = dt.datetime.strptime(formattedDate, '%Y%m%d').strftime('%-m월 %-d일')
-date_kr_month = dt.datetime.strptime(formattedDate, '%Y%m%d').strftime('%-m월')
-date_kr_ymd = dt.datetime.strptime(formattedDate, '%Y%m%d').strftime('%Y년 %-m월 %-d일')  # Unix
+
 
 #########################################################################################################
 def generate_prompt(df_news: pd.DataFrame) -> str:

@@ -69,7 +69,7 @@ sp500 = True
 opt = 10 
 
 #for news
-top_limit = 50
+news_lookup = 100
 
 #for moat
 moat_limit = 50
@@ -1441,7 +1441,7 @@ df = df.sort_values(by='합계점수', ascending=False)
 
 # 상위 X개 티커 리스트 추출
 top_tickers = df['티커'].head(opt).tolist()
-top_tickers_news = df['티커'].tolist()
+top_tickers_news = df['티커'].head(news_lookup).tolist()
 
 #################################################################
 def generate_moat_summary(df: pd.DataFrame, moat_limit: int) -> pd.DataFrame:
@@ -1719,10 +1719,17 @@ def detailed_portfolio_statistics(weights):
     kurt = kurtosis(portfolio_returns)
     max_dd = max_drawdown(portfolio_returns)
     count = len(portfolio_returns)
-    tnx = yf.Ticker("^TNX")
-    tnx_data = tnx.history(period="1d")
-    latest_yield = tnx_data['Close'].iloc[-1]
-    risk_free_rate = round(latest_yield/100.0, 2)
+
+    # ✅ Safe TNX fetch with fallback
+    try:
+        tnx = yf.Ticker("^TNX")
+        tnx_data = tnx.history(period="1d")
+        latest_yield = tnx_data['Close'].iloc[-1]
+        risk_free_rate = round(latest_yield / 100.0, 2)
+    except Exception as e:
+        print(f"⚠️ Failed to fetch TNX: {e}")
+        risk_free_rate = 0.04  # default 4% fallback
+
     sharpe_ratio = (mean_return_annualized - risk_free_rate) / std_dev_annualized
 
     # CVaR 계산 (5% 수준)
@@ -1731,14 +1738,13 @@ def detailed_portfolio_statistics(weights):
     var_index = int(np.floor(alpha * len(sorted_returns)))
     var = sorted_returns[var_index]
     cvar = sorted_returns[:var_index].mean()
-    # 연율화
-    cvar_annualized = (1 + cvar) ** 252 - 1
+    cvar_annualized = (1 + cvar) ** 252 - 1  # 연율화
 
     downside_returns = portfolio_returns[portfolio_returns < 0]
     downside_std_dev = downside_returns.std() * np.sqrt(252)
     sortino_ratio = mean_return_annualized / downside_std_dev if downside_std_dev != 0 else np.nan
     variance = std_dev_annualized ** 2 
-    
+
     return mean_return_annualized, std_dev_annualized, skewness, kurt, max_dd, count, sharpe_ratio, cvar_annualized, sortino_ratio, variance
 # Calcular estadísticas para cada portafolio
 statistics_cvar = detailed_portfolio_statistics(optimal_weights_cvar)

@@ -4,14 +4,14 @@
       <h1>📈 DeepFund AI 리포트</h1>
       <p class="description">
         실적 기반 퀀트 알고리즘이 선정한 이번달 Top 10 가치 종목입니다.<br />
-        더 자세한 투자 인사이트와 분석이 궁금하다면 이메일을 등록하세요.
+        더 자세한 투자 인사이트와 분석이 궁금하다면 무료 뉴스레터를 구독하세요.
       </p>
 
       <!-- 헤더 -->
-      <div class="list-header">
+      <div class="column-header">
         <span class="rank">순위</span>
-        <span class="ticker">종목명</span>
-        <span class="change">주가(1개월대비)</span>
+        <span class="ticker">종목</span>
+        <span class="change">주가 (1개월대비)</span>
       </div>
 
       <!-- 종목 리스트 -->
@@ -22,7 +22,7 @@
           :style="{ animationDelay: `${index * 0.3}s` }"
           class="fade-in"
         >
-          <span class="rank">{{ tickers.length - index }}.</span>
+          <span class="rank">{{ index + 1 }}</span>
           <span class="ticker">{{ item.ticker }}</span>
           <span
             class="change"
@@ -33,7 +33,7 @@
         </li>
       </ul>
 
-      <!-- 구독 폼 -->
+      <!-- 이메일 폼 -->
       <form class="subscribe-form" @submit.prevent="submitEmail">
         <input
           v-model="email"
@@ -60,7 +60,7 @@ onMounted(async () => {
   try {
     const res = await fetch('https://portfolio-production-54cf.up.railway.app/top-tickers')
     const data = await res.json()
-    tickers.value = data.tickers.reverse() // 10위부터 1위
+    tickers.value = data.tickers.reverse() // 10위부터 1위로 역순
   } catch (e) {
     console.error('❌ 티커 로드 실패:', e)
   }
@@ -84,6 +84,8 @@ const submitEmail = async () => {
 </script>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600&family=Montserrat:wght@500;600;700&display=swap');
+
 .wrapper {
   display: flex;
   justify-content: center;
@@ -91,7 +93,7 @@ const submitEmail = async () => {
   min-height: 100vh;
   padding: 30px 20px;
   background: #f3f6fa;
-  font-family: 'Pretendard', 'Montserrat', 'Segoe UI', sans-serif;
+  font-family: 'Montserrat', sans-serif;
 }
 
 .report-box {
@@ -99,7 +101,7 @@ const submitEmail = async () => {
   border-radius: 20px;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
   padding: 50px 45px 45px;
-  max-width: 560px;
+  max-width: 540px;
   width: 100%;
   text-align: center;
 }
@@ -119,69 +121,60 @@ h1 {
   line-height: 1.7;
   font-weight: 500;
   letter-spacing: -0.01em;
+  font-family: 'Noto Sans KR', sans-serif;
 }
 
-.list-header {
+.column-header {
+  font-family: 'Noto Sans KR', sans-serif;
+  font-weight: 600;
+  font-size: 1rem;
+  color: #2d3748;
   display: flex;
   justify-content: center;
-  align-items: center;
-  font-weight: 800;
-  font-size: 1rem;
-  padding-bottom: 10px;
-  border-bottom: 2px solid #dee2e6;
+  gap: 40px;
   margin-bottom: 10px;
-  color: #495057;
-}
-
-.list-header .rank,
-.list-header .ticker,
-.list-header .change {
-  flex: 1;
-  text-align: center;
 }
 
 .ticker-list {
   list-style: none;
   padding: 0;
   margin: 0 0 40px;
-  display: flex;
-  flex-direction: column-reverse; /* 핵심! */
 }
 
 .ticker-list li {
-  font-weight: 700;
-  font-size: 1.2rem;
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 600;
+  font-size: 1.15rem;
   color: #007bff;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
   opacity: 0;
   animation: fadeInUp 0.6s forwards;
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 15px;
+  gap: 40px;
 }
 
 .rank {
-  flex: 1;
   color: #001f4d;
-  font-weight: 900;
-  text-align: center;
+  width: 38px;
+  text-align: right;
+  font-weight: 700;
   font-family: 'Courier New', monospace;
 }
 
 .ticker {
-  flex: 1;
-  text-align: center;
+  flex-grow: 1;
+  text-align: left;
   color: #004085;
-  letter-spacing: 0.01em;
-  font-variant: normal;
+  letter-spacing: 0.02em;
 }
 
 .change {
-  flex: 1;
+  min-width: 80px;
   font-weight: 600;
-  font-size: 1.05rem;
-  text-align: center;
+  font-size: 1rem;
+  text-align: right;
   border-radius: 10px;
   padding: 4px 10px;
   user-select: none;

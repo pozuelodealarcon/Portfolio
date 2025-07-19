@@ -60,6 +60,7 @@ def add_email():
     else:
         return jsonify({'message': f'✅ Email added locally (already in GitHub): {email}'})
 
+
 @app.route('/')
 def serve_vue():
     return app.send_static_file('index.html')

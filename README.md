@@ -1,7 +1,7 @@
-# **🇺🇸 Quantitative Investment Analysis and Optimization Tool with Buffett Methodology**
+# Buffet Style Quantitative Investment Analysis and Optimization Program
 
 
-## A full-stack program that combines Warren Buffett’s investment philosophy with modern quantitative strategies and AI-powered analysis to analyze U.S. stocks, interpret market sentiment, and automatically generate optimized portfolios for mid- and long-term value investing
+### A **full-stack program** that combines Warren Buffett’s investment philosophy with modern quantitative strategies and AI-powered analysis to analyze U.S. stocks, interpret market sentiment, and automatically generate optimized portfolios for mid- and long-term value investing
 
 ### 💌 [Join Our Free Stock Insights Newsletter](https://portfolio-production-54cf.up.railway.app/)
 

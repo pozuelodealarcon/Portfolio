@@ -20,6 +20,7 @@ import { ref } from 'vue'
 const email = ref('')
 const message = ref('')
 
+
 const submitEmail = async () => {
   try {
     const response = await fetch('https://portfolio-production-6e97.up.railway.app/add-email', {

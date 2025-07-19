@@ -83,9 +83,7 @@ const submitEmail = async () => {
 }
 </script>
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@700&display=swap');
-
 <style scoped>
 .wrapper {
   display: flex;
@@ -94,39 +92,38 @@ const submitEmail = async () => {
   min-height: 100vh;
   padding: 30px 20px;
   background: #f3f6fa;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 .report-box {
   background: white;
   border-radius: 20px;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
-  padding: 50px 45px 45px;
-  max-width: 560px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.06);
+  padding: 40px;
+  max-width: 500px;
   width: 100%;
   text-align: center;
 }
 
 h1 {
-  font-size: 2.4rem;
-  margin-bottom: 10px;
+  font-size: 1.8rem;
+  margin-bottom: 12px;
+  color: #0d1b2a;
   font-weight: 700;
-  color: #0a1f44;
   letter-spacing: -0.02em;
-  font-family: 'Inter', sans-serif;
 }
 
 .description {
-  font-size: 1.05rem;
+  font-size: 1rem;
   color: #4a4a4a;
-  margin-bottom: 35px;
-  line-height: 1.7;
+  margin-bottom: 30px;
+  line-height: 1.6;
   font-weight: 500;
   letter-spacing: -0.01em;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-/* 한글 컬럼 헤더는 Noto Sans KR */
+/* 컬럼 헤더 - 한글용 Noto Sans KR */
 .list-header {
   display: flex;
   justify-content: center;
@@ -147,18 +144,18 @@ h1 {
   text-align: center;
 }
 
-/* 티커 리스트 애니메이션 순서 및 텍스트 */
+/* 리스트 */
 .ticker-list {
   list-style: none;
   padding: 0;
-  margin: 0 0 40px;
+  margin: 0 0 30px;
   display: flex;
   flex-direction: column-reverse;
 }
 
 .ticker-list li {
-  font-weight: 700;
-  font-size: 1.2rem;
+  font-weight: 600;
+  font-size: 1.25rem;
   color: #007bff;
   margin-bottom: 14px;
   opacity: 0;
@@ -167,7 +164,7 @@ h1 {
   justify-content: center;
   align-items: center;
   gap: 15px;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 .rank {
@@ -175,7 +172,7 @@ h1 {
   color: #001f4d;
   font-weight: 900;
   text-align: center;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Courier New', monospace;
 }
 
 .ticker {
@@ -184,18 +181,16 @@ h1 {
   color: #004085;
   letter-spacing: 0.01em;
   font-variant: normal;
-  font-family: 'Inter', sans-serif;
 }
 
 .change {
   flex: 1;
   font-weight: 600;
-  font-size: 1.05rem;
+  font-size: 1.1rem;
   text-align: center;
   border-radius: 10px;
   padding: 4px 10px;
   user-select: none;
-  font-family: 'Inter', sans-serif;
 }
 
 .change.positive {
@@ -224,7 +219,7 @@ h1 {
   justify-content: center;
   gap: 12px;
   margin-top: 15px;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 .subscribe-form input {
@@ -235,7 +230,7 @@ h1 {
   width: 65%;
   outline: none;
   transition: border-color 0.25s ease;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 .subscribe-form input:focus {
@@ -252,7 +247,7 @@ h1 {
   font-weight: 700;
   font-size: 1rem;
   transition: background-color 0.3s ease;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 .subscribe-form button:hover {
@@ -263,6 +258,6 @@ h1 {
   margin-top: 14px;
   font-size: 0.9rem;
   color: #333;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 </style>

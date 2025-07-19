@@ -1,50 +1,38 @@
-# 🇺🇸 Quantitative Investment Analysis and Optimization Tool with Buffett Methodology
+# **🇺🇸 Quantitative Investment Analysis and Optimization Tool with Buffett Methodology**
 
-([Subscribe for free](https://portfolio-production-6e97.up.railway.app/))
 
-📈 **A program that combines Warren Buffett’s investment philosophy with modern quantitative strategies**  
-to analyze U.S. stocks and automatically generate optimized portfolios for mid-term and long-term value investment
+## A full-stack program that combines Warren Buffett’s investment philosophy with modern quantitative strategies and AI-powered analysis to analyze U.S. stocks, interpret market sentiment, and automatically generate optimized portfolios for mid- and long-term value investing
+
+### 💌 [Join Our Free Stock Insights Newsletter](https://portfolio-production-54cf.up.railway.app/)
+
+> Get Buffett-style stock picks, AI-driven market news, and optimized portfolios—delivered automatically.
+---
 
 ## 🔧 Key Features
 
-- Financial data crawling using FinancialModelingPrep API  
-- Price data collection and caching via yFinance  
-- Calculation of Buffett-style value investing score (B-Score)  
-- Momentum scoring based on technical indicators (RSI, MACD, moving averages, etc.)  
-- DCF intrinsic value evaluation based on FCF yield and CAGR  
-- ESG performance classification  
-- Portfolio optimization (Sharpe, Sortino, CVaR, variance minimization)  
-- Queries Marketaux API for the three latest and most relevant news; returns the headline and summary along with sentiment scores associated with the ticker in each article
-- Results saved to Excel and automatically emailed
+* Financial data crawling using FinancialModelingPrep API
+* Price data collection and caching via yFinance
+* Calculation of Buffett-style value investing score (B-Score)
+* Momentum scoring based on technical indicators (RSI, MACD, moving averages, etc.)
+* Portfolio optimization using Modern Portfolio Theory (Sharpe, Sortino, CVaR, variance minimization)
+* Queries Marketaux API for the latest news
+* **DCF intrinsic value evaluation based on 10,000 Monte Carlo Simulation per ticker**
+* **AI-powered macroeconomic and news sentiment analysis using Gemini 2.5 Flash**
+* **Vue.js frontend for subscription web and Flask API backend running on Railway**
+* Results saved to Excel and automatically emailed to subscribers
+
+---
 
 ## 📁 Directory Structure
 
-
-
+```
 src/
-├── buffett\_us.py        # Main executable file
-
-
-
-## ⚙️ Installation
-
-```bash
-git clone https://github.com/pozuelodealarcon/Portfolio.git
-pip install -r requirements.txt
-````
-
-> ⚠️ Set required environment variables in GitHub Secrets or `.env` file:
-
-* `EMAIL_ADDRESS`
-* `EMAIL_PASSWORD`
-* `FMP_API_KEY`
-
-GitHub Actions automatically:
-
-* Checks and downloads recent price cache
-* Calculates value and momentum scores
-* Derives optimized portfolio weights
-* Generates Excel reports and sends them via email
+├── buffett_us.py         # Main analysis script
+cool-vue-app/src/
+├── App.vue             # Vue.js frontend for subscription web
+server.py                # Flask backend for managing email subscriptions
+recipients.json       # Auto-updated subscriber email list
+```
 
 ---
 
@@ -74,6 +62,14 @@ GitHub Actions automatically:
   * 20-day/60-day returns ≥ 10%
   * RSI rebound confirmation
   * MACD golden cross
+
+### ④ AI-Powered Sentiment & Macroeconomic Summary
+
+* Uses **Gemini 2.5 Flash Google Search** to:
+
+  * Summarize recent macroeconomic trends
+  * Interpret news articles with sentiment scoring
+  * Generate stock picks based on quantitative + narrative alignment
 
 ---
 
@@ -108,6 +104,21 @@ GitHub Actions automatically:
 
 ---
 
+## 📤 Automation & Deployment
+
+### ✅ GitHub Actions
+
+* Configured in `.github/workflows/buffett.yml` to run **every Monday, Wednesday, and Friday at 08:00 KST**
+* Auto-downloads prices, computes scores, optimizes weights, and sends results via email
+
+### ✅ Railway Deployment
+
+* **Flask backend + Vue frontend** deployed via Railway
+* Public-facing email subscription system with auto-update to `recipients.json`
+* Auto commits/pushes email of a new subscriber to GitHub using REST API
+
+---
+
 ## Disclaimer
 
 * This analysis and all provided information are for reference purposes only.
@@ -115,17 +126,7 @@ GitHub Actions automatically:
 
 ---
 
-## 📤 Automated Execution (GitHub Actions)
-
-Configured in `.github/workflows/buffett.yml` to run **automatically every Mondays and Fridays at 08:00 KST**.
-
----
-
 ## 📜 License
 
 MIT License
 (c) 2025 Hyungsuk Choi ([chs\_3411@naver.com](mailto:chs_3411@naver.com))
-
-```
-```
-

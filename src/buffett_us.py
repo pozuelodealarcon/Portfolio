@@ -49,9 +49,7 @@ try:
 except (FileNotFoundError, json.JSONDecodeError):
     print("⚠️ recipients.json 파일이 없거나 잘못되었습니다.")
 
-# 확인용 출력
-print(recipients)
-
+recipients = list(set(recipients))
 
 ################ PREDETERMINED FIELDS ###################
 
@@ -1090,11 +1088,11 @@ def score_intrinsic_value(conf_lower, conf_upper, current_price, fcf_yield, teny
 
     if conf_lower is not None and conf_upper is not None and current_price is not None:
         if current_price < conf_upper:
-            score += 1  # price is within fair value range
+            score += 2  # price is within fair value range
             if current_price <= conf_lower:
                 score += 3  # price is at or below lower bound of fair value range
         else:
-            score -= 2  # price outside fair value range
+            score -= 3  # price outside fair value range
 
     if fcf_yield is not None:
         if fcf_yield > tenyr_treasury_yield:
@@ -2142,7 +2140,7 @@ html_content = f"""
 <html>
   <body>
 
-    <p><strong>지금 무료 구독하고 AI 투자 인사이트를 매주 받아보세요:</strong> <a href="https://portfolio-production-6e97.up.railway.app/" target="_blank">구독하러 가기</a></p>
+    <p><strong>지금 무료 구독하고 AI 투자 인사이트를 매주 받아보세요:</strong> <a href="https://portfolio-production-54cf.up.railway.app/" target="_blank">구독하러 가기</a></p>
     
     <p>귀하의 중장기 투자 참고를 위해 <b>{date_kr}</b> 기준, 
     시가총액 상위 <b>{limit}</b>개, 뉴욕증권거래소(NYSE), 나스닥(NASDAQ), 아멕스(AMEX)에 상장된 기업들의 최신 퀀트 데이터를 전달드립니다.</p>
@@ -2193,7 +2191,7 @@ html_content = f"""
     투자 판단 시에는 정성적 요소에 대한 별도의 면밀한 검토도 함께 병행하시기를 권장드립니다.
     </p>
 
-    <p><em>해당 메일은 매주 월, 금 오전 8시에 자동 발송되며, 안정적이고 현명한 투자를 위한 참고 자료로 제공됩니다.</em></p>
+    <p><em>해당 메일은 매주 월, 수, 금 오전 8시에 자동 발송되며, 안정적이고 현명한 투자를 위한 참고 자료로 제공됩니다.</em></p>
 
     <p><b>귀하의 성공적인 투자를 응원합니다.</b></p>
   </body>

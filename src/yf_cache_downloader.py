@@ -112,7 +112,7 @@ def update_cache(tickers, cache_file=CACHE_FILE):
 
 if __name__ == "__main__":
     tickers = get_tickers_by_country('US', limit, api_key)  # Example tickers
-    tickers_to_remove = ['ANTM', 'RY-PT', 'VZA']
+    tickers_to_remove = ['ANTM', 'RY-PT', 'VZA','AED', 'AEH', 'BDXA', 'AMOV', 'PXD', 'ATVI', 'SQ', 'CEO']
     tickers = [t for t in tickers if t not in tickers_to_remove]
     print(len(tickers))
     update_cache(tickers)

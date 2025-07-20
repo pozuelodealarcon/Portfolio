@@ -109,14 +109,6 @@ const submitEmail = async () => {
     console.error('❌ Fetch Error:', err)
   }
 }
-
-onMounted(() => {
-  window.scrollToNewsletter = () => {
-    const el = document.getElementById('newsletter')
-    if (el) el.scrollIntoView({ behavior: 'smooth' })
-  }
-})
-
 onMounted(async () => {
   // 종목 데이터 로드
   try {
@@ -125,6 +117,11 @@ onMounted(async () => {
     tickers.value = data.tickers.reverse()
   } catch (e) {
     console.error('❌ 티커 로드 실패:', e)
+  }
+
+  window.scrollToNewsletter = () => {
+    const el = document.getElementById('newsletter')
+    if (el) el.scrollIntoView({ behavior: 'smooth' })
   }
 
   let i = 0;

@@ -87,24 +87,30 @@ def market_data():
     indices = {
         "S&P500": "^GSPC",
         "NASDAQ": "^IXIC",
+        "Dow Jones": "	^DJI",
         "KOSPI": "^KS11",
         "KOSDAQ": "^KQ11",
         "USD/KRW": "USDKRW=X",
+        "Gold": "GC=F",
+        "WTI": "CL=F",
 
     }
 
     data = {}
     for name, symbol in indices.items():
         ticker = yf.Ticker(symbol)
-        price = ticker.history(period="1d").tail(1)['Close'].iloc[0]
+        hist = ticker.history(period="1d").tail(1)
+        price = hist['Close'].iloc[0] if not hist.empty else None
         prev_close = ticker.info.get("previousClose", price)
+
+        if price is None or prev_close is None:
+            continue
+
         change = price - prev_close
-        percent = (change / prev_close) * 100 if prev_close else 0
         sign = "▲" if change > 0 else "▼" if change < 0 else "-"
         data[name] = {
             "price": round(price, 2),
-            "change": f"{sign} {change:+.2f}",
-            "percent": f"{percent:+.2f}%"
+            "change": f"{sign} {change:+.2f}"  # ← 퍼센트 제거
         }
 
     return jsonify(data)

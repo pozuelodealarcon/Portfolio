@@ -64,7 +64,7 @@ const typedText = ref('')
 const marketRibbon = ref('로딩 중...')
 
 const fullText =
-  '워렌 버핏의 보수적인 철학 기반 퀀트 알고리즘이 선정한 이번달 Top 10 가치 종목입니다. 더 자세한 투자 인사이트와 분석이 궁금하다면 무료 뉴스레터를 구독해보세요.'
+  '워렌 버핏의 투자 원칙을 반영한 퀀트 알고리즘이 선정한 이번 달 Top 10 가치주입니다. 보다 깊이 있는 분석과 인사이트는 무료 뉴스레터에서 확인하세요.'
 
 // 📈 마켓 리본 텍스트 업데이트 함수
 const updateRibbon = async () => {
@@ -73,10 +73,10 @@ const updateRibbon = async () => {
     const data = await res.json()
 
     const parts = Object.entries(data).map(
-      ([name, info]) =>
-        `${name} ${info.price} ${info.change} ${info.percent}`
-    )
-    marketRibbon.value = parts.join(' &nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp; ')
+      ([name, info]) => `${name} ${info.price} ${info.change}`
+    );
+    marketRibbon.value = parts.join(" &nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp; ");
+
   } catch (err) {
     console.error('데이터 가져오기 실패:', err)
     marketRibbon.value = '📡 마켓 데이터 로드 실패'
@@ -158,7 +158,7 @@ onMounted(async () => {
 .scrolling-text {
   display: inline-block;
   padding-left: 100%;
-  animation: scroll-left 18s linear infinite;
+  animation: scroll-left 25s linear infinite;
 }
 
 @keyframes scroll-left {

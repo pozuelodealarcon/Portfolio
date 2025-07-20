@@ -129,8 +129,8 @@ onMounted(async () => {
 .logo {
   max-width: 400px;   /* 원하는 크기로 키우기 (예: 300px) */
   height: auto;
-  margin-top: 8px;    /* 위쪽 마진 줄이기 */
-  margin-bottom: 8px; /* 아래쪽 마진 줄이기 */
+  margin-top: 0px;    /* 위쪽 마진 줄이기 */
+  margin-bottom: 0px; /* 아래쪽 마진 줄이기 */
   display: block;
   margin-left: auto;
   margin-right: auto;

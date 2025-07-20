@@ -53,6 +53,10 @@
         <button type="submit">구독</button>
       </form>
 
+      <!-- 페이지 맨 아래에 위치할 구간 -->
+      <div id="newsletter"></div>
+
+
       <p v-if="message" class="feedback">{{ message }}</p>
       <p class="copyright">©2025 Hyungsuk Choi, University of Maryland</p>
     </div>
@@ -72,7 +76,7 @@ const marketRibbon = ref('로딩 중...')
 const fullText =
   `<span style="font-weight:700; color:#114477;">워렌 버핏</span>의 투자 원칙을 반영한 퀀트 알고리즘이 선정한 
   <span style="color:#007bff; font-weight:800;">이번 달 Top 10 가치주</span>입니다.<br>
-  심층 분석과 인사이트는 무료 뉴스레터에서 확인하세요.`;
+  심층 분석과 인사이트는 무료 <a href="#newsletter" style="color:#007bff; font-weight:700; text-decoration: underline; cursor: pointer;">뉴스레터</a>에서 확인하세요.`;
 
 // 📈 마켓 리본 텍스트 업데이트 함수
 const updateRibbon = async () => {
@@ -439,5 +443,8 @@ h1 {
   }
 }
 
+html {
+  scroll-behavior: smooth;
+}
 
 </style>

@@ -65,8 +65,8 @@ const typedText = ref('')
 const marketRibbon = ref('로딩 중...')
 
 const fullText =
-  `<span style="font-weight:700; color:#114477;">워렌 버핏</span>의 투자 원칙을 반영한  
-  퀀트 알고리즘이 선정한 <span style="color:#007bff; font-weight:800;">이번 달 Top 10 가치주</span>입니다.<br>
+  `<span style="font-weight:700; color:#114477;">워렌 버핏</span>의 투자 원칙을 반영한 퀀트 알고리즘이 선정한 
+  <span style="color:#007bff; font-weight:800;">이번 달 Top 10 가치주</span>입니다.<br>
   심층 분석과 인사이트는 무료 뉴스레터에서 확인하세요.`;
 
 // 📈 마켓 리본 텍스트 업데이트 함수
@@ -296,7 +296,7 @@ h1 {
   text-align: center;
   color: #114477;
   letter-spacing: 0.01em;
-  font-weight: 400;
+  font-weight: 500;
 }
 
 .change {

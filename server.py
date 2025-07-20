@@ -103,21 +103,22 @@ def market_data():
     data = {}
     for name, symbol in indices.items():
         ticker = yf.Ticker(symbol)
-        hist = ticker.history(period="1d").tail(1)
-        price = hist['Close'].iloc[0] if not hist.empty else None
-        prev_close = ticker.info.get("previousClose", price)
-
-        if price is None or prev_close is None:
+        hist = ticker.history(period="2d").tail(2)  # 최근 2일 데이터 필요 (오늘, 전일)
+        if len(hist) < 2:
             continue
 
-        change = price - prev_close
-        percent_change = (change / prev_close) * 100
+        price_today = hist['Close'].iloc[1]
+        price_yesterday = hist['Close'].iloc[0]
+
+        change = price_today - price_yesterday
+        percent_change = (change / price_yesterday) * 100
 
         sign = "▲" if change > 0 else "▼" if change < 0 else "-"
         data[name] = {
-            "price": round(price, 2),
+            "price": round(price_today, 2),
             "change": f"{sign} {abs(percent_change):.2f}%"
         }
+
         return jsonify(data)
 
 @app.route('/top-tickers')

@@ -2,11 +2,7 @@
   <div class="wrapper">
     <!-- 리본 -->
     <div class="ticker-ribbon">
-      <div class="scrolling-text">
-        S&P500 5,600.12 ▲ +0.25% &nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp;
-        KOSPI 2,750.45 ▼ -0.13% &nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp;
-        NASDAQ 14,220.10 ▲ +1.10%
-      </div>
+      <div class="scrolling-text" v-html="marketRibbon"></div>
     </div>
 
     <div class="report-box">
@@ -53,7 +49,7 @@
       </form>
 
       <p v-if="message" class="feedback">{{ message }}</p>
-      <p class="copyright">©2025 Hyungsuk Choi, University of Maryland </p>
+      <p class="copyright">©2025 Hyungsuk Choi, University of Maryland</p>
     </div>
   </div>
 </template>
@@ -64,27 +60,28 @@ import { ref, onMounted } from 'vue'
 const tickers = ref([])
 const email = ref('')
 const message = ref('')
-
 const typedText = ref('')
-const fullText = '워렌 버핏의 보수적인 철학 기반 퀀트 알고리즘이 선정한 이번달 Top 10 가치 종목입니다. 더 자세한 투자 인사이트와 분석이 궁금하다면 무료 뉴스레터를 구독해보세요.'
+const marketRibbon = ref('로딩 중...')
 
-onMounted(async () => {
+const fullText =
+  '워렌 버핏의 보수적인 철학 기반 퀀트 알고리즘이 선정한 이번달 Top 10 가치 종목입니다. 더 자세한 투자 인사이트와 분석이 궁금하다면 무료 뉴스레터를 구독해보세요.'
+
+// 📈 마켓 리본 텍스트 업데이트 함수
+const updateRibbon = async () => {
   try {
-    const res = await fetch('https://portfolio-production-54cf.up.railway.app/top-tickers')
+    const res = await fetch('/api/market-data')
     const data = await res.json()
-    tickers.value = data.tickers.reverse()
-  } catch (e) {
-    console.error('❌ 티커 로드 실패:', e)
-  }
 
-  // 타이핑 애니메이션 시작
-  let i = 0
-  const typeInterval = setInterval(() => {
-    typedText.value += fullText[i]
-    i++
-    if (i >= fullText.length) clearInterval(typeInterval)
-  }, 30)
-})
+    const parts = Object.entries(data).map(
+      ([name, info]) =>
+        `${name} ${info.price} ${info.change} ${info.percent}`
+    )
+    marketRibbon.value = parts.join(' &nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp; ')
+  } catch (err) {
+    console.error('데이터 가져오기 실패:', err)
+    marketRibbon.value = '📡 마켓 데이터 로드 실패'
+  }
+}
 
 const submitEmail = async () => {
   try {
@@ -101,6 +98,29 @@ const submitEmail = async () => {
     console.error('❌ Fetch Error:', err)
   }
 }
+
+onMounted(async () => {
+  // 종목 데이터 로드
+  try {
+    const res = await fetch('https://portfolio-production-54cf.up.railway.app/top-tickers')
+    const data = await res.json()
+    tickers.value = data.tickers.reverse()
+  } catch (e) {
+    console.error('❌ 티커 로드 실패:', e)
+  }
+
+  // 타이핑 효과
+  let i = 0
+  const typeInterval = setInterval(() => {
+    typedText.value += fullText[i]
+    i++
+    if (i >= fullText.length) clearInterval(typeInterval)
+  }, 30)
+
+  // 마켓 리본 초기화 및 주기적 갱신
+  await updateRibbon()
+  setInterval(updateRibbon, 30000)
+})
 </script>
 
 <style scoped>

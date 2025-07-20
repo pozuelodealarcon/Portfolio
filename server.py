@@ -5,6 +5,7 @@ from flask_cors import CORS
 import base64
 import requests
 import pandas as pd
+import yfinance as yf
 
 app = Flask(__name__, static_folder="cool-vue-app/dist", static_url_path="")
 CORS(app, resources={r"/*": {"origins": "*"}})
@@ -79,6 +80,34 @@ def subscribe():
         return jsonify({"message": f"✅ 구독 완료: {email}"})
     else:
         return jsonify({"message": f"❌ GitHub 업로드 실패: {msg}"}), 500
+
+
+@app.route('/api/market-data')
+def market_data():
+    indices = {
+        "S&P500": "^GSPC",
+        "NASDAQ": "^IXIC",
+        "KOSPI": "^KS11",
+        "KOSDAQ": "^KQ11",
+        "USD/KRW": "USDKRW=X",
+
+    }
+
+    data = {}
+    for name, symbol in indices.items():
+        ticker = yf.Ticker(symbol)
+        price = ticker.history(period="1d").tail(1)['Close'].iloc[0]
+        prev_close = ticker.info.get("previousClose", price)
+        change = price - prev_close
+        percent = (change / prev_close) * 100 if prev_close else 0
+        sign = "▲" if change > 0 else "▼" if change < 0 else "-"
+        data[name] = {
+            "price": round(price, 2),
+            "change": f"{sign} {change:+.2f}",
+            "percent": f"{percent:+.2f}%"
+        }
+
+    return jsonify(data)
 
 @app.route('/top-tickers')
 def top_tickers():

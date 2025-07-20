@@ -8,7 +8,7 @@
     <div class="report-box">
       <h1>📈 DeepFund AI 리포트</h1>
       <p class="description">
-        <span class="typewriter">{{ typedText }}</span>
+        <span class="typewriter" v-html="typedText"></span>
       </p>
 
       <!-- 헤더 -->

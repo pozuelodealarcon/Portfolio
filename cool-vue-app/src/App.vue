@@ -114,7 +114,7 @@ onMounted(async () => {
   const rawText =
   '워렌 버핏의 투자 원칙을 반영한 퀀트 알고리즘이 선정한 이번 달 Top 10 가치주입니다. 보다 깊이 있는 분석과 인사이트는 무료 뉴스레터에서 확인하세요.';
 
-  const fullText =
+  const styledText =
   `<span style="font-weight:700; color:#114477;">워렌 버핏</span>의 투자 원칙을 반영한 퀀트 알고리즘이 선정한 
   <span style="color:#007bff; font-weight:800;">이번 달 Top 10 가치주</span>입니다.<br>
   심층 분석과 인사이트는 무료 뉴스레터에서 확인하세요.`;
@@ -387,5 +387,24 @@ h1 {
   font-size: 0.75rem;
   color: #999;
 }
+
+@media (max-width: 480px) {
+  .description {
+    font-size: 1rem;
+    font-weight: 500;
+    line-height: 1.6;
+    color: #444;
+  }
+
+  .ticker-list li {
+    font-size: 1rem;
+  }
+
+  .subscribe-form input,
+  .subscribe-form button {
+    font-size: 0.95rem;
+  }
+}
+
 
 </style>

@@ -1,4 +1,4 @@
-# Buffett-Style Quantitative Investment Analysis & Optimization Platform
+# DeepFund: Buffett-Style Quantitative Investment Analysis & Optimization
 
 ### A comprehensive full-stack solution integrating Warren Buffett’s timeless investment principles with cutting-edge quantitative techniques and AI-driven market sentiment analysis — delivering optimized portfolios for mid- to long-term value investing in U.S. equities.
 
@@ -9,16 +9,15 @@
 
 
 ## 🔧 Key Features
-
-* Financial data crawling using FinancialModelingPrep API
-* Price data collection and caching via yFinance
-* Calculation of Buffett-style value investing score (B-Score)
-* Momentum scoring based on technical indicators (RSI, MACD, moving averages, etc.)
-* Portfolio optimization using Modern Portfolio Theory (Sharpe, Sortino, CVaR, variance minimization)
-* Queries Marketaux API for the latest news
 * **DCF intrinsic value evaluation based on 10,000 Monte Carlo simulations per ticker**
 * **AI-powered macroeconomic and news sentiment analysis using Gemini 2.5 Flash**
-* **Vue.js frontend for subscription web and Flask API backend running on Railway**
+* **Vue.js frontend for DeepFund that shows top 10 tickers, live market indices, and a subscription banner**
+* **Flask API backend running on Railway**
+* Financial data crawling using FinancialModelingPrep API and yFinance
+* Original algorithm that implements Buffett-style scoring of value investing (B-Score)
+* Momentum scoring based on technical indicators (RSI, MACD, moving averages - although Buffett himself didn't really care about these!)
+* Portfolio optimization using Modern Portfolio Theory (Sharpe, Sortino, CVaR, variance)
+* Queries Marketaux API for the latest news
 * Results saved to Excel and automatically emailed to subscribers
 
 ---
@@ -36,7 +35,7 @@ recipients.json       # Auto-updated subscriber email list
 
 ---
 
-## 1. Analysis Logic
+## 1. Algorithm Logic
 
 ### ① Valuation Metrics
 

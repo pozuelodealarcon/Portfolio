@@ -93,8 +93,8 @@ def market_data():
         ("KOSPI", "^KS11"),
         ("KOSDAQ", "^KQ11"),
         ("USD/KRW", "USDKRW=X"),
-        ("Bitcoin", "BTC-USD"),
-        ("Ethereum", "ETH-USD"),
+        ("BTC/USD", "BTC-USD"),
+        ("ETH/USD", "ETH-USD"),
         ("Gold", "GC=F"),
         ("WTI", "CL=F"),
         ("Brent", "BZ=F"),
@@ -103,7 +103,7 @@ def market_data():
     data = OrderedDict()
     for name, symbol in indices.items():
         ticker = yf.Ticker(symbol)
-        hist = ticker.history(period="2d").tail(2)
+        hist = ticker.history(period="3d").tail(2)
         if len(hist) < 2:
             continue
 

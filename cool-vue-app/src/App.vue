@@ -189,6 +189,17 @@ h1 {
   }
 }
 
+@keyframes fadeInSlide {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* 리스트 헤더 */
 .list-header {
   display: flex;
@@ -206,8 +217,10 @@ h1 {
 .list-header span {
   flex: 1;
   text-align: center;
-  font-family: 'Noto Sans KR', sans-serif;
+  font-family: 'Noto Sans KR', sans-serif !important;
+  font-weight: 700;
 }
+
 
 /* 종목 리스트 */
 .ticker-list {
@@ -266,6 +279,12 @@ h1 {
 .change.negative {
   background-color: #fdecea;
   color: #c0392b;
+}
+
+.list-header .rank,
+.list-header .ticker,
+.list-header .change {
+  font-family: 'Noto Sans KR', sans-serif;
 }
 
 /* 구독 폼 */
@@ -327,3 +346,5 @@ h1 {
 }
 
 </style>
+
+      

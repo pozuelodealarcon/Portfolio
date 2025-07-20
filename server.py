@@ -111,13 +111,14 @@ def market_data():
             continue
 
         change = price - prev_close
+        percent_change = (change / prev_close) * 100
+
         sign = "▲" if change > 0 else "▼" if change < 0 else "-"
         data[name] = {
             "price": round(price, 2),
-            "change": f"{sign} {change:+.2f}"  # ← 퍼센트 제거
+            "change": f"{sign} {abs(percent_change):.2f}%"
         }
-
-    return jsonify(data)
+        return jsonify(data)
 
 @app.route('/top-tickers')
 def top_tickers():

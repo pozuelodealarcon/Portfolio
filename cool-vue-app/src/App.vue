@@ -71,11 +71,10 @@ const updateRibbon = async () => {
   try {
     const res = await fetch('/api/market-data')
     const data = await res.json()
-
     const parts = Object.entries(data).map(
       ([name, info]) => `${name} ${info.price} ${info.change}`
-    );
-    marketRibbon.value = parts.join(" &nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp; ");
+    )
+    marketRibbon.value = parts.join(" &nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp; ")
 
   } catch (err) {
     console.error('데이터 가져오기 실패:', err)
@@ -158,7 +157,7 @@ onMounted(async () => {
 .scrolling-text {
   display: inline-block;
   padding-left: 100%;
-  animation: scroll-left 30s linear infinite;
+  animation: scroll-left 60s linear infinite;
 }
 
 @keyframes scroll-left {
@@ -282,6 +281,7 @@ h1 {
   text-align: center;
   color: #114477;
   letter-spacing: 0.01em;
+  font-weight: 400;
 }
 
 .change {
@@ -290,8 +290,8 @@ h1 {
   text-align: center;
   padding: 5px 12px;
   border-radius: 12px;
-  font-weight: 600;
   transition: all 0.2s ease-in-out;
+  font-weight: 400;
 }
 
 .change.positive {

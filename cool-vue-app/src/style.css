@@ -1,3 +1,8 @@
+/* src/assets/global.css 등 전역 CSS 파일에 */
+html {
+  scroll-behavior: smooth;
+}
+
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
@@ -64,6 +69,8 @@ button:focus-visible {
   padding: 2rem;
   text-align: center;
 }
+
+
 
 @media (prefers-color-scheme: light) {
   :root {

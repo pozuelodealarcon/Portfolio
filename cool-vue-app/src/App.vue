@@ -53,7 +53,7 @@
       </form>
 
       <p v-if="message" class="feedback">{{ message }}</p>
-      <p class="copyright">© Hyungsuk Choi 2025</p>
+      <p class="copyright">©2025 Hyungsuk Choi, University of Maryland </p>
     </div>
   </div>
 </template>
@@ -104,7 +104,7 @@ const submitEmail = async () => {
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+KR:wght@500;700&family=Courier+Prime&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap');
 
 /* 공통 스타일 */
 .wrapper {
@@ -113,12 +113,17 @@ const submitEmail = async () => {
   align-items: center;
   min-height: 100vh;
   background: linear-gradient(145deg, #f2f6fc, #e6edf7);
-  padding: 40px 20px;
-  font-family: 'Inter', 'Noto Sans KR', sans-serif;
+  padding: 70px 20px 40px; /* 리본 고정 높이 + 여유 */
+  font-family: 'Noto Sans KR', sans-serif;
+  box-sizing: border-box;
 }
 
 /* 리본 슬라이딩 */
 .ticker-ribbon {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
   width: 100%;
   background: #0b3c5d;
   color: #fff;
@@ -127,7 +132,7 @@ const submitEmail = async () => {
   font-weight: 600;
   font-size: 0.85rem;
   padding: 10px 0;
-  font-family: 'Noto Sans KR', sans-serif;
+  box-sizing: border-box;
 }
 
 .scrolling-text {
@@ -147,7 +152,7 @@ const submitEmail = async () => {
 
 /* 보고서 박스 */
 .report-box {
-  background: #ffffff;
+  background: #fff;
   border-radius: 24px;
   box-shadow: 0 15px 45px rgba(0, 0, 0, 0.08);
   padding: 48px 32px;
@@ -158,7 +163,6 @@ const submitEmail = async () => {
 
 /* 제목 */
 h1 {
-  font-family: 'Noto Sans KR', sans-serif;
   font-size: 1.9rem;
   margin-bottom: 14px;
   color: #1e2a38;
@@ -167,13 +171,12 @@ h1 {
 
 /* 설명 타이핑 */
 .description {
-  font-size: 0.82rem;
+  font-size: 0.85rem;
   color: #5c5c5c;
   margin-bottom: 32px;
-  line-height: 1.7;
+  line-height: 1.6;
   font-weight: 500;
   min-height: 3.4em;
-  font-family: 'Noto Sans KR', sans-serif;
 }
 
 .typewriter {
@@ -205,9 +208,8 @@ h1 {
   display: flex;
   justify-content: center;
   align-items: center;
-  font-family: 'Noto Sans KR', sans-serif;
   font-weight: 700;
-  font-size: 0.90rem;
+  font-size: 0.9rem;
   border-bottom: 2px solid #e3e8ef;
   padding-bottom: 10px;
   margin-bottom: 12px;
@@ -217,10 +219,7 @@ h1 {
 .list-header span {
   flex: 1;
   text-align: center;
-  font-family: 'Noto Sans KR', sans-serif !important;
-  font-weight: 700;
 }
-
 
 /* 종목 리스트 */
 .ticker-list {
@@ -242,7 +241,6 @@ h1 {
   margin-bottom: 16px;
   opacity: 0;
   animation: fadeInSlide 0.6s forwards;
-  font-family: 'Inter', sans-serif;
 }
 
 .rank {
@@ -250,8 +248,8 @@ h1 {
   color: #2d3e50;
   font-weight: 800;
   text-align: center;
-  font-family: 'Courier Prime', monospace;
   font-size: 1.1rem;
+  font-family: 'Courier Prime', monospace; /* 이건 숫자 가독성 위해 유지 */
 }
 
 .ticker {
@@ -281,12 +279,6 @@ h1 {
   color: #c0392b;
 }
 
-.list-header .rank,
-.list-header .ticker,
-.list-header .change {
-  font-family: 'Noto Sans KR', sans-serif;
-}
-
 /* 구독 폼 */
 .subscribe-form {
   display: flex;
@@ -303,7 +295,7 @@ h1 {
   font-size: 1rem;
   width: 65%;
   max-width: 280px;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Noto Sans KR', sans-serif;
   transition: border-color 0.25s ease;
 }
 
@@ -322,7 +314,7 @@ h1 {
   font-weight: 700;
   font-size: 1rem;
   transition: background 0.3s ease;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Noto Sans KR', sans-serif;
 }
 
 .subscribe-form button:hover {
@@ -334,7 +326,7 @@ h1 {
   margin-top: 16px;
   font-size: 0.85rem;
   color: #333;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Noto Sans KR', sans-serif;
 }
 
 /* 카피라이트 */
@@ -342,9 +334,6 @@ h1 {
   margin-top: 24px;
   font-size: 0.75rem;
   color: #999;
-  font-family: 'Noto Sans KR', sans-serif;
 }
 
 </style>
-
-      

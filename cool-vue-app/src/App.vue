@@ -131,8 +131,6 @@ onMounted(async () => {
   height: auto;
   margin-top: 8px;    /* 위쪽 마진 줄이기 */
   margin-bottom: 8px; /* 아래쪽 마진 줄이기 */
-  padding-top: 0px;
-  padding-bottom: 0px;
   display: block;
   margin-left: auto;
   margin-right: auto;

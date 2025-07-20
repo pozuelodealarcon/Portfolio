@@ -6,6 +6,7 @@ import base64
 import requests
 import pandas as pd
 import yfinance as yf
+from collections import OrderedDict
 
 app = Flask(__name__, static_folder="cool-vue-app/dist", static_url_path="")
 CORS(app, resources={r"/*": {"origins": "*"}})
@@ -84,17 +85,20 @@ def subscribe():
 
 @app.route('/api/market-data')
 def market_data():
-    indices = {
-        "S&P500": "^GSPC",
-        "NASDAQ": "^IXIC",
-        "Dow Jones": "	^DJI",
-        "KOSPI": "^KS11",
-        "KOSDAQ": "^KQ11",
-        "USD/KRW": "USDKRW=X",
-        "Gold": "GC=F",
-        "WTI": "CL=F",
-
-    }
+    indices = OrderedDict([
+    ("S&P500", "^GSPC"),
+    ("NASDAQ", "^IXIC"),
+    ("Dow Jones", "^DJI"),
+    ("KOSPI", "^KS11"),
+    ("KOSDAQ", "^KQ11"),
+    ("USD/KRW", "USDKRW=X"),
+    ("Bitcoin", "BTC-USD"),
+    ("Ethereum", "ETH-USD"),
+    ("Gold", "GC=F"),
+    ("WTI", "CL=F"),
+    ("Brent", "BZ=F"),
+    
+])
 
     data = {}
     for name, symbol in indices.items():

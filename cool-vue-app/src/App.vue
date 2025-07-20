@@ -158,7 +158,7 @@ onMounted(async () => {
 .scrolling-text {
   display: inline-block;
   padding-left: 100%;
-  animation: scroll-left 25s linear infinite;
+  animation: scroll-left 30s linear infinite;
 }
 
 @keyframes scroll-left {

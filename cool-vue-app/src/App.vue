@@ -110,7 +110,7 @@ const submitEmail = async () => {
   }
 }
 onMounted(async () => {
-  // 종목 데이터 로드
+  // ① 종목 데이터 로드
   try {
     const res = await fetch('https://portfolio-production-54cf.up.railway.app/top-tickers')
     const data = await res.json()
@@ -119,53 +119,56 @@ onMounted(async () => {
     console.error('❌ 티커 로드 실패:', e)
   }
 
-  let i = 0
-  let isTag = false
-  let tempText = ''
-  let tagBuffer = ''
+  // ② 타이핑 효과 시작
+  let i = 0;
+  let tempText = '';
 
   const typeInterval = setInterval(() => {
-    const char = fullText[i]
-
-    if (char === '<') {
-      isTag = true
-      tagBuffer += char
-    } else if (char === '>') {
-      tagBuffer += char
-      tempText += tagBuffer      // 태그 전체를 한 번에 붙임
-      tagBuffer = ''
-      isTag = false
-      typedText.value = tempText
-    } else if (isTag) {
-      tagBuffer += char          // 태그 내부는 모아두기
-    } else {
-      tempText += char           // 일반 텍스트는 하나씩 타이핑
-      typedText.value = tempText
-    }
-
-    i++
     if (i >= fullText.length) {
-      clearInterval(typeInterval)
+      clearInterval(typeInterval);
 
-      // 타이핑 완료 후 스크롤 이벤트 연결
+      // 타이핑 완료 후 스크롤 이벤트 연결 (한 번만 실행)
       setTimeout(() => {
-        const link = document.querySelector('.scroll-link')
-        const target = document.getElementById('newsletter')
+        const link = document.querySelector('.scroll-link');
+        const target = document.getElementById('newsletter');
         if (link && target) {
           link.addEventListener('click', (e) => {
-            e.preventDefault()
-            target.scrollIntoView({ behavior: 'smooth', block: 'start' })
-          })
+            e.preventDefault();
+            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          });
         }
-      }, 100)
+      }, 100);
+
+      return;
     }
-  }, 30)
 
+    const char = fullText[i];
 
+    if (char === '<') {
+      // 태그 시작: 끝까지 찾아서 한 번에 붙이기
+      const tagEnd = fullText.indexOf('>', i);
+      if (tagEnd !== -1) {
+        tempText += fullText.substring(i, tagEnd + 1);
+        i = tagEnd + 1;
+      } else {
+        // 예외 처리: 태그가 닫히지 않았을 경우
+        tempText += char;
+        i++;
+      }
+    } else {
+      // 일반 텍스트는 한 글자씩
+      tempText += char;
+      i++;
+    }
+
+    typedText.value = tempText;
+  }, 30);
   // 마켓 리본 초기화 및 주기적 갱신
   await updateRibbon()
   setInterval(updateRibbon, 30000)
-})
+});
+
+
 </script>
 
 <style scoped>

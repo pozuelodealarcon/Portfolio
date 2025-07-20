@@ -7,6 +7,7 @@ import requests
 import pandas as pd
 import yfinance as yf
 from collections import OrderedDict
+from flask import Response
 
 app = Flask(__name__, static_folder="cool-vue-app/dist", static_url_path="")
 CORS(app, resources={r"/*": {"origins": "*"}})
@@ -86,24 +87,23 @@ def subscribe():
 @app.route('/api/market-data')
 def market_data():
     indices = OrderedDict([
-    ("S&P500", "^GSPC"),
-    ("NASDAQ", "^IXIC"),
-    ("Dow Jones", "^DJI"),
-    ("KOSPI", "^KS11"),
-    ("KOSDAQ", "^KQ11"),
-    ("USD/KRW", "USDKRW=X"),
-    ("Bitcoin", "BTC-USD"),
-    ("Ethereum", "ETH-USD"),
-    ("Gold", "GC=F"),
-    ("WTI", "CL=F"),
-    ("Brent", "BZ=F"),
-    
-])
+        ("S&P500", "^GSPC"),
+        ("NASDAQ", "^IXIC"),
+        ("Dow Jones", "^DJI"),
+        ("KOSPI", "^KS11"),
+        ("KOSDAQ", "^KQ11"),
+        ("USD/KRW", "USDKRW=X"),
+        ("Bitcoin", "BTC-USD"),
+        ("Ethereum", "ETH-USD"),
+        ("Gold", "GC=F"),
+        ("WTI", "CL=F"),
+        ("Brent", "BZ=F"),
+    ])
 
-    data = {}
+    data = OrderedDict()
     for name, symbol in indices.items():
         ticker = yf.Ticker(symbol)
-        hist = ticker.history(period="2d").tail(2)  # 최근 2일 데이터 필요 (오늘, 전일)
+        hist = ticker.history(period="2d").tail(2)
         if len(hist) < 2:
             continue
 
@@ -119,7 +119,8 @@ def market_data():
             "change": f"{sign} {abs(percent_change):.2f}%"
         }
 
-    return jsonify(data)
+    json_str = json.dumps(data, ensure_ascii=False)
+    return Response(json_str, mimetype='application/json')
 
 @app.route('/top-tickers')
 def top_tickers():

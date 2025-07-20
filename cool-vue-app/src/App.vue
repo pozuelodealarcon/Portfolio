@@ -1,17 +1,25 @@
 <template>
   <div class="wrapper">
+    <!-- 리본 -->
+    <div class="ticker-ribbon">
+      <div class="scrolling-text">
+        S&P500 5,600.12 ▲ +0.25% &nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp;
+        KOSPI 2,750.45 ▼ -0.13% &nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp;
+        NASDAQ 14,220.10 ▲ +1.10%
+      </div>
+    </div>
+
     <div class="report-box">
       <h1>📈 DeepFund AI 리포트</h1>
       <p class="description">
-        워렌 버핏의 보수적인 투자 철학 기반 퀀트 알고리즘이 선정한 이번달 Top 10 가치 종목입니다.<br />
-        더 자세한 투자 인사이트와 분석이 궁금하다면 무료 뉴스레터를 구독해보세요.
+        <span class="typewriter">{{ typedText }}</span>
       </p>
 
       <!-- 헤더 -->
       <div class="list-header">
-        <span class="rank_col">순위</span>
-        <span class="ticker_col">종목명</span>
-        <span class="change_col">주가 (1개월대비)</span>
+        <span class="rank">순위</span>
+        <span class="ticker">종목명</span>
+        <span class="change">주가 (1개월대비)</span>
       </div>
 
       <!-- 종목 리스트 -->
@@ -45,6 +53,7 @@
       </form>
 
       <p v-if="message" class="feedback">{{ message }}</p>
+      <p class="copyright">© Hyungsuk Choi 2025</p>
     </div>
   </div>
 </template>
@@ -56,14 +65,25 @@ const tickers = ref([])
 const email = ref('')
 const message = ref('')
 
+const typedText = ref('')
+const fullText = '워렌 버핏의 보수적인 투자 철학 기반 퀀트 알고리즘이 선정한 이번달 Top 10 가치 종목입니다. 더 자세한 투자 인사이트와 분석이 궁금하다면 무료 뉴스레터를 구독해보세요.'
+
 onMounted(async () => {
   try {
     const res = await fetch('https://portfolio-production-54cf.up.railway.app/top-tickers')
     const data = await res.json()
-    tickers.value = data.tickers.reverse() // 10위부터 1위
+    tickers.value = data.tickers.reverse()
   } catch (e) {
     console.error('❌ 티커 로드 실패:', e)
   }
+
+  // 타이핑 애니메이션 시작
+  let i = 0
+  const typeInterval = setInterval(() => {
+    typedText.value += fullText[i]
+    i++
+    if (i >= fullText.length) clearInterval(typeInterval)
+  }, 30)
 })
 
 const submitEmail = async () => {
@@ -83,12 +103,13 @@ const submitEmail = async () => {
 }
 </script>
 
+<style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+KR:wght@500;700&family=Courier+Prime&display=swap');
 
-<style scoped>
+/* 공통 스타일 */
 .wrapper {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
   align-items: center;
   min-height: 100vh;
   background: linear-gradient(145deg, #f2f6fc, #e6edf7);
@@ -96,8 +117,35 @@ const submitEmail = async () => {
   font-family: 'Inter', 'Noto Sans KR', sans-serif;
 }
 
+/* 리본 슬라이딩 */
+.ticker-ribbon {
+  width: 100%;
+  background: #0b3c5d;
+  color: #fff;
+  overflow: hidden;
+  white-space: nowrap;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 10px 0;
+  font-family: 'Noto Sans KR', sans-serif;
+}
 
+.scrolling-text {
+  display: inline-block;
+  padding-left: 100%;
+  animation: scroll-left 18s linear infinite;
+}
 
+@keyframes scroll-left {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+/* 보고서 박스 */
 .report-box {
   background: #ffffff;
   border-radius: 24px;
@@ -108,6 +156,7 @@ const submitEmail = async () => {
   text-align: center;
 }
 
+/* 제목 */
 h1 {
   font-family: 'Noto Sans KR', sans-serif;
   font-size: 1.9rem;
@@ -116,14 +165,31 @@ h1 {
   font-weight: 700;
 }
 
+/* 설명 타이핑 */
 .description {
   font-size: 0.82rem;
   color: #5c5c5c;
   margin-bottom: 32px;
   line-height: 1.7;
   font-weight: 500;
+  min-height: 3.4em;
+  font-family: 'Noto Sans KR', sans-serif;
 }
 
+.typewriter {
+  border-right: 2px solid #aaa;
+  white-space: pre-wrap;
+  overflow: hidden;
+  animation: blink 1s step-end infinite;
+}
+
+@keyframes blink {
+  50% {
+    border-color: transparent;
+  }
+}
+
+/* 리스트 헤더 */
 .list-header {
   display: flex;
   justify-content: center;
@@ -140,8 +206,10 @@ h1 {
 .list-header span {
   flex: 1;
   text-align: center;
+  font-family: 'Noto Sans KR', sans-serif;
 }
 
+/* 종목 리스트 */
 .ticker-list {
   list-style: none;
   padding: 0;
@@ -190,36 +258,6 @@ h1 {
   transition: all 0.2s ease-in-out;
 }
 
-.rank_col {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-  background: linear-gradient(145deg, #f2f6fc, #e6edf7);
-  padding: 40px 20px;
-  font-family: 'Inter', 'Noto Sans KR', sans-serif;
-}
-
-.ticker_col {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-  background: linear-gradient(145deg, #f2f6fc, #e6edf7);
-  padding: 40px 20px;
-  font-family: 'Inter', 'Noto Sans KR', sans-serif;
-}
-
-.change_col {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-  background: linear-gradient(145deg, #f2f6fc, #e6edf7);
-  padding: 40px 20px;
-  font-family: 'Inter', 'Noto Sans KR', sans-serif;
-}
-
 .change.positive {
   background-color: #e2f4e9;
   color: #1e7b45;
@@ -228,17 +266,6 @@ h1 {
 .change.negative {
   background-color: #fdecea;
   color: #c0392b;
-}
-
-@keyframes fadeInSlide {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 
 /* 구독 폼 */
@@ -283,10 +310,20 @@ h1 {
   background: linear-gradient(135deg, #0056b3, #003e91);
 }
 
+/* 피드백 메시지 */
 .feedback {
   margin-top: 16px;
   font-size: 0.85rem;
   color: #333;
   font-family: 'Inter', sans-serif;
 }
+
+/* 카피라이트 */
+.copyright {
+  margin-top: 24px;
+  font-size: 0.75rem;
+  color: #999;
+  font-family: 'Noto Sans KR', sans-serif;
+}
+
 </style>

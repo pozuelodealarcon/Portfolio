@@ -116,29 +116,37 @@ onMounted(async () => {
     console.error('❌ 티커 로드 실패:', e)
   }
 
-  // 타이핑 효과
   let i = 0;
-  let isTag = false;
   let tempText = '';
+  let isTag = false;
 
   const typeInterval = setInterval(() => {
+    if (i >= fullText.length) {
+      clearInterval(typeInterval);
+      return;
+    }
+
     const char = fullText[i];
 
-    if (char === '<') isTag = true;
+    if (char === '<') {
+      // 태그 시작
+      isTag = true;
+      // 태그 전체를 한 번에 붙이기 위해
+      let tagEnd = fullText.indexOf('>', i);
+      if (tagEnd === -1) tagEnd = fullText.length - 1;
 
-    tempText += char;
+      // 태그 전체 붙이기
+      tempText += fullText.substring(i, tagEnd + 1);
+      i = tagEnd + 1;
+      isTag = false;
+    } else {
+      // 일반 텍스트는 한 글자씩
+      tempText += char;
+      i++;
+    }
 
-    if (char === '>') isTag = false;
-
-    // ★ 여기만 변경 ★
-    typedText.value = tempText;  // Vue 반응형 변수에 바로 할당
-
-    i++;
-
-    if (i >= fullText.length) clearInterval(typeInterval);
+    typedText.value = tempText;
   }, 30);
-
-
 
   // 마켓 리본 초기화 및 주기적 갱신
   await updateRibbon()

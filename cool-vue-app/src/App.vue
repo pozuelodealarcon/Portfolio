@@ -111,13 +111,25 @@ onMounted(async () => {
     console.error('❌ 티커 로드 실패:', e)
   }
 
+  const rawText =
+  '워렌 버핏의 투자 원칙을 반영한 퀀트 알고리즘이 선정한 이번 달 Top 10 가치주입니다. 보다 깊이 있는 분석과 인사이트는 무료 뉴스레터에서 확인하세요.';
+
+  const fullText =
+  `<span style="font-weight:700; color:#114477;">워렌 버핏</span>의 투자 원칙을 반영한 퀀트 알고리즘이 선정한 
+  <span style="color:#007bff; font-weight:800;">이번 달 Top 10 가치주</span>입니다.<br>
+  심층 분석과 인사이트는 무료 뉴스레터에서 확인하세요.`;
+
+  typedText.value = ''
   // 타이핑 효과
-  let i = 0
+  let i = 0;
   const typeInterval = setInterval(() => {
-    typedText.value += fullText[i]
-    i++
-    if (i >= fullText.length) clearInterval(typeInterval)
-  }, 30)
+    typedText.value += rawText[i];
+    i++;
+    if (i >= rawText.length) {
+      clearInterval(typeInterval);
+      typedText.value = styledText; // 전체 HTML 덮어쓰기
+    }
+  }, 30);
 
   // 마켓 리본 초기화 및 주기적 갱신
   await updateRibbon()

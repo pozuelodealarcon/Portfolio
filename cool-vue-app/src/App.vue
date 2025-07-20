@@ -76,7 +76,7 @@ const marketRibbon = ref('로딩 중...')
 const fullText =
   `<span style="font-weight:700; color:#114477;">워렌 버핏</span>의 투자 원칙을 반영한 퀀트 알고리즘이 선정한 
   <span style="color:#007bff; font-weight:800;">이번 달 Top 10 가치주</span>입니다.<br>
-  심층 분석과 인사이트는 무료 <a href="#newsletter" @click.prevent="scrollToNewsletter" style="color:#007bff; font-weight:700; text-decoration: underline; cursor: pointer;">뉴스레터</a>에서 확인하세요.`;
+  심층 분석과 인사이트는 무료 <a href="#newsletter" onclick="scrollToNewsletter()" style="color:#007bff; font-weight:700; text-decoration: underline; cursor: pointer;">뉴스레터</a>에서 확인하세요.`;
 
 // 📈 마켓 리본 텍스트 업데이트 함수
 const updateRibbon = async () => {
@@ -110,14 +110,12 @@ const submitEmail = async () => {
   }
 }
 
-const scrollToNewsletter = () => {
-  const el = document.getElementById('newsletter')
-  if (el) {
-    const y = el.getBoundingClientRect().top + window.pageYOffset
-    window.scrollTo({ top: y, behavior: 'smooth' })
+onMounted(() => {
+  window.scrollToNewsletter = () => {
+    const el = document.getElementById('newsletter')
+    if (el) el.scrollIntoView({ behavior: 'smooth' })
   }
-}
-
+})
 
 onMounted(async () => {
   // 종목 데이터 로드

@@ -6,18 +6,23 @@
     </div>
 
     <div class="report-box">
-      <img :src="logo" alt="DeepFund AI 로고" class="logo" />
+      <img
+  :src="logo"
+  alt="DeepFund AI 로고"
+  class="logo fade-in"
+  :style="{ animationDelay: '0.2s' }"
+/>
       <p class="description">
         <span class="typewriter" v-html="typedText"></span>
       </p>
 
       <!-- 헤더 -->
-      <div class="list-header">
+      <div class="list-header fade-in" :style="{ animationDelay: '0.4s' }">
         <span class="rank">순위</span>
         <span class="ticker">종목명</span>
         <span class="change">주가 (1개월▲)</span>
       </div>
-
+      
       <!-- 종목 리스트 -->
       <ul class="ticker-list">
         <li
@@ -112,7 +117,6 @@ onMounted(async () => {
   }
 
   // 타이핑 효과
-  const typedText = document.querySelector('#typedText');
   let i = 0;
   let isTag = false;
   let tempText = '';
@@ -126,13 +130,14 @@ onMounted(async () => {
 
     if (char === '>') isTag = false;
 
-    // 태그 내부일 때는 바로 출력, 태그 외 텍스트도 천천히 출력
-    typedText.innerHTML = tempText;
+    // ★ 여기만 변경 ★
+    typedText.value = tempText;  // Vue 반응형 변수에 바로 할당
 
     i++;
 
     if (i >= fullText.length) clearInterval(typeInterval);
   }, 30);
+
 
 
   // 마켓 리본 초기화 및 주기적 갱신
@@ -322,7 +327,7 @@ h1 {
   font-weight: 800;
   text-align: center;
   font-size: 1.1rem;
-  font-family: 'Courier Prime', monospace; /* 이건 숫자 가독성 위해 유지 */
+  font-family: 'Noto Sans KR', sans-serif;
 }
 
 .ticker {
@@ -409,5 +414,22 @@ h1 {
   font-size: 0.75rem;
   color: #999;
 }
+
+.fade-in {
+  opacity: 0;
+  transform: translateY(10px);
+  animation-fill-mode: forwards;
+  animation-name: fadeInUp;
+  animation-duration: 0.6s;
+  animation-timing-function: ease-out;
+}
+
+@keyframes fadeInUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 
 </style>

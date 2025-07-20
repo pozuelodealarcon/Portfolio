@@ -6,7 +6,7 @@
     </div>
 
     <div class="report-box">
-      <img src="logo" alt="DeepFund AI 로고" class="logo" />
+      <img :src="logo" alt="DeepFund AI 로고" class="logo" />
       <p class="description">
         <span class="typewriter" v-html="typedText"></span>
       </p>

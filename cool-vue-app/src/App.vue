@@ -127,13 +127,15 @@ onMounted(async () => {
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap');
 
 .logo {
-  max-width: 200px; /* 원하는 크기 조절 */
+  max-width: 300px;   /* 원하는 크기로 키우기 (예: 300px) */
   height: auto;
-  margin-bottom: 20px;
+  margin-top: 8px;    /* 위쪽 마진 줄이기 */
+  margin-bottom: 8px; /* 아래쪽 마진 줄이기 */
   display: block;
   margin-left: auto;
   margin-right: auto;
 }
+
 
 /* 공통 스타일 */
 .wrapper {

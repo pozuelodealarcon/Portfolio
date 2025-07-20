@@ -6,7 +6,7 @@
     </div>
 
     <div class="report-box">
-      <h1>📈 DeepFund AI 리포트</h1>
+      <img src="cool-vue-app/src/logo.png" alt="DeepFund AI 로고" class="logo" />
       <p class="description">
         <span class="typewriter" v-html="typedText"></span>
       </p>
@@ -78,7 +78,7 @@ const updateRibbon = async () => {
 
   } catch (err) {
     console.error('데이터 가져오기 실패:', err)
-    marketRibbon.value = '📡 마켓 데이터 로드 실패'
+    marketRibbon.value = '📡 페이지를 새로고침해 주시기 바랍니다.'
   }
 }
 
@@ -124,6 +124,15 @@ onMounted(async () => {
 
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap');
+
+.logo {
+  max-width: 200px; /* 원하는 크기 조절 */
+  height: auto;
+  margin-bottom: 20px;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
 
 /* 공통 스타일 */
 .wrapper {

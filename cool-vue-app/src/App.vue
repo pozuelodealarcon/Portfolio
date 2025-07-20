@@ -66,7 +66,7 @@ const email = ref('')
 const message = ref('')
 
 const typedText = ref('')
-const fullText = '워렌 버핏의 보수적인 투자 철학 기반 퀀트 알고리즘이 선정한 이번달 Top 10 가치 종목입니다. 더 자세한 투자 인사이트와 분석이 궁금하다면 무료 뉴스레터를 구독해보세요.'
+const fullText = '워렌 버핏의 보수적인 철학 기반 퀀트 알고리즘이 선정한 이번달 Top 10 가치 종목입니다. 더 자세한 투자 인사이트와 분석이 궁금하다면 무료 뉴스레터를 구독해보세요.'
 
 onMounted(async () => {
   try {
@@ -219,6 +219,11 @@ h1 {
 .list-header span {
   flex: 1;
   text-align: center;
+  font-family: 'Noto Sans KR', sans-serif; /* 명확히 지정 */
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #3b3b3b;
+
 }
 
 /* 종목 리스트 */

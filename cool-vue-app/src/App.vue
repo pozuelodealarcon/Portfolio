@@ -76,7 +76,7 @@ const marketRibbon = ref('로딩 중...')
 const fullText =
   `<span style="font-weight:700; color:#114477;">워렌 버핏</span>의 투자 원칙을 반영한 퀀트 알고리즘이 선정한 
   <span style="color:#007bff; font-weight:800;">이번 달 Top 10 가치주</span>입니다.<br>
-  심층 분석과 인사이트는 무료 <a href="#newsletter" onclick="scrollToNewsletter()" style="color:#007bff; font-weight:700; text-decoration: underline; cursor: pointer;">뉴스레터</a>에서 확인하세요.`;
+  심층 분석과 인사이트는 무료 <a href="#newsletter" class="scroll-link" style="color:#007bff; font-weight:700; text-decoration: underline; cursor: pointer;">뉴스레터</a>에서 확인하세요.`;
 
 // 📈 마켓 리본 텍스트 업데이트 함수
 const updateRibbon = async () => {
@@ -119,42 +119,33 @@ onMounted(async () => {
     console.error('❌ 티커 로드 실패:', e)
   }
 
-  window.scrollToNewsletter = () => {
-    const el = document.getElementById('newsletter')
-    if (el) el.scrollIntoView({ behavior: 'smooth' })
-  }
-
-  let i = 0;
-  let tempText = '';
-  let isTag = false;
+  let i = 0
+  let isTag = false
+  let tempText = ''
 
   const typeInterval = setInterval(() => {
+    const char = fullText[i]
+    if (char === '<') isTag = true
+    tempText += char
+    if (char === '>') isTag = false
+    typedText.value = tempText
+    i++
     if (i >= fullText.length) {
-      clearInterval(typeInterval);
-      return;
+      clearInterval(typeInterval)
+
+      // 타이핑 완료 후 이벤트 연결
+      setTimeout(() => {
+        const link = document.querySelector('.scroll-link')
+        const target = document.getElementById('newsletter')
+        if (link && target) {
+          link.addEventListener('click', (e) => {
+            e.preventDefault()
+            target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          })
+        }
+      }, 100)
     }
-
-    const char = fullText[i];
-
-    if (char === '<') {
-      // 태그 시작
-      isTag = true;
-      // 태그 전체를 한 번에 붙이기 위해
-      let tagEnd = fullText.indexOf('>', i);
-      if (tagEnd === -1) tagEnd = fullText.length - 1;
-
-      // 태그 전체 붙이기
-      tempText += fullText.substring(i, tagEnd + 1);
-      i = tagEnd + 1;
-      isTag = false;
-    } else {
-      // 일반 텍스트는 한 글자씩
-      tempText += char;
-      i++;
-    }
-
-    typedText.value = tempText;
-  }, 30);
+  }, 30)
 
   // 마켓 리본 초기화 및 주기적 갱신
   await updateRibbon()

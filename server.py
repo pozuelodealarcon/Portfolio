@@ -119,7 +119,7 @@ def market_data():
             "change": f"{sign} {abs(percent_change):.2f}%"
         }
 
-        return jsonify(data)
+    return jsonify(data)
 
 @app.route('/top-tickers')
 def top_tickers():

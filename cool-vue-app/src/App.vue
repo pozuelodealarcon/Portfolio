@@ -112,8 +112,12 @@ const submitEmail = async () => {
 
 const scrollToNewsletter = () => {
   const el = document.getElementById('newsletter')
-  if (el) el.scrollIntoView({ behavior: 'smooth' })
+  if (el) {
+    const y = el.getBoundingClientRect().top + window.pageYOffset
+    window.scrollTo({ top: y, behavior: 'smooth' })
+  }
 }
+
 
 onMounted(async () => {
   // 종목 데이터 로드

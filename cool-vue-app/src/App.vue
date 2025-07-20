@@ -122,18 +122,32 @@ onMounted(async () => {
   let i = 0
   let isTag = false
   let tempText = ''
+  let tagBuffer = ''
 
   const typeInterval = setInterval(() => {
     const char = fullText[i]
-    if (char === '<') isTag = true
-    tempText += char
-    if (char === '>') isTag = false
-    typedText.value = tempText
+
+    if (char === '<') {
+      isTag = true
+      tagBuffer += char
+    } else if (char === '>') {
+      tagBuffer += char
+      tempText += tagBuffer      // 태그 전체를 한 번에 붙임
+      tagBuffer = ''
+      isTag = false
+      typedText.value = tempText
+    } else if (isTag) {
+      tagBuffer += char          // 태그 내부는 모아두기
+    } else {
+      tempText += char           // 일반 텍스트는 하나씩 타이핑
+      typedText.value = tempText
+    }
+
     i++
     if (i >= fullText.length) {
       clearInterval(typeInterval)
 
-      // 타이핑 완료 후 이벤트 연결
+      // 타이핑 완료 후 스크롤 이벤트 연결
       setTimeout(() => {
         const link = document.querySelector('.scroll-link')
         const target = document.getElementById('newsletter')
@@ -146,6 +160,7 @@ onMounted(async () => {
       }, 100)
     }
   }, 30)
+
 
   // 마켓 리본 초기화 및 주기적 갱신
   await updateRibbon()

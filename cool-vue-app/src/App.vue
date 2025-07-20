@@ -127,6 +127,7 @@ onMounted(async () => {
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap');
 
 .logo {
+  width: 100%;
   max-width: 400px;   /* 원하는 크기로 키우기 (예: 300px) */
   height: auto;
   margin-top: 8px;    /* 위쪽 마진 줄이기 */
@@ -202,11 +203,11 @@ h1 {
 
 /* 설명 타이핑 */
 .description {
-  font-size: 0.85rem;
+  font-size: 1.2rem;
   color: #5c5c5c;
   margin-bottom: 32px;
-  line-height: 1.6;
-  font-weight: 500;
+  line-height: 2.0;
+  font-weight: 700;
   min-height: 3.4em;
 }
 

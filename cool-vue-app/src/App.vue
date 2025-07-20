@@ -15,7 +15,7 @@
       <div class="list-header">
         <span class="rank">순위</span>
         <span class="ticker">종목명</span>
-        <span class="change">주가 (1개월대비)</span>
+        <span class="change">주가 (1개월▲)</span>
       </div>
 
       <!-- 종목 리스트 -->
@@ -112,12 +112,28 @@ onMounted(async () => {
   }
 
   // 타이핑 효과
-  let i = 0
+  const typedText = document.querySelector('#typedText');
+  let i = 0;
+  let isTag = false;
+  let tempText = '';
+
   const typeInterval = setInterval(() => {
-    typedText.value += fullText[i]
-    i++
-    if (i >= fullText.length) clearInterval(typeInterval)
-  }, 30)
+    const char = fullText[i];
+
+    if (char === '<') isTag = true;
+
+    tempText += char;
+
+    if (char === '>') isTag = false;
+
+    // 태그 내부일 때는 바로 출력, 태그 외 텍스트도 천천히 출력
+    typedText.innerHTML = tempText;
+
+    i++;
+
+    if (i >= fullText.length) clearInterval(typeInterval);
+  }, 30);
+
 
   // 마켓 리본 초기화 및 주기적 갱신
   await updateRibbon()

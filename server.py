@@ -136,7 +136,7 @@ def top_tickers():
             unique_tickers.append(ticker)
             tickers.append({
                 "ticker": str(ticker),
-                "change": str(row['주가(1개월대비)'])
+                "change": str(row['1개월대비'])
             })
         if len(tickers) == 10:
             break

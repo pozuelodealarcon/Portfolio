@@ -62,14 +62,14 @@ marketaux_api = os.environ['MARKETAUX_API']
 NUM_THREADS = 2 #multithreading 
 
 country = 'US'
-limit=200 # max 250 requests/day
+limit=50 # max 250 requests/day #
 sp500 = True
 
 # top X tickers to optimize
 opt = 10 
 
 #for news
-news_lookup = 100
+news_lookup = 50 #
 
 #for moat
 moat_limit = 50
@@ -1973,8 +1973,8 @@ with pd.ExcelWriter(filename, engine='xlsxwriter') as writer:
         '티커': 6,
         '종목': 25,
         '업종': 25,
-        '현재가': 15,
-        '1개월대비': 15,
+        '현재가': 10,
+        '1개월대비': 10,
     }
     for col_name, width in col_widths.items():
         if col_name in df_for_excel.columns:
@@ -1995,19 +1995,6 @@ with pd.ExcelWriter(filename, engine='xlsxwriter') as writer:
         'min_color': "#FF0000",
         'mid_color': "#FFFF00",
         'max_color': "#00FF00"
-    })
-
-    # 7) PBR 컬럼 조건부 서식
-    pbr_col_idx = df_for_excel.columns.get_loc('PBR')
-    pbr_col_letter = xl_col(pbr_col_idx)
-    pbr_range = f"{pbr_col_letter}{start_row + 1}:{pbr_col_letter}{end_row + 1}"
-
-    orange_format = workbook.add_format({'bg_color': '#FFA500', 'font_color': '#000000'})
-    worksheet.conditional_format(pbr_range, {
-        'type': 'cell',
-        'criteria': '>',
-        'value': 10,
-        'format': orange_format
     })
 
 

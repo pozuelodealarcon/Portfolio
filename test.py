@@ -44,7 +44,7 @@ import markdown
 ################ PREDETERMINED FIELDS ###################
 
 
-fmp_key = '60ZVxqQtumzWp4LVs4PmJOjiNSnbGThu'
+fmp_key = ''
 NUM_THREADS = 2 #multithreading 
 
 country = 'US'

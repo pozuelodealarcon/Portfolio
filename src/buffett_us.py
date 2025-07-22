@@ -62,17 +62,17 @@ marketaux_api = os.environ['MARKETAUX_API']
 NUM_THREADS = 2 #multithreading 
 
 country = 'US'
-limit=50 # max 250 requests/day #
+limit=10 # max 250 requests/day #
 sp500 = True
 
 # top X tickers to optimize
 opt = 10 
 
 #for news
-news_lookup = 50 #
+news_lookup = 10 #
 
 #for moat
-moat_limit = 50
+moat_limit = 10
 #########################################################
 
 
@@ -1454,6 +1454,7 @@ export_columns_kr = [
 ]
 
 # 4) 정렬
+df = pd.DataFrame()
 df = final_df.sort_values(by='총점수', ascending=False).reset_index(drop=True)
 
 # 5) 엑셀 저장
@@ -1890,7 +1891,7 @@ with pd.ExcelWriter(filename, engine='xlsxwriter') as writer:
 
       # 종목분석 시트 먼저 생성해야 함
     df.to_excel(writer, index=False, sheet_name='종목분석')  # df_analysis는 종목분석 데이터프레임
-
+   
     # 경쟁우위(Moat) 시트 저장 및 표 적용
     moat_df.to_excel(writer, index=False, sheet_name='경쟁우위분석')
     ws_moat = writer.sheets['경쟁우위분석']
@@ -1936,15 +1937,14 @@ with pd.ExcelWriter(filename, engine='xlsxwriter') as writer:
     autofit_columns_and_wrap(ws_news, news_df, writer.book)
 
     workbook  = writer.book
-    # 1) df 대신 df로 통일
+    # 1) df로 통일
     worksheet = writer.sheets['종목분석']
-    df_for_excel = df  # 명확하게 변수 할당
 
     # 2) 엑셀 행/열 범위 설정 (헤더 1행 기준)
     start_row = 1  # 헤더 다음부터 데이터
-    end_row = len(df_for_excel)  # 데이터 끝 행
+    end_row = len(df)  # 데이터 끝 행
     start_col = 0
-    end_col = len(df_for_excel.columns) - 1
+    end_col = len(df.columns) - 1
 
     # 3) 엑셀 셀 주소 생성 함수
     def xl_col(col_idx):
@@ -1962,9 +1962,9 @@ with pd.ExcelWriter(filename, engine='xlsxwriter') as writer:
     last_cell = f"{xl_col(end_col)}{end_row + 1}"
     data_range = f"{first_cell}:{last_cell}"
 
-    # 4) 표 추가
-    worksheet.add_table(data_range, {
-        'columns': [{'header': col} for col in df_for_excel.columns],
+    (mr, mc) = df.shape
+    worksheet.add_table(1, 0, mr - 1, mc - 1, {  # 여기 mr 대신 mr-1로 해야 함
+        'columns': [{'header': col} for col in df.columns],
         'style': 'Table Style Medium 9'
     })
 
@@ -1977,12 +1977,12 @@ with pd.ExcelWriter(filename, engine='xlsxwriter') as writer:
         '1개월대비': 10,
     }
     for col_name, width in col_widths.items():
-        if col_name in df_for_excel.columns:
-            col_idx = df_for_excel.columns.get_loc(col_name)
+        if col_name in df.columns:
+            col_idx = df.columns.get_loc(col_name)
             worksheet.set_column(col_idx, col_idx, width)
 
     # 6) 그라데이션 포맷팅 적용 (총점수 컬럼)
-    total_score_col_idx = df_for_excel.columns.get_loc('총점수')
+    total_score_col_idx = df.columns.get_loc('총점수')
     total_score_col_letter = xl_col(total_score_col_idx)
     total_score_range = f"{total_score_col_letter}{start_row + 1}:{total_score_col_letter}{end_row + 1}"
 

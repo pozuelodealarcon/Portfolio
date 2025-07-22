@@ -177,132 +177,101 @@ def get_tickers_by_country(country:str, limit: int, apikey: str):
         print(f"Error: {e}")
         return []
 
-def safe_check(val):
-    return val is not None and not (isinstance(val, float) and np.isnan(val))
+# buffett's philosophy & my quant ideas
+def buffett_score (de, cr, pbr, per, ind_per, roe, ind_roe, roa, ind_roa, eps, div, icr, opinc_yoy, opinc_qoq):
+    score = 0
+    #basic buffett-style filtering
+    if de is not None and de <= 0.5 and de != 0:
+        score +=1
+    if cr is not None and (cr >= 1.5 and cr <= 2.5):
+        score +=1
 
-def quant_style_score(
-    price_vs_fair_upper=None,
-    price_vs_fair_lower=None,
-    fcf_yield_rank=None,
-    fcf_vs_treasury_spread=None,
-    per=None,
-    per_rank=None,
-    pbr_rank=None,
-    de=None,
-    cr=None,
-    industry_per=None,
-    roe_z=None,
-    roa_z=None,
-    roe=None,
-    roa=None,
-    icr=None,
-    fcf_cagr_rank=None,
-    eps_cagr_rank=None,
-    div_cagr_rank=None,
-    eps=None,
-    div_yield=None,
-    opinc_yoy=None,
-    opinc_qoq=None,
-    industry_roe=None,
-    industry_roa=None
-):
-    valuation_score = 0
-    earnings_momentum_score = 0
+    if pbr is not None and (pbr <= 2 and pbr > 0):
+        score +=0.5
+        if pbr <= 1.5:
+            score +=1
+            if pbr <= 1:
+                score += 0.5
+        
 
-    # Valuation
-    if safe_check(price_vs_fair_upper) and price_vs_fair_upper > 0:
-        valuation_score += min(price_vs_fair_upper * 3, 3)
-    if safe_check(price_vs_fair_lower) and price_vs_fair_lower > 0:
-        valuation_score += min(price_vs_fair_lower * 4, 3)
-    if safe_check(fcf_vs_treasury_spread):
-        if fcf_vs_treasury_spread > 0:
-            valuation_score += min(fcf_vs_treasury_spread * 10, 2)
-        else:
-            valuation_score -= 1
-    if safe_check(fcf_yield_rank):
-        valuation_score += fcf_yield_rank * 2
-    if safe_check(per_rank):
-        valuation_score += (1 - per_rank) * 2
-    if safe_check(per) and safe_check(industry_per):
-        if per < industry_per * 0.7:
-            valuation_score += 0.5
-        elif per > industry_per * 1.3:
-            valuation_score -= 0.5
-    if safe_check(pbr_rank):
-        valuation_score += (1 - pbr_rank) * 1.5
-    if safe_check(de):
-        if 0 < de <= 0.5:
-            valuation_score += 1
-        elif de > 1.0:
-            valuation_score -= 1
-    if safe_check(cr):
-        if 1.5 <= cr <= 2.5:
-            valuation_score += 1
-        elif cr < 1.0:
-            valuation_score -= 0.5
+    # 고배당주 수혜 예상
+    if div is not None and not isinstance(div, bool): #cagr = +4~6-10%
+        if div >= 0.1:
+            score +=1.0
+        elif div >= 0.08:
+            score +=0.75
+        elif div >= 0.06:
+            score +=0.5
 
-    # Earnings / Momentum
-    if safe_check(roe_z):
-        earnings_momentum_score += min(max(roe_z, -2), 2)
-    if safe_check(roa_z):
-        earnings_momentum_score += min(max(roa_z, -2), 2)
-    if not safe_check(roe_z) and safe_check(industry_roe) and safe_check(roe):
-        if roe > industry_roe:
-            earnings_momentum_score += 0.5
-    if not safe_check(roa_z) and safe_check(industry_roa) and safe_check(roa):
-        if roa > industry_roa:
-            earnings_momentum_score += 0.5
-    if safe_check(icr):
-        if icr >= 10:
-            earnings_momentum_score += 1
-        elif icr >= 5:
-            earnings_momentum_score += 0.5
-        elif icr < 1:
-            earnings_momentum_score -= 0.5
-    if safe_check(fcf_cagr_rank):
-        earnings_momentum_score += fcf_cagr_rank * 2
-    if safe_check(eps_cagr_rank):
-        earnings_momentum_score += eps_cagr_rank * 2
-    if safe_check(div_cagr_rank):
-        earnings_momentum_score += div_cagr_rank * 1.5
-    if safe_check(eps):
-        if eps >= 0.3:
-            earnings_momentum_score += 2
-        elif eps >= 0.1:
-            earnings_momentum_score += 1
-        elif eps < 0:
-            earnings_momentum_score -= 1
-    if safe_check(div_yield):
-        if div_yield >= 0.1:
-            earnings_momentum_score += 1.0
-        elif div_yield >= 0.08:
-            earnings_momentum_score += 0.75
-        elif div_yield >= 0.06:
-            earnings_momentum_score += 0.5
-        elif div_yield < 0.02:
-            earnings_momentum_score -= 0.5
-    if safe_check(opinc_yoy):
-    # YoY 성장률 크기에 따라 가중치 부여 (예: 0~2 범위)
-        if opinc_yoy > 0.2:
-            earnings_momentum_score += 2
-        elif opinc_yoy > 0.05:
-            earnings_momentum_score += 1
-        else:
-            earnings_momentum_score += 0
+    if isinstance(div, bool) and div: #3y yoy
+        score +=1
+    
+    if isinstance(opinc_yoy, bool):
+        if opinc_yoy:
+            score += 1
+        else: 
+            score -= 1
+    else:
+        if opinc_yoy is not None:
+            if opinc_yoy > 0:
+                score += 1
+            else:
+                score -= 1
 
-        # 마이너스면 페널티
-        if opinc_yoy < 0:
-            earnings_momentum_score -= 1
 
-    if safe_check(opinc_qoq):
-        # QoQ 성장률도 강도에 따라 가중치 차등 부여
-        if opinc_qoq > 0.1:
-            earnings_momentum_score += 1
-        elif opinc_qoq > 0:
-            earnings_momentum_score += 0.5
-        elif opinc_qoq < 0:
-            earnings_momentum_score -= 0.5
-    return round(valuation_score, 2), round(earnings_momentum_score, 2)
+    if isinstance(opinc_qoq, bool):
+        if opinc_qoq:
+            score += 1
+    else:
+        if opinc_qoq is not None:
+            if opinc_qoq > 0:
+                score += 1
+
+
+    if isinstance(eps, bool):
+        if eps:
+            score += 1
+        else: 
+            score -= 1
+    else:
+        if eps is not None:
+            if eps >= 0.1:
+                score += 1
+                if div is not None:
+                    if div and eps >= 0.3:
+                        score +=1
+        #  3. 고배당 + 고EPS 성장률 전략 (배당 성장주 전략)
+        # 아이디어: 고배당이면서 실적 성장세가 뚜렷한 기업
+            if eps < 0:
+                score -= 1
+            if eps > 0 and per is not None:
+                peg = per / (eps * 100) #peg ratio, underv if less than 1
+                if peg <= 1:
+                    score += 1
+
+    if icr is not None and icr >= 5: #x5
+        score +=1
+
+    if None not in {roe, ind_roe, per, ind_per}:
+        if per > ind_per and roe < ind_roe:
+            score -=2 # hard pass
+            if roe < 0:  #EVEN WORSE
+                score -=1
+
+    if None not in {roe, ind_roe, per, ind_per, roa, ind_roa}:
+        # 1. 저PER + 고ROE 전략 (가치 + 질적 우량주)
+        # 아이디어: 저평가된 기업 중 자본수익률이 높은 우량주 발굴
+        if roe > ind_roe and per != 0:
+            if per < ind_per:
+                score += 2  # strong fundamentals and value
+                # if roa > ind_roa:
+                #     score += 0.5
+            elif per <= 1.2 * ind_per:
+                score += 1  # great business, slightly overvalued (still reasonable)
+                # if roa > ind_roa:
+                #     score += 0.25
+         
+    return score
 
 def get_fcf_yield_and_cagr(ticker, yf_ticker, api_key="YOUR_API_KEY"):
     def try_fmp(ticker, api_key):
@@ -468,7 +437,6 @@ def get_trading_volume_vs_avg20(ticker_symbol: str) -> float:
 
 
 
-
 def has_stable_dividend_growth_cagr(ticker):
     try:
         stock = ticker
@@ -516,31 +484,51 @@ def has_stable_dividend_growth_cagr(ticker):
     except Exception:
         return None
 
-
-
-
-def compute_eps_growth_slope(ticker):
+def has_stable_eps_growth_cagr(ticker):
     try:
-        income_stmt = ticker.financials  # Annual financials DataFrame
         
+        income_stmt = ticker.financials  # Annual financials DataFrame
+
         if "Diluted EPS" not in income_stmt.index:
             return None
 
         eps_series = income_stmt.loc["Diluted EPS"].dropna()
-        eps_series = eps_series.sort_index()  # Oldest to newest
 
-        # Keep last 5 years
+        # Sort by date ascending (oldest to newest)
+        eps_series = eps_series.sort_index()
+
+        # Get current year to filter last 5 years
         current_year = dt.datetime.today().year
-        eps_series = eps_series[[col for col in eps_series.index if col.year >= current_year - 5]]
 
-        if len(eps_series) < 2:
+        # Filter EPS for last 5 years explicitly
+        # income_stmt columns are timestamps, get their years
+        eps_years = [col.year for col in eps_series.index]
+
+        # Select only last 5 years (if available)
+        selected_years = [year for year in eps_years if current_year - 5 <= year <= current_year - 1]
+
+        # Filter eps_series to selected years only
+        filtered_eps = eps_series[[col for col in eps_series.index if col.year in selected_years]]
+
+        if len(filtered_eps) < 2:
             return None
 
-        eps_list = eps_series.tolist()
+        eps_list = filtered_eps.tolist()
 
-        x = list(range(len(eps_list)))
-        slope, _, _, _, _ = linregress(x, eps_list)
-        return slope
+        eps_start = eps_list[0]
+        eps_end = eps_list[-1]
+
+        if eps_start <= 0 or eps_end <= 0:
+            tolerance = 0.95
+            stable_growth = all(
+                later >= earlier * tolerance for earlier, later in zip(eps_list, eps_list[1:])
+            )
+            return stable_growth
+
+        periods = len(eps_list) - 1
+        cagr = (eps_end / eps_start) ** (1 / periods) - 1
+
+        return cagr
 
     except Exception:
         return None
@@ -568,6 +556,42 @@ def get_interest_coverage_ratio(ticker):
     else:
         return None
 
+def get_esg_score(ticker):
+    ans = ''
+    try:
+        esg = ticker.sustainability
+        if esg is None or esg.empty:
+            return ''
+
+        rateY = esg.loc['esgPerformance', 'esgScores']
+        rateY_str = str(rateY).strip()
+        ans = esg_dict.get(rateY_str, '')
+    except Exception:
+        ans = ''
+    return ans
+
+
+# def get_percentage_change(ticker):
+#     ticker = yf.Ticker(ticker)
+
+#     # Get last 2 days of price data
+#     data = ticker.history(period="2d")
+
+#     # Check if we have at least 2 days and prev_close is not zero
+#     if len(data) >= 2:
+#         prev_close = data['Close'].iloc[-2]
+#         last_close = data['Close'].iloc[-1]
+
+#         if prev_close != 0:
+#             percent_change = ((last_close - prev_close) / prev_close) * 100
+#             if percent_change >= 0:
+#                 return (f" (+{percent_change:.2f}%)")  # e.g., (-6.20%)
+#             else:
+#                 return (f" ({percent_change:.2f}%)")  # e.g., (-6.20%)
+#         else:
+#             return ' ()'
+#     else:
+#         return ' ()'
 
 ### 1mo ver.
 def get_percentage_change(ticker):
@@ -724,7 +748,7 @@ def get_industry_roa(ind):
 ######## LOAD TICKERS ###########
 raw_tickers = get_tickers(country, limit, sp500)
 
-prohibited = {'AFA', 'ACH', 'BACRP', 'CDVM', 'NVL', 'TBB', 'TBC', 'VZA', "ANTM","SOJD","SOJE","SOJC","RY-PT","DUKB"} # no data on yfinance or frequently cause errors
+prohibited = {'AFA', 'BACRP', 'CDVM', 'NVL', 'TBB', 'TBC', 'VZA', "ANTM","SOJD","SOJE","SOJC","RY-PT","DUKB"} # no data on yfinance or frequently cause errors
 def keep_ticker(t):
     return t not in prohibited
 tickers = list(filter(keep_ticker, raw_tickers))
@@ -982,34 +1006,21 @@ def check_momentum_conditions_batch(tickers: list) -> pd.DataFrame:
 
 df_batch_result = check_momentum_conditions_batch(tickers)
 
-def score_momentum(ma, ma_lt, ret_20d, ret_60d, rsi, macd):
+def score_momentum(ma, ma_lt, ret, ret60, rsi, macd):
     score = 0
-
-    # 이동평균 크로스오버 (단기, 장기)
-    if ma:           # 단기 MA 크로스 오버 신호 (True/False)
+    if ma:
         score += 10
-    if ma_lt:        # 장기 MA 크로스 오버 신호 (True/False)
-        score += 15
-
-    # 단기 수익률 반영 (예: 20일 수익률)
-    if ret_20d is not None:
-        if ret_20d > 0:
-            score += min(ret_20d * 100, 10)  # 0~10점, 1% 상승시 1점
-
-    # 중기 수익률 반영 (예: 60일 수익률)
-    if ret_60d is not None:
-        if ret_60d > 0:
-            score += min(ret_60d * 100, 15)  # 0~15점
-
-    # RSI 과매도 반등 (True/False)
+    if ma_lt:
+        score += 20
+    if ret:
+        score += 10
+    if ret60:
+        score += 20
     if rsi:
         score += 20
-
-    # MACD 골든크로스 (True/False)
     if macd:
         score += 20
-
-    return round(score, 2)
+    return score
 
 def get_operating_income_yoy(ticker_obj):
     try:
@@ -1019,22 +1030,27 @@ def get_operating_income_yoy(ticker_obj):
             return None
 
         operating_income = financials.loc["Operating Income"].dropna()
-        operating_income = operating_income.sort_index()  # 오래된 순 정렬
 
-        if len(operating_income) < 2:
+        if len(operating_income) < 3:
             return None
 
-        # 최근 2년치 영업이익
-        latest = operating_income.iloc[-1]
-        prev = operating_income.iloc[-2]
+        income_values = operating_income[::-1].values.tolist()
 
-        if prev == 0:
-            return None  # 0으로 나누기 방지
+        if all(later >= earlier for earlier, later in zip(income_values, income_values[1:])):
+            return True
 
-        yoy_growth = (latest - prev) / abs(prev)
-        return yoy_growth
+        oi_start = income_values[0]
+        oi_end = income_values[-1]
 
-    except Exception:
+        if oi_start is None or oi_end is None or oi_start <= 0 or oi_end <= 0:
+            return False
+
+        periods = len(income_values) - 1
+        cagr = (oi_end / oi_start) ** (1 / periods) - 1
+
+        return cagr
+
+    except Exception as e:
         return None
 
 def get_operating_income_qoq(ticker_obj):
@@ -1044,22 +1060,28 @@ def get_operating_income_qoq(ticker_obj):
         if "Operating Income" not in financials.index:
             return None
 
-        operating_income = financials.loc["Operating Income"].dropna()
-        operating_income = operating_income.sort_index()  # 오래된 순 정렬
+        operating_income = financials.loc["Operating Income"].dropna()[::-1]
 
-        if len(operating_income) < 2:
+        if len(operating_income) < 3:
             return None
 
-        latest = operating_income.iloc[-1]
-        prev = operating_income.iloc[-2]
+        income_values = operating_income.values.tolist()
 
-        if prev == 0:
-            return None
+        if all(later >= earlier for earlier, later in zip(income_values, income_values[1:])):
+            return True
 
-        qoq_growth = (latest - prev) / abs(prev)
-        return qoq_growth
+        oi_start = income_values[0]
+        oi_end = income_values[-1]
 
-    except Exception:
+        if oi_start is None or oi_end is None or oi_start <= 0 or oi_end <= 0:
+            return False
+
+        periods = len(income_values) - 1
+        qoq_cagr = (oi_end / oi_start) ** (1 / periods) - 1
+
+        return qoq_cagr
+
+    except Exception as e:
         return None
 
     
@@ -1148,6 +1170,57 @@ def monte_carlo_dcf_valuation(
 
     return (float(conf_lower), float(conf_upper))
 
+def classify_cyclicality(industry):
+    """
+    Classify a ticker as 'cyclical', 'defensive', or 'neutral' based on its industry.
+
+    Returns:
+      - 'cyclical' if industry matches cyclical keywords
+      - 'defensive' if industry matches defensive keywords
+      - 'neutral' if no clear match
+      - None if industry info unavailable or error
+    """
+
+    cyclical_keywords = [
+    "auto", "apparel", "footwear", "home improvement", "internet retail", "leisure", "lodging",
+    "restaurant", "specialty retail", "textile", "travel", "coal", "oil", "gas", "renewable",
+    "asset management", "bank", "capital markets", "credit services", "insurance",
+    "mortgage", "real estate", "aerospace", "defense", "air freight", "airline",
+    "building", "conglomerate", "construction", "electrical equipment", "engineering",
+    "industrial", "machinery", "marine", "railroad", "waste", "chemical", "container",
+    "metal", "paper", "advertising", "broadcasting", "cable", "casino", "communication",
+    "gaming", "interactive media", "movies", "publishing", "radio", "recreational",
+    "software", "semiconductor", "information technology", "it services"
+    ]
+
+
+    defensive_keywords = [
+    "beverages", "confectioner", "food", "household", "packaged", "personal product",
+    "tobacco", "biotech", "healthcare", "health", "medical device", "pharma",
+    "utility", "power producer", "utilities", 
+    ]
+
+    try:
+        if not industry:
+            return None  # No industry info
+
+        industry_lower = industry.lower()
+
+        # Check cyclical
+        for kw in cyclical_keywords:
+            if kw in industry_lower:
+                return "cyclical"
+
+        # Check defensive
+        for kw in defensive_keywords:
+            if kw in industry_lower:
+                return "defensive"
+
+        # If no matches, neutral
+        return "neutral"
+
+    except Exception as e:
+        return None
 
 def analyze_moat(company_name: str) -> str:
     prompt = f"""
@@ -1177,6 +1250,9 @@ q = Queue()
 for ticker in tickers:
     q.put(ticker)
 
+# with shelve.open("cache/ticker_cache") as cache:
+#     # Clear all the cache entries by deleting the keys
+#     cache.clear()
 
 def process_ticker_quantitatives():
     while not q.empty():
@@ -1189,86 +1265,109 @@ def process_ticker_quantitatives():
             industry = info.get("industry", None)
             currentPrice = info.get("currentPrice", None)
             percentage_change = get_percentage_change(ticker)
-
-            # Valuation & Liquidity
-            debtToEquity = info.get('debtToEquity', None)
-            debtToEquity = debtToEquity / 100 if debtToEquity is not None else None
-            currentRatio = info.get('currentRatio', None)
-            pbr = info.get('priceToBook', None)
-            per = info.get('trailingPE', None)
-
-            # Industry
+            debtToEquity = info.get('debtToEquity', None) # < 0.5
+            debtToEquity = debtToEquity/100 if debtToEquity is not None else None
+            currentRatio = info.get('currentRatio', None) # 초점: 회사의 단기 유동성, > 1.5 && < 2.5
+            pbr = info.get('priceToBook', None) # 초점: 자산가치, 저pbr종목은 저평가된 자산 가치주로 간주. 장기 수익률 설명력 높음 < 1.5 (=being traded at 1.5 times its book value (asset-liab))
+            per = info.get('trailingPE', None) # 초점: 수익성, over/undervalue? 저per 종목 선별, 10-20전후(혹은 산업평균)로 낮고 높음 구분. 주가가 그 기업의 이익에 비해 과대/과소평가되어 있다는 의미
+                                                                       # low per could be undervalued or company in trouble, IT, 바이오 등 성장산업은 자연스레 per이 높게 형성
+                                                                             # low per could be undervalued or company in trouble, IT, 바이오 등 성장산업은 자연스레 per이 높게 형성
             industry_per = get_industry_per(industry)
-            industry_per = round(industry_per) if industry_per is not None else None
+            industry_per = round(industry_per) if industry_per is not None else industry_per
             industry_roe = get_industry_roe(industry)
             industry_roa = get_industry_roa(industry)
 
-            # Profitability
-            roe = info.get('returnOnEquity', None)
-            roa = info.get('returnOnAssets', None)
+            roe = info.get('returnOnEquity', None) # 수익성 높은 기업 선별. 고roe + 저pbr 조합은 가장 유명한 퀀트 전략. > 8% (0.08) 주주 입장에서 수익성
+            roa = info.get('returnOnAssets', None) # > 6% (0.06), 기업 전체 효율성
+            #ROE가 높고 ROA는 낮다면? → 부채를 많이 이용해 수익을 낸 기업일 수 있음. ROE와 ROA 모두 높다면? → 자산과 자본 모두 효율적으로 잘 운용하고 있다는 의미.
+            #A = L + E
+            
             icr = get_interest_coverage_ratio(yf_ticker)
+            eps_growth = has_stable_eps_growth_cagr(yf_ticker) # earnings per share, the higher the better, buffett looks for stable EPS growth
+            # eps_growth_quart = has_stable_eps_growth_quarterly(ticker) 
+            div_growth = has_stable_dividend_growth_cagr(yf_ticker) # buffett looks for stable dividend growth for at least 10 years
+            # bvps_growth = bvps_undervalued(info.get('bookValue', None), currentPrice)
+            
+            operating_income_yoy = get_operating_income_yoy(yf_ticker)
+            operating_income_qoq = get_operating_income_qoq(yf_ticker)
+            
+            ma = df_batch_result.loc[df_batch_result['Ticker'] == ticker, 'ma_crossover'].values[0]
+            ma_lt = df_batch_result.loc[df_batch_result['Ticker'] == ticker, 'ma_crossover_lt'].values[0]
+            ret20 = df_batch_result.loc[df_batch_result['Ticker'] == ticker, 'return_20d'].values[0]
+            ret60 = df_batch_result.loc[df_batch_result['Ticker'] == ticker, 'return_60d'].values[0]
+            rsi = df_batch_result.loc[df_batch_result['Ticker'] == ticker, 'rsi_rebound'].values[0]
+            macd = df_batch_result.loc[df_batch_result['Ticker'] == ticker, 'macd_golden_cross'].values[0]
 
-            # Growth
-            eps_cagr = compute_eps_growth_slope(yf_ticker)
-            div_cagr = has_stable_dividend_growth_cagr(yf_ticker)
-            opinc_yoy = get_operating_income_yoy(yf_ticker)
-            opinc_qoq = get_operating_income_qoq(yf_ticker)
-
-            # FCF & Valuation
+            momentum_score = score_momentum(ma, ma_lt, ret20, ret60, rsi, macd)
+            # vol = get_trading_volume_vs_avg20(ticker)
+            esg = get_esg_score(yf_ticker)
+        
+            quantitative_buffett_score = buffett_score(debtToEquity, currentRatio, pbr, per, industry_per, roe, industry_roe, roa, industry_roa, eps_growth, div_growth, icr, operating_income_yoy, operating_income_qoq)
             fcf_yield, fcf_cagr, fcf_list = get_fcf_yield_and_cagr(ticker, yf_ticker, api_key=fmp_key)
             tenyr_treasury_yield = get_10yr_treasury_yield()
-            discount_rate = (tenyr_treasury_yield + (beta * 5.0)) / 100.0 if beta is not None else (tenyr_treasury_yield + 5.0) / 100.0
-            terminal_growth_rate = 0.02
+            discount_rate = (tenyr_treasury_yield+(beta*5.0))/100.0 if beta is not None else (tenyr_treasury_yield+5.0)/100.0
+            terminal_growth_rate = 0.02 #0.03
+            # intrinsic_value, est_fcf_cagr = dcf_valuation(fcf_list, discount_rate=discount_rate, long_term_growth=terminal_growth_rate, years=10, shares_outstanding=shares_outstanding, cagr=fcf_cagr)
+            if not fcf_list or fcf_list[-1] is None:
+                # handle missing FCF, e.g. skip, default, or raise error
+                initial_fcf = None
+            else:
+                initial_fcf = fcf_list[-1]
 
-            initial_fcf = fcf_list[-1] if fcf_list and fcf_list[-1] is not None else None
+            if initial_fcf is None:
+                # maybe skip valuation or set a default score
+                intrinsic_value_range = (None, None)
+            else:
+                intrinsic_value_range = monte_carlo_dcf_valuation(
+                    info, initial_fcf, discount_rate, terminal_growth_rate, projection_years=5, num_simulations=10_000
+                )
+            
+            
+            intrinsic_value_score = score_intrinsic_value(*intrinsic_value_range, currentPrice, fcf_yield, tenyr_treasury_yield, fcf_cagr)
+            quantitative_buffett_score += intrinsic_value_score
+            
+            
 
-            intrinsic_value_range = (
-                monte_carlo_dcf_valuation(
-                    info, initial_fcf, discount_rate, terminal_growth_rate,
-                    projection_years=5, num_simulations=10_000
-                ) if initial_fcf is not None else (None, None)
-            )
+            ## FOR extra 10 score:::
+            # MOAT -> sustainable competitive advantage that protects a company from its competitors, little to no competition, dominant market share, customer loyalty 
+            # KEY: sustainable && long-term durability
+            # ex) brand power(Coca-Cola), network effect(Facebook, Visa), cost advantage(Walmart, Costco), high switching costs(Adobe),
+            # regulatory advantage(gov protection), patients(Pfizer, Intel)
+            
+            roe_print = f'{round(roe*100,1)}%' if roe is not None else 'N/A'
+            roe_print += f'({round(industry_roe*100)})' if industry_roe is not None else ''
+
+            roa_print = f'{round(roa*100,1)}%' if roa is not None else 'N/A'
+            roa_print += f'({round(industry_roa*100)})' if industry_roe is not None else ''
+
+            per_print = f'{round(per,2)}' if per is not None else 'N/A'
+            per_print += f'({industry_per})' if industry_per is not None else ''
+
+            operating_income_yoy = f'{operating_income_yoy:.0%}' if isinstance(operating_income_yoy, float) else operating_income_yoy
+            operating_income_qoq = f'{operating_income_qoq:.0%}' if isinstance(operating_income_qoq, float) else operating_income_qoq
 
             result = {
-                "ticker": ticker,
-                "name": name,
-                "price": currentPrice,
-                "price_vs_fair_upper": ((intrinsic_value_range[1] - currentPrice) / currentPrice) if intrinsic_value_range[1] and currentPrice else None,
-                "price_vs_fair_lower": ((intrinsic_value_range[0] - currentPrice) / currentPrice) if intrinsic_value_range[0] and currentPrice else None,
-                "fcf_yield": fcf_yield,
-                "per": per,
-                "pbr": pbr,
-                "de": debtToEquity,
-                "cr": currentRatio,
-                "roe": roe,
-                "roa": roa,
-                "icr": icr,
-                "fcf_cagr": fcf_cagr,
-                "eps_cagr": eps_cagr if isinstance(eps_cagr, float) else None,
-                "div_cagr": div_cagr if isinstance(div_cagr, float) else None,
-                "eps": eps_cagr if isinstance(eps_cagr, float) else None,
-                "div_yield": info.get('dividendYield', div_cagr) if div_cagr is not None else None,
-                "opinc_yoy": opinc_yoy if isinstance(opinc_yoy, float) else None,
-                "opinc_qoq": opinc_qoq if isinstance(opinc_qoq, float) else None,
-
-                # Industry benchmarks
-                "industry_per": industry_per,
-                "industry_roe": industry_roe,
-                "industry_roa": industry_roa,
-
-                # NEW: fields needed for quant_style_score (will be filled later)
-                "fcf_yield_rank": None,
-                "per_rank": None,
-                "pbr_rank": None,
-                "fcf_cagr_rank": None,
-                "eps_cagr_rank": None,
-                "div_cagr_rank": None,
-                "roe_z": None,
-                "roa_z": None,
-
-                # Misc.
-                "industry":industry,
-                "1M_Change": percentage_change,
+                "티커": ticker,
+                "종목": name,
+                "B-Score": round(quantitative_buffett_score, 1),
+                "업종": industry,
+                "주가(1개월대비)": f"${currentPrice:,.2f}" + percentage_change,
+                "추정DCF": (f"${intrinsic_value_range[0]:,.0f} - ${intrinsic_value_range[1]:,.0f}" if intrinsic_value_range and intrinsic_value_range != (None, None) else 'N/A'),
+                "부채비율": round(debtToEquity, 2) if debtToEquity is not None else 'N/A',
+                "유동비율": round(currentRatio, 2) if currentRatio is not None else 'N/A',
+                "PBR": round(pbr,2) if pbr is not None else None,
+                "PER(업종)": per_print,
+                "ROE(업종)": roe_print,
+                "ROA(업종)": roa_print,
+                "ICR": round(icr,1) if icr is not None else 'N/A',
+                "FCF수익률": f"{fcf_yield:.1f}%" if fcf_yield is not None else 'N/A',
+                "FCF성장률": f"{fcf_cagr:.1f}%" if fcf_cagr is not None else 'N/A',
+                "EPS성장률": eps_growth if isinstance(eps_growth, bool) else (f"{eps_growth:.2%}" if eps_growth is not None else 'N/A'), #use this instead of operating income incrs for quart/annual 
+                "배당성장률": div_growth if isinstance(div_growth, bool) else (f"{div_growth:.2%}" if div_growth is not None else 'N/A'),
+                "영업이익률(Y/Q)": str(operating_income_yoy if operating_income_yoy is not None else 'N/A') + '/' + str(operating_income_qoq if operating_income_qoq is not None else 'N/A'),
+                '모멘텀': momentum_score,
+                # '거래량': vol,
+                'ESG': esg, #works only for US stocks
             }
 
             with data_lock:
@@ -1283,9 +1382,11 @@ def process_ticker_quantitatives():
             if "429" in str(e):
                 print("Too many requests! Waiting 10 seconds...")
                 time.sleep(10)
-
+        
         finally:
             q.task_done()
+            #time.sleep(2)
+    
 
 threads = []
 
@@ -1300,169 +1401,31 @@ for t in threads:
 q.join()
 
 df = pd.DataFrame(data)
+# df.dropna(subset=["D/E", "CR", "P/B", "ROE", "ROA", "PER", "ICR"], inplace = True)
 
-# Rank 계산
-df["fcf_yield_rank"] = df["fcf_yield"].rank(pct=True)
-df["per_rank"] = 1 - df["per"].rank(pct=True)
-df["pbr_rank"] = 1 - df["pbr"].rank(pct=True)
-df["fcf_cagr_rank"] = df["fcf_cagr"].rank(pct=True)
-df["eps_cagr_rank"] = df["eps_cagr"].rank(pct=True)
-df["div_cagr_rank"] = df["div_cagr"].rank(pct=True)
-# 업종별 통계 계산
-industry_stats = df.groupby("industry").agg({
-    "roe": ["mean", "std"],
-    "roa": ["mean", "std"]
-})
+min_b_score = df["B-Score"].min()
+max_b_score = df["B-Score"].max()
 
-industry_stats.columns = ['_'.join(col).strip() for col in industry_stats.columns.values]
-industry_stats.index.name = "industry"
+if min_b_score == max_b_score:
+    df["B-Score"] = 0
+else:
+    df["B-Score"] = (df["B-Score"] - min_b_score) / (max_b_score - min_b_score) * 100
 
-df = df.merge(industry_stats, left_on="industry", right_index=True, how="left")
-
-def safe_z(x, mean, std):
-    if pd.isna(x) or pd.isna(mean) or pd.isna(std) or std == 0:
-        return 0
-    return (x - mean) / std
-
-df["roe_z"] = df.apply(lambda row: safe_z(row["roe"], row["roe_mean"], row["roe_std"]), axis=1)
-df["roa_z"] = df.apply(lambda row: safe_z(row["roa"], row["roa_mean"], row["roa_std"]), axis=1)
+df["B-Score"] = df["B-Score"].round(0)
 
 
-def compute_quant_scores(df, tenyr_yield):
-    scores = []
-    for _, row in df.iterrows():
-        valuation_score, momentum_score = quant_style_score(
-            price_vs_fair_upper=row["price_vs_fair_upper"],
-            price_vs_fair_lower=row["price_vs_fair_lower"],
-            fcf_yield_rank=row["fcf_yield_rank"],
-            fcf_vs_treasury_spread=row["fcf_yield"] - tenyr_yield if row["fcf_yield"] is not None else None,
-            per=row["per"],
-            per_rank=row["per_rank"],
-            pbr_rank=row["pbr_rank"],
-            de=row["de"],
-            cr=row["cr"],
-            industry_per=row["industry_per"],
-            roe_z=row["roe_z"],
-            roa_z=row["roa_z"],
-            roe=row["roe"],        # 추가
-            roa=row["roa"],        # 추가
-            icr=row["icr"],
-            fcf_cagr_rank=row["fcf_cagr_rank"],
-            eps_cagr_rank=row["eps_cagr_rank"],
-            div_cagr_rank=row["div_cagr_rank"],
-            eps=row["eps"],
-            div_yield=row["div_yield"],
-            opinc_yoy=row["opinc_yoy"],
-            opinc_qoq=row["opinc_qoq"],
-            industry_roe=row["industry_roe"],
-            industry_roa=row["industry_roa"]
-        )
-        scores.append({
-            "ticker": row["ticker"],
-            "valuation_score": valuation_score,
-            "momentum_score": momentum_score,
-            "total_score": valuation_score + momentum_score
-        })
-    return pd.DataFrame(scores)
+# 모멘텀 정규화 및 반올림
+max_momentum = df["모멘텀"].max()
+df["모멘텀"] = (df["모멘텀"] / max_momentum) * 100
+df["모멘텀"] = df["모멘텀"].round(0)
 
+df["합계점수"] = df["B-Score"] + df["모멘텀"]
 
-###############
-def compute_price_flow_scores(df_main, df_batch_result):
-    scores = []
-    for ticker in df_main['ticker']:
-        row = df_batch_result.loc[df_batch_result['Ticker'] == ticker]
-        if row.empty:
-            scores.append(None)
-            continue
-        
-        ma = bool(row['ma_crossover'].values[0])
-        ma_lt = bool(row['ma_crossover_lt'].values[0])
-        ret20 = row['return_20d'].values[0]
-        ret60 = row['return_60d'].values[0]
-        rsi = bool(row['rsi_rebound'].values[0])
-        macd = bool(row['macd_golden_cross'].values[0])
-        
-        score = score_momentum(ma, ma_lt, ret20, ret60, rsi, macd)
-        scores.append(score)
-    return scores
+df = df.sort_values(by='합계점수', ascending=False)
 
-# 메인 df에 price_flow_score 컬럼 추가
-# Step 1: price_flow_score 먼저 계산
-df['price_flow_score'] = compute_price_flow_scores(df, df_batch_result)
-
-# Step 2: 퀀트 점수 계산 (valuation_score, momentum_score, total_score 등)
-tenyr_yield = get_10yr_treasury_yield()
-score_df = compute_quant_scores(df, tenyr_yield)
-
-# Step 3: 두 결과 merge (이때 total_score가 생김)
-final_df = df.merge(score_df, on="ticker", how="left")
-
-# Step 4: total_score에 price_flow_score 더하기
-final_df['total_score'] = final_df['total_score'].fillna(0) + final_df['price_flow_score'].fillna(0)
-
-def normalize_series(series):
-    min_val = series.min()
-    max_val = series.max()
-    if pd.isna(min_val) or pd.isna(max_val) or min_val == max_val:
-        return pd.Series([0.0] * len(series), index=series.index)
-    return (series - min_val) / (max_val - min_val) * 100  # ✅ Scale to 0–100
-
-# Normalize each category to 0–100
-final_df['valuation_score_norm'] = normalize_series(final_df['valuation_score'])
-final_df['momentum_score_norm'] = normalize_series(final_df['momentum_score'])
-final_df['price_flow_score_norm'] = normalize_series(final_df['price_flow_score'].fillna(0))
-
-# Add up and average
-final_df['total_score'] = (
-    final_df['valuation_score_norm'] +
-    final_df['momentum_score_norm'] +
-    final_df['price_flow_score_norm']
-) / 3  # ✅ Final score out of 100
-
-
-# Round the normalized scores and total
-score_cols = [
-    "valuation_score_norm",
-    "momentum_score_norm",
-    "price_flow_score_norm",
-    "total_score"
-]
-
-final_df[score_cols] = final_df[score_cols].round()
-
-# 1) rename_dict 정의
-rename_dict = {
-    "ticker": "티커",
-    "name": "종목",      # 실제 final_df에 name 컬럼이 있으면
-    "industry": "업종",
-    "price": "현재가",
-    "1M_Change": "1개월대비",
-    "valuation_score_norm": "밸류에이션",
-    "momentum_score_norm": "실적모멘텀",
-    "price_flow_score_norm": "가격/수급",
-    "total_score": "총점수"
-}
-
-# 2) 컬럼명 변경
-final_df = final_df.rename(columns=rename_dict)
-
-# 3) 내보낼 컬럼 리스트 (원하는 순서 및 컬럼만)
-export_columns_kr = [
-    "티커", "종목", "업종", "현재가", "1개월대비",
-    "밸류에이션", "실적모멘텀", "가격/수급",
-    "총점수"
-]
-
-# 4) 정렬
-df = final_df.sort_values(by='총점수', ascending=False).reset_index(drop=True)
-
-# 5) 엑셀 저장
-df[export_columns_kr].to_excel("deep_fund.xlsx", index=False)
-
-# 6) 상위 티커 리스트 추출
+# 상위 X개 티커 리스트 추출
 top_tickers = df['티커'].head(opt).tolist()
 top_tickers_news = df['티커'].head(news_lookup).tolist()
-
 
 #################################################################
 def generate_moat_summary(df: pd.DataFrame, moat_limit: int) -> pd.DataFrame:
@@ -1904,9 +1867,6 @@ with pd.ExcelWriter(filename, engine='xlsxwriter') as writer:
     # 기존 포트폴리오비중 시트 대신 각 기준별로 나눠서 저장 (엑셀 표로)
     for method in ['CVaR', 'Sortino', 'Variance', 'Sharpe']:
         df_method = df_weights[df_weights['최적화 기준'] == method]
-        
-        df_method = df_method[df_method['비중(%)'] != 0]
-        
         df_method.to_excel(writer, index=False, sheet_name=f'포트비중_{method}')
         ws = writer.sheets[f'포트비중_{method}']
         (mr, mc) = df_method.shape
@@ -1914,6 +1874,7 @@ with pd.ExcelWriter(filename, engine='xlsxwriter') as writer:
             'columns': [{'header': col} for col in df_method.columns],
             'style': 'Table Style Medium 9'
         })
+
 
 
     # 포트폴리오통계 시트도 엑셀 표로
@@ -1936,17 +1897,44 @@ with pd.ExcelWriter(filename, engine='xlsxwriter') as writer:
     autofit_columns_and_wrap(ws_news, news_df, writer.book)
 
     workbook  = writer.book
-    # 1) df 대신 df로 통일
     worksheet = writer.sheets['종목분석']
-    df_for_excel = df  # 명확하게 변수 할당
 
-    # 2) 엑셀 행/열 범위 설정 (헤더 1행 기준)
-    start_row = 1  # 헤더 다음부터 데이터
-    end_row = len(df_for_excel)  # 데이터 끝 행
+    # Define column widths you want (by column name)
+    col_widths = {
+        '티커':6,
+        '종목': 25,
+        'B-Score':6,
+        '업종': 25,
+        '주가(1개월대비)': 15,
+        '추정DCF': 10,
+        '부채비율':6,
+        '유동비율':6,
+        'PBR':6,
+        'PER(업종)': 7,
+        'ICR':6,
+        "FCF성장률": 10,
+        'EPS성장률': 10,
+        '배당성장률': 10,
+        '영업이익률(Y/Q)': 10,
+        '모멘텀':6,
+        '거래량':6,
+        '합계점수':6,
+    }
+
+    # Set widths for specified columns
+    for col_name, width in col_widths.items():
+        if col_name in df.columns:
+            col_idx = df.columns.get_loc(col_name)
+            worksheet.set_column(col_idx, col_idx, width)
+
+    
+    bscore_col_idx = df.columns.get_loc('B-Score')
+    
+    start_row = 0  # data starts after header row 1
+    end_row = len(df)
     start_col = 0
-    end_col = len(df_for_excel.columns) - 1
-
-    # 3) 엑셀 셀 주소 생성 함수
+    end_col = len(df.columns) - 1
+    
     def xl_col(col_idx):
         div = col_idx + 1
         string = ""
@@ -1957,33 +1945,40 @@ with pd.ExcelWriter(filename, engine='xlsxwriter') as writer:
                 div -= 1
             string = chr(64 + mod) + string
         return string
-
+    
     first_cell = f"{xl_col(start_col)}{start_row + 1}"
     last_cell = f"{xl_col(end_col)}{end_row + 1}"
     data_range = f"{first_cell}:{last_cell}"
-
-    # 4) 표 추가
+    
+    bscore_col_letter = xl_col(bscore_col_idx)
+    
+    # 1) Add Excel table for the data
     worksheet.add_table(data_range, {
-        'columns': [{'header': col} for col in df_for_excel.columns],
-        'style': 'Table Style Medium 9'
+        'columns': [{'header': col} for col in df.columns],
+        'style': 'Table Style Medium 9' 
     })
+    
+    # 2) Gradient on B-Score column (dynamic min/max)
+    bscore_range = f"{bscore_col_letter}{start_row + 1}:{bscore_col_letter}{end_row + 1}"
+    
+    worksheet.conditional_format(bscore_range, {
+        'type': '3_color_scale',
+        'min_type': 'min',
+        'mid_type': 'percentile',
+        'mid_value': 50,
+        'max_type': 'max',
+        'min_color': "#FF0000",
+        'mid_color': "#FFFF00",
+        'max_color': "#00FF00"
+    })
+    #############
+    # Get the column index for '합계점수'
+    total_score_col_idx = df.columns.get_loc('합계점수')
 
-    # 5) 컬럼별 너비 지정
-    col_widths = {
-        '티커': 6,
-        '종목': 25,
-        '업종': 25,
-        '현재가': 15,
-        '1개월대비': 15,
-    }
-    for col_name, width in col_widths.items():
-        if col_name in df_for_excel.columns:
-            col_idx = df_for_excel.columns.get_loc(col_name)
-            worksheet.set_column(col_idx, col_idx, width)
-
-    # 6) 그라데이션 포맷팅 적용 (총점수 컬럼)
-    total_score_col_idx = df_for_excel.columns.get_loc('총점수')
+    # Column letter for '합계점수'
     total_score_col_letter = xl_col(total_score_col_idx)
+
+    # 2) Add gradient formatting on '합계점수' column
     total_score_range = f"{total_score_col_letter}{start_row + 1}:{total_score_col_letter}{end_row + 1}"
 
     worksheet.conditional_format(total_score_range, {
@@ -1997,18 +1992,44 @@ with pd.ExcelWriter(filename, engine='xlsxwriter') as writer:
         'max_color': "#00FF00"
     })
 
-    # 7) PBR 컬럼 조건부 서식
-    pbr_col_idx = df_for_excel.columns.get_loc('PBR')
+    #############
+    pbr_col_idx = df.columns.get_loc('PBR')
     pbr_col_letter = xl_col(pbr_col_idx)
-    pbr_range = f"{pbr_col_letter}{start_row + 1}:{pbr_col_letter}{end_row + 1}"
+    pbr_range = f"{pbr_col_letter}{start_row + 2}:{pbr_col_letter}{end_row + 1}"
 
-    orange_format = workbook.add_format({'bg_color': '#FFA500', 'font_color': '#000000'})
+    yellow_format = workbook.add_format({'bg_color': '#FFFF00', 'font_color': '#000000'})
+    orange_format = workbook.add_format({'bg_color': '#FFA500', 'font_color': '#000000'})  # 오렌지색
+
+
+    # 주황색 조건 (PBR > 10)
     worksheet.conditional_format(pbr_range, {
         'type': 'cell',
         'criteria': '>',
         'value': 10,
         'format': orange_format
     })
+
+    # Create formats
+    right_align_format = workbook.add_format({'align': 'right'})
+    center_align_format = workbook.add_format({'align': 'center'})
+
+    # Write header (row 0) without formatting
+    for col_num, value in enumerate(df.columns.values):
+        worksheet.write(0, col_num, value)
+
+    # Write data rows with formatting based on column
+    for row_num, row_data in enumerate(df.values, start=1):
+        for col_num, cell_value in enumerate(row_data):
+            col_name = df.columns[col_num]
+            
+            if col_name in ['PER(업종)', 'ROE(업종)', 'ROA(업종)', '부채비율', '유동비율', 'ICR', '거래량']:
+                fmt = right_align_format
+            elif col_name in ['EPS성장률', '배당성장률', '영업이익률(Y/Q)', '영업이익률(Y)', 'FCF성장률', 'FCF수익률']:
+                fmt = center_align_format
+            else:
+                fmt = None
+
+            worksheet.write(row_num, col_num, cell_value, fmt)
 
 
 ##########################################################################################################
@@ -2086,16 +2107,16 @@ msg['To'] = ''  # or '' or a single address to satisfy the 'To' header requireme
 content = (
     f"귀하의 중장기 투자 참고를 위해 {date_kr} 기준, "
     f"시가총액 상위 {limit}개 상장기업에 대한 최신 퀀트 분석 자료를 전달드립니다. "
-    "각 기업의 총점수는 밸류에이션 점수, 실적모멘텀 점수, 그리고 가격/수급 점수를 반영하였습니다.\n\n"
+    "각 기업의 재무 점수는 ‘B-Score’, 중장기 모멘텀을 포함한 총점수는 '종합점수' 항목을 참고해 주시기 바랍니다.\n\n"
     "본 자료는 워런 버핏의 투자 철학을 기반으로, "
-    "기업의 재무 건전성 및 실적을 수치화하여 평가한 결과입니다. "
+    "기업의 재무 건전성을 수치화하여 평가한 결과입니다. "
     "투자 판단 시에는 정성적 요소에 대한 별도의 면밀한 검토도 "
     "함께 병행하시기를 권장드립니다.\n\n"
     "📌주요 재무지표 해설\n"
     "D/E 부채비율 (Debt to Equity): 자본 대비 부채의 비율로, 재무 건전성을 나타냅니다. 낮을수록 안정적입니다.\n"
     "CR 유동비율 (Current Ratio): 유동자산이 유동부채를 얼마나 커버할 수 있는지를 보여줍니다.\n"
     "PBR 주가순자산비율 (Price to Book Ratio): 주가가 장부가치 대비 얼마나 높은지를 나타내며, 1보다 낮으면 저평가로 해석되기도 합니다.\n"
-    "PER 주가수익비율 (Price to Earnings Ratio): 이익 대비 주가 수준을 나타냅니다. 낮을수록 이익 대비 저렴한 기업입니다. 높을수록 시장의 기대치가 높습니다.\n"
+    "PER 주가수익비율 (Price to Earnings Ratio): 이익 대비 주가 수준을 나타냅니다. 낮을수록 이익 대비 저렴한 기업입니다.\n"
     "ROE 자기자본이익률 (Return on Equity): 자본을(부채 미포함) 얼마나 효율적으로 운용해 이익을 냈는지를 나타냅니다.\n"
     "ROA 총자산이익률 (Return on Assets): 총자산(부채 포함) 대비 수익률로, 보수적인 수익성 지표입니다.\n"
     "ICR 이자보상비율 (Interest Coverage Ratio): 영업이익으로 이자비용을 얼마나 감당할 수 있는지 나타냅니다.\n"
@@ -2103,6 +2124,7 @@ content = (
     "배당성장률: 최근 10년간 배당금의 성장률을 나타내는 지표입니다.\n"
     "영업이익률: 최근 5개 영업년도/분기의 평균 영업이익률 성장률로, 기업의 수익성 수준을 보여줍니다.\n"
     "모멘텀: 주가의 중장기 상승 흐름을 반영한 지표로, 주가의 탄력과 추세를 평가합니다.\n\n"
+    "ESG: 기업의 지속가능성을 나타내는 지표로, 동종업계 대비 수준과 함께 평가합니다. (LAG: 뒤쳐짐, AVG: 평균, LEAD: 우수)\n\n"
     "해당 메일은 매주 평일 오후 5시에 자동 발송되며, 안정적이고 현명한 투자를 위한 참고 자료로 제공됩니다.\n\n"
     "귀하의 성공적인 투자를 응원합니다."
 )
@@ -2117,7 +2139,7 @@ html_content = f"""
     <p>귀하의 중장기 투자 참고를 위해 <b>{date_kr}</b> 기준, 
     시가총액 상위 <b>{limit}</b>개, 뉴욕증권거래소(NYSE), 나스닥(NASDAQ), 아멕스(AMEX)에 상장된 기업들의 최신 퀀트 데이터를 전달드립니다.</p>
 
-    <p>각 기업의 총점수는 밸류에이션 점수, 실적모멘텀 점수, 그리고 가격/수급 점수를 반영하였습니다. 자세한 내용은 아래 해설을 참고해주시기 바랍니다.</p>
+    <p>각 기업의 재무 점수는 <b>B-Score</b>, 중장기 모멘텀을 포함한 총점수는 <b>종합점수</b> 항목을 참고해 주시기 바랍니다.</p>
 
     <h3 style="margin-top: 30px;"><strong>{date_kr} AI 선정 주요 뉴스 및 거시경제 분석</strong></h3>
 
@@ -2138,7 +2160,7 @@ html_content = f"""
         <tr><td><b>D/E</b></td><td>부채비율</td><td>자본 대비 부채의 비율로, 재무 건전성을 나타냅니다. 낮을수록 안정적입니다.</td></tr>
         <tr><td><b>CR</b></td><td>유동비율</td><td>유동자산이 유동부채를 얼마나 커버할 수 있는지를 보여줍니다.</td></tr>
         <tr><td><b>PBR</b></td><td>주가순자산비율</td><td>주가가 장부가치 대비 얼마나 높은지를 나타내며, 1보다 낮으면 저평가로 해석되기도 합니다.</td></tr>
-        <tr><td><b>PER</b></td><td>주가수익비율</td><td>이익 대비 주가 수준을 나타냅니다. 낮을수록 이익 대비 저렴한 기업입니다. 높을수록 시장의 기대치가 높습니다.</td></tr>
+        <tr><td><b>PER</b></td><td>주가수익비율</td><td>이익 대비 주가 수준을 나타냅니다. 낮을수록 이익 대비 저렴한 기업입니다.</td></tr>
         <tr><td><b>ROE</b></td><td>자기자본이익률</td><td>자본을(부채 미포함) 얼마나 효율적으로 운용해 이익을 냈는지를 나타냅니다.</td></tr>
         <tr><td><b>ROA</b></td><td>총자산이익률</td><td>총자산(부채 포함) 대비 수익률로, 보수적인 수익성 지표입니다.</td></tr>
         <tr><td><b>ICR</b></td><td>이자보상비율</td><td>영업이익으로 이자비용을 얼마나 감당할 수 있는지 나타냅니다.</td></tr>

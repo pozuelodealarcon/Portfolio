@@ -1455,10 +1455,16 @@ export_columns_kr = [
 
 # 4) 정렬
 df = pd.DataFrame()
-df = final_df.sort_values(by='총점수', ascending=False).reset_index(drop=True)
+# 컬럼을 필터링한 새로운 df로 overwrite
+df = final_df[export_columns_kr].sort_values(by='총점수', ascending=False).reset_index(drop=True)
+df = df.drop(columns=[col for col in df.columns if col not in export_columns_kr])
 
-# 5) 엑셀 저장
-df[export_columns_kr].to_excel("deep_fund.xlsx", index=False)
+# 3️⃣ 컬럼 순서 맞추기 (혹시 순서 틀어졌을 수도 있으니)
+df = df[export_columns_kr]
+
+# 그리고 그대로 저장
+df.to_excel("deep_fund.xlsx", index=False)
+
 
 # 6) 상위 티커 리스트 추출
 top_tickers = df['티커'].head(opt).tolist()
@@ -1940,13 +1946,11 @@ with pd.ExcelWriter(filename, engine='xlsxwriter') as writer:
     # 1) df로 통일
     worksheet = writer.sheets['종목분석']
 
-    # 2) 엑셀 행/열 범위 설정 (헤더 1행 기준)
-    start_row = 1  # 헤더 다음부터 데이터
-    end_row = len(df)  # 데이터 끝 행
+    start_row = 0  # data starts after header row 1
+    end_row = len(df)
     start_col = 0
     end_col = len(df.columns) - 1
 
-    # 3) 엑셀 셀 주소 생성 함수
     def xl_col(col_idx):
         div = col_idx + 1
         string = ""
@@ -1962,10 +1966,10 @@ with pd.ExcelWriter(filename, engine='xlsxwriter') as writer:
     last_cell = f"{xl_col(end_col)}{end_row + 1}"
     data_range = f"{first_cell}:{last_cell}"
 
-    (mr, mc) = df.shape
-    worksheet.add_table(1, 0, mr - 1, mc - 1, {  # 여기 mr 대신 mr-1로 해야 함
+    # 1) Add Excel table for the data
+    worksheet.add_table(data_range, {
         'columns': [{'header': col} for col in df.columns],
-        'style': 'Table Style Medium 9'
+        'style': 'Table Style Medium 9' 
     })
 
     # 5) 컬럼별 너비 지정

@@ -1958,8 +1958,10 @@ with pd.ExcelWriter(filename, engine='xlsxwriter') as writer:
     # 4️⃣ "현재가" 컬럼 위치 구해서 서식 적용
     price_col_idx = df.columns.get_loc("현재가")  # 0부터 시작하는 인덱스
     for row in range(1, len(df) + 1):  # 헤더 제외, 1부터 시작
-        worksheet.write_number(row, price_col_idx, df.at[row - 1, "현재가"], currency_format)
-
+        value = df.at[row - 1, "현재가"]
+        if isinstance(value, float) and (math.isnan(value) or math.isinf(value)):
+            value = 0  
+        worksheet.write_number(row, price_col_idx, value, currency_format)
 
     start_row = 0  # data starts after header row 1
     end_row = len(df)

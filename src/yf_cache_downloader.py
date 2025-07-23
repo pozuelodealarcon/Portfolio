@@ -6,8 +6,7 @@ import requests
 
 CACHE_FILE = "yf_cache_multi.csv"
 limit = 200
-# api_key = os.environ['FMP_API_KEY']
-api_key = '60ZVxqQtumzWp4LVs4PmJOjiNSnbGThu'
+api_key = os.environ['FMP_API_KEY']
 
 #hi
 def get_tickers_by_country(country:str, limit: int, apikey: str):

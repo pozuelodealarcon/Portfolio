@@ -7,8 +7,8 @@ from datetime import datetime, timedelta
 CACHE_FILE = "yf_cache_multi.csv"  # Path to your cached price data
 BENCHMARK = "^GSPC"                # S&P 500
 REBALANCE_FREQ = "M"               # Monthly rebalancing
-TOP_N = 5                          # Number of top stocks to hold
-START_DATE = "2022-01-01"          # Backtest start
+TOP_N = 5           # Number of top stocks to hold
+START_DATE = "2025-01-01"          # Backtest start
 END_DATE = datetime.today().strftime("%Y-%m-%d")  # Backtest end
 
 # --- LOAD PRICE DATA ---
@@ -33,15 +33,17 @@ score_df = pd.read_excel("deep_fund.xlsx", sheet_name="종목분석")
 score_df = score_df.rename(columns={"티커": "Ticker"})
 
 # --- BENCHMARK DATA ---
-benchmark = yf.download(BENCHMARK, start=START_DATE, end=END_DATE, progress=False)["Close"]
+benchmark = yf.download(BENCHMARK, start=START_DATE, end=END_DATE, progress=False, auto_adjust=True)["Close"]
+
+# --- LOAD WEIGHTS FROM '포트비중_Sortino' SHEET ---
+sortino_df = pd.read_excel("deep_fund.xlsx", sheet_name="포트비중_Sortino")
+# 예시: 'Ticker', 'Weight' 컬럼이 있다고 가정
+sortino_weights = dict(zip(sortino_df['티커'], sortino_df['비중(%)']))
 
 # --- BACKTEST FUNCTION ---
 def backtest(price_df, score_df, benchmark, top_n=TOP_N, rebalance_freq=REBALANCE_FREQ):
-    # Align dates
     price_df = price_df.ffill().dropna()
-    returns = price_df.pct_change().fillna(0)
-    # Rebalance dates (month end)
-    rebal_dates = price_df.resample(rebalance_freq).last().index
+    rebal_dates = price_df.resample('ME').last().index
 
     portfolio_value = [1.0]
     dates = [price_df.index[0]]
@@ -51,15 +53,24 @@ def backtest(price_df, score_df, benchmark, top_n=TOP_N, rebalance_freq=REBALANC
     for i in range(1, len(rebal_dates)):
         date = rebal_dates[i]
         prev_date = rebal_dates[i-1]
-        # Use the latest available score for each ticker
-        # (Assume score_df is static; for rolling, you need to recalc scores each period)
-        top = score_df.sort_values("총점수", ascending=False).head(top_n)["Ticker"].tolist()
-        available = [t for t in top if t in price_df.columns]
+        if date not in price_df.index:
+            date_idx = price_df.index.searchsorted(date, side='right') - 1
+            if date_idx < 0:
+                continue
+            date = price_df.index[date_idx]
+        if prev_date not in price_df.index:
+            prev_idx = price_df.index.searchsorted(prev_date, side='right') - 1
+            if prev_idx < 0:
+                continue
+            prev_date = price_df.index[prev_idx]
+
+        # 포트비중_Sortino 시트의 티커와 비중 사용
+        available = [t for t in sortino_weights if t in price_df.columns]
         if len(available) == 0:
             continue
-        # Equal weight
-        weights = np.array([1/len(available)] * len(available))
-        # Calculate period return
+        weights = np.array([sortino_weights[t] for t in available])
+        weights = weights / weights.sum()  # 혹시 합이 1이 아닐 경우 정규화
+
         start_prices = price_df.loc[prev_date, available]
         end_prices = price_df.loc[date, available]
         period_return = np.dot((end_prices.values / start_prices.values) - 1, weights)
@@ -71,13 +82,13 @@ def backtest(price_df, score_df, benchmark, top_n=TOP_N, rebalance_freq=REBALANC
     # Benchmark
     bench = benchmark.reindex(dates).ffill()
     bench_returns = bench.pct_change().fillna(0)
-    bench_value = (1 + bench_returns).cumprod()
+    bench_value = (1 + bench_returns).cumprod().values
 
-    # Results DataFrame
+    min_len = min(len(dates), len(portfolio_value), len(bench_value))
     results = pd.DataFrame({
-        "Date": dates,
-        "Portfolio": portfolio_value,
-        "Benchmark": bench_value.values
+        "Date": np.array(dates[:min_len]).ravel(),
+        "Portfolio": np.array(portfolio_value[:min_len]).ravel(),
+        "Benchmark": np.array(bench_value[:min_len]).ravel()
     }).set_index("Date")
 
     return results, weights_history, tickers_history

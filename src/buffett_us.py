@@ -1412,13 +1412,21 @@ final_df['valuation_score_norm'] = normalize_series(final_df['valuation_score'])
 final_df['momentum_score_norm'] = normalize_series(final_df['momentum_score'])
 final_df['price_flow_score_norm'] = normalize_series(final_df['price_flow_score'].fillna(0))
 
-# Add up and average
-final_df['total_score'] = (
-    final_df['valuation_score_norm'] +
-    final_df['momentum_score_norm'] +
-    final_df['price_flow_score_norm']
-) / 3  # ✅ Final score out of 100
+# Buffett-style
+valuation_weight = 0.6
+momentum_weight = 0.25
+price_flow_weight = 0.15
 
+# quant fund
+# valuation_weight = 0.4
+# momentum_weight = 0.4
+# price_flow_weight = 0.2
+
+final_df['total_score'] = (
+    final_df['valuation_score_norm'] * valuation_weight +
+    final_df['momentum_score_norm'] * momentum_weight +
+    final_df['price_flow_score_norm'] * price_flow_weight
+)
 
 # Round the normalized scores and total
 score_cols = [
@@ -1945,7 +1953,7 @@ with pd.ExcelWriter(filename, engine='xlsxwriter') as writer:
     # 1) df로 통일
     worksheet = writer.sheets['종목분석']
 
-    currency_format = workbook.add_format({'num_format': '$#,##0'})  # 또는 '$#,##0.00' (소수점 포함)
+    currency_format = workbook.add_format({'num_format': '$#,##.00'}) 
 
     # 4️⃣ "현재가" 컬럼 위치 구해서 서식 적용
     price_col_idx = df.columns.get_loc("현재가")  # 0부터 시작하는 인덱스

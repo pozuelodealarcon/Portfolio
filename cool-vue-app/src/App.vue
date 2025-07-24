@@ -14,10 +14,44 @@
 />
       <p class="description">
         <span class="typewriter" v-html="typedText"></span>
+        <span class="info-icon" @click="showPrinciple = !showPrinciple" title="투자원칙 설명">
+          i
+        </span>
+        <div v-if="showPrinciple" class="principle-popup" @click.stop>
+          <strong>투자원칙</strong><br>
+          <b>🏦 밸류에이션이란?</b><br>
+          <span class="principle-bullet">기업의 내재가치와 현재 주가의 괴리를 평가</span><br>
+          <b>밸류에이션 팩터 (7개):</b><br>
+          <span class="principle-bullet">• DCF(할인현금흐름)</span><br>
+          <span class="principle-bullet">• PER(주가수익비율)</span><br>
+          <span class="principle-bullet">• PBR(주가순자산비율)</span><br>
+          <span class="principle-bullet">• FCF수익률</span><br>
+          <span class="principle-bullet">• 업종 PER 비교</span><br>
+          <span class="principle-bullet">• 부채비율(D/E), 유동비율(CR)</span><br>
+          <br>
+          <b>📈 실적모멘텀이란?</b><br>
+          <span class="principle-bullet">기업의 이익 성장성과 재무 건전성, 배당 성장 등 실적 기반의 추세 평가</span><br>
+          <b>실적모멘텀 팩터 (6개):</b><br>
+          <span class="principle-bullet">• ROE/ROA Z-Score</span><br>
+          <span class="principle-bullet">• 이자보상비율(ICR)</span><br>
+          <span class="principle-bullet">• FCF 성장률 (5년간)</span><br>
+          <span class="principle-bullet">• EPS 성장률 (5년간)</span><br>
+          <span class="principle-bullet">• 배당 성장률 (10년간)</span><br>
+          <span class="principle-bullet">• 영업이익 성장률 (최근 4개 분기, 4개 년도 대비)</span><br>
+          <br>
+          <b>💰 가격/수급이란?</b><br>
+          <span class="principle-bullet">주가의 중장기 추세, 거래량, 기술적 신호 등 시장 수급 기반 평가</span><br>
+          <b>가격/수급 팩터 (5개):</b><br>
+          <span class="principle-bullet">• 이동평균선 크로스오버 (20/60일선, 50/200일선)</span><br>
+          <span class="principle-bullet">• 단기/중기 수익률 (20/60일)</span><br>
+          <span class="principle-bullet">• MACD 골든크로스</span><br>
+          <span class="principle-bullet">• RSI 반등 신호</span><br>
+          <span class="principle-bullet">• 거래량 변화</span><br>
+        </div>
       </p>
 
       <!-- 헤더 -->
-      <div class="list-header fade-in" :style="{ animationDelay: '3.0s' }">
+      <div class="list-header fade-in" :style="{ animationDelay: '3.1s' }">
         <span class="rank">순위</span>
         <span class="ticker">종목명</span>
         <span class="change">주가 (1개월▲)</span>
@@ -72,7 +106,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import logo from './logo.png'
 
 const tickers = ref([])
@@ -80,6 +114,7 @@ const email = ref('')
 const message = ref('')
 const typedText = ref('')
 const marketRibbon = ref('로딩 중...')
+const showPrinciple = ref(false)
 
 const fullText =
   `<span style="font-weight:700; color:#114477;">워렌 버핏</span>의 투자 원칙을 반영한 퀀트 알고리즘이 선정한 
@@ -115,6 +150,12 @@ const submitEmail = async () => {
   } catch (err) {
     message.value = '⚠️ 이메일 구독 중 오류가 발생했습니다.'
     console.error('❌ Fetch Error:', err)
+  }
+}
+
+function handleClickOutside(e) {
+  if (!e.target.closest('.info-icon') && !e.target.closest('.principle-popup')) {
+    showPrinciple.value = false
   }
 }
 onMounted(async () => {
@@ -174,7 +215,12 @@ onMounted(async () => {
   // 마켓 리본 초기화 및 주기적 갱신
   await updateRibbon()
   setInterval(updateRibbon, 30000)
+
+  document.addEventListener('click', handleClickOutside)
 });
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleClickOutside)
+})
 
 
 </script>
@@ -259,6 +305,7 @@ h1 {
 
 /* 설명 타이핑 */
 .description {
+  position: relative;
   font-size: 1.2rem;
   color: #5c5c5c;
   margin-bottom: 32px;
@@ -266,7 +313,54 @@ h1 {
   font-weight: 700;
   min-height: 3.4em;
 }
-/* 📱 모바일 (최대 너비 480px)에서만 적용 */
+.info-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 8px;
+  font-size: 0.95em;
+  font-weight: bold;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  color: #007bff;
+  border: 1.5px solid #007bff;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+  user-select: none;
+  transition: background 0.2s;
+}
+.info-icon:hover {
+  background: #007bff;
+  color: #fff;
+}
+.principle-popup {
+  position: absolute;
+  top: 32px;
+  right: 0;
+  z-index: 10;
+  background: #fff;
+  color: #222;
+  border: 1px solid #ccd6e0;
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.10);
+  padding: 16px 18px;
+  font-size: 0.98em;
+  min-width: 180px;
+  text-align: left;
+  line-height: 1.7;
+  animation: fadeInUp 0.3s;
+}
+.principle-bullet {
+  color: #666a73;
+  font-size: 0.97em;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  display: block;
+  margin-left: 2px;
+  margin-bottom: 1px;
+}
 @media (max-width: 480px) {
   .description {
     font-size: 1.05rem;
@@ -282,6 +376,14 @@ h1 {
   .subscribe-form input,
   .subscribe-form button {
     font-size: 0.95rem;
+  }
+
+  .principle-popup {
+    right: auto;
+    left: 0;
+    min-width: 140px;
+    font-size: 0.92em;
+    padding: 12px 16px;
   }
 }
 
@@ -402,65 +504,65 @@ h1 {
 
 .subscribe-form input {
   padding: 10px 18px;
-  border: 1px solid #ccd6e0;
+  border: 1px solid #ccd6e0;.subscribe-form input:focus {
   border-radius: 20px;
   font-size: 1rem;
   width: 65%;
   max-width: 280px;
+  font-family: 'Noto Sans KR', sans-serif;.subscribe-form button {
   font-family: 'Noto Sans KR', sans-serif;
-  transition: border-color 0.25s ease;
+  transition: border-color 0.25s ease;gradient(135deg, #007bff, #0056b3);
 }
 
-.subscribe-form input:focus {
+.subscribe-form input:focus {: 22px;
   border-color: #007bff;
-  outline: none;
+  outline: none;;
 }
-
-.subscribe-form button {
+ground 0.3s ease;
+.subscribe-form button {-serif;
   padding: 10px 22px;
   background: linear-gradient(135deg, #007bff, #0056b3);
-  color: white;
-  border: none;
+  color: white;.subscribe-form button:hover {
+  border: none;135deg, #0056b3, #003e91);
   border-radius: 22px;
   cursor: pointer;
-  font-weight: 700;
+  font-weight: 700;/* 피드백 메시지 */
   font-size: 1rem;
-  transition: background 0.3s ease;
-  font-family: 'Noto Sans KR', sans-serif;
+  transition: background 0.3s ease;p: 16px;
+  font-family: 'Noto Sans KR', sans-serif;m;
 }
-
+ 'Noto Sans KR', sans-serif;
 .subscribe-form button:hover {
   background: linear-gradient(135deg, #0056b3, #003e91);
-}
-
-/* 피드백 메시지 */
-.feedback {
+}/* 카피라이트 */
+{
+/* 피드백 메시지 */: 24px;
+.feedback {m;
   margin-top: 16px;
   font-size: 0.85rem;
   color: #333;
-  font-family: 'Noto Sans KR', sans-serif;
-}
-
-/* 카피라이트 */
+  font-family: 'Noto Sans KR', sans-serif;.fade-in {
+} 0;
+translateY(10px);
+/* 카피라이트 */s;
 .copyright {
   margin-top: 24px;
-  font-size: 0.75rem;
+  font-size: 0.75rem;: ease-out;
   color: #999;
 }
-
+@keyframes fadeInUp {
 .fade-in {
-  opacity: 0;
-  transform: translateY(10px);
+  opacity: 0;acity: 1;
+  transform: translateY(10px);translateY(0);
   animation-fill-mode: forwards;
   animation-name: fadeInUp;
   animation-duration: 0.6s;
-  animation-timing-function: ease-out;
-}
+  animation-timing-function: ease-out;html {
+}ll-behavior: smooth;
 
 @keyframes fadeInUp {
-  to {
-    opacity: 1;
-    transform: translateY(0);
+  to {</style>
+    opacity: 1;    transform: translateY(0);
   }
 }
 

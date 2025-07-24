@@ -22,10 +22,14 @@
             class="info-icon info-icon-absolute"
             @click="showPrinciple = !showPrinciple"
             title="투자원칙 설명"
-          >i</span>
+          ><svg width="13" height="13" viewBox="0 0 20 20" fill="none">
+    <circle cx="10" cy="10" r="9" stroke="#1976d2" stroke-width="2" fill="#fff"/>
+    <rect x="9" y="7" width="2" height="6" rx="1" fill="#1976d2"/>
+    <rect x="9" y="5" width="2" height="2" rx="1" fill="#1976d2"/>
+  </svg></span>
         </transition>
         <div v-if="showPrinciple" class="principle-popup" @click.stop>
-          <strong>DeepFund 투자 판단의 근거를 밸류에이션, 실적 모멘텀, 그리고 가격/수급이라는 세 가지 범주로 나누어 체계적으로 평가한 뒤 철저한 백테스팅 과정을 거칩니다.</strong><br><br>
+          <strong>DeepFund는 투자 판단의 근거를 밸류에이션, 실적 모멘텀, 그리고 가격/수급이라는 세 가지 범주로 나누어 체계적으로 평가합니다.</strong><br><br>
           <b>🏦 밸류에이션이란?</b><br>
           <span class="principle-bullet">기업의 내재가치는 장기적인 투자 성과의 핵심입니다. 밸류에이션 분석은 현재 주가가 그 기업의 실제 가치에 비해 과대평가되어 있는지, 혹은 저평가되어 있는지를 평가하는 과정입니다.</span><br>
           <b>밸류에이션 팩터 (7개):</b><br>
@@ -590,12 +594,30 @@ html {
 }
 .info-icon-absolute {
   position: absolute;
-  top: 0;
-  right: -10px; /* 더 왼쪽으로 */
+  top: -8px;
+  right: -18px; /* 더 왼쪽으로 */
   z-index: 20;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-  font-size: 1.05em;
-  background: #fff;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+  font-size: 1.08em;
+  font-weight: 700;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #fff 70%, #eaf3ff 100%);
+  color: #1976d2;
+  border: 1.5px solid #90caf9;
+  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.08);
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+}
+.info-icon-absolute:hover {
+  background: linear-gradient(135deg, #1976d2 80%, #42a5f5 100%);
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(25, 118, 210, 0.18);
 }
 .fade-enter-active, .fade-leave-active {
   transition: opacity 0.5s cubic-bezier(.4,0,.2,1), transform 0.5s cubic-bezier(.4,0,.2,1);

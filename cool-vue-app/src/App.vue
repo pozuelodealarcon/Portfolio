@@ -17,7 +17,7 @@
       </p>
 
       <!-- 헤더 -->
-      <div class="list-header fade-in" :style="{ animationDelay: '0.4s' }">
+      <div class="list-header fade-in" :style="{ animationDelay: '3.0s' }">
         <span class="rank">순위</span>
         <span class="ticker">종목명</span>
         <span class="change">주가 (1개월▲)</span>
@@ -32,7 +32,15 @@
           class="fade-in"
         >
           <span class="rank">{{ tickers.length - index }}.</span>
-          <span class="ticker">{{ item.ticker }}</span>
+          <a
+      class="ticker"
+      :href="`https://www.google.com/search?q=${encodeURIComponent(item.ticker)}`"
+      target="_blank"
+      rel="noopener noreferrer"
+      style="text-decoration: underline; color: #114477; cursor: pointer;"
+    >
+      {{ item.ticker }}
+    </a>
           <span
             class="change"
             :class="{ positive: item.change.startsWith('+'), negative: item.change.startsWith('-') }"

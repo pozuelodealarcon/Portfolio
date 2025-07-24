@@ -25,27 +25,27 @@
           >i</span>
         </transition>
         <div v-if="showPrinciple" class="principle-popup" @click.stop>
-          <strong>투자원칙</strong><br>
+          <strong>우리는 투자 판단의 근거를 밸류에이션, 실적 모멘텀, 그리고 가격/수급이라는 세 가지 범주로 나누어 체계적으로 평가합니다.</strong><br>
           <b>🏦 밸류에이션이란?</b><br>
-          <span class="principle-bullet">기업의 내재가치와 현재 주가의 괴리를 평가</span>
+          <span class="principle-bullet">기업의 내재가치는 장기적인 투자 성과의 핵심입니다. 밸류에이션 분석은 현재 주가가 그 기업의 실제 가치에 비해 과대평가되어 있는지, 혹은 저평가되어 있는지를 평가하는 과정입니다.</span>
           <b>밸류에이션 팩터 (7개):</b><br>
           <span class="principle-bullet">• DCF(할인현금흐름)</span>
           <span class="principle-bullet">• PER(주가수익비율)</span>
           <span class="principle-bullet">• PBR(주가순자산비율)</span>
           <span class="principle-bullet">• FCF수익률</span>
           <span class="principle-bullet">• 업종 PER 비교</span>
-          <span class="principle-bullet">• 부채비율(D/E), 유동비율(CR)</span>
+          <span class="principle-bullet">• 부채비율(D/E), 유동비율(CR)</span><br>
           <b>📈 실적모멘텀이란?</b><br>
-          <span class="principle-bullet">기업의 이익 성장성과 재무 건전성, 배당 성장 등 실적 기반의 추세 평가</span>
+          <span class="principle-bullet">가치투자의 핵심은 "훌륭한 기업을 적정한 가격에 사는 것"입니다. 실적 모멘텀은 기업이 지속적인 수익 창출 역량과 재무 건전성을 보유하고 있는지를 평가합니다.</span>
           <b>실적모멘텀 팩터 (6개):</b><br>
           <span class="principle-bullet">• ROE/ROA Z-Score</span>
           <span class="principle-bullet">• 이자보상비율(ICR)</span>
           <span class="principle-bullet">• FCF 성장률 (5년간)</span>
           <span class="principle-bullet">• EPS 성장률 (5년간)</span>
           <span class="principle-bullet">• 배당 성장률 (10년간)</span>
-          <span class="principle-bullet">• 영업이익 성장률 (최근 4개 분기, 4개 년도 대비)</span>
+          <span class="principle-bullet">• 영업이익 성장률 (최근 4개 분기, 4개 년도 대비)</span><br>
           <b>💰 가격/수급이란?</b><br>
-          <span class="principle-bullet">주가의 중단기 추세, 거래량, 기술적 신호 등 시장 수급 기반 평가</span>
+          <span class="principle-bullet">단기적 주가 흐름은 시장의 감정과 수급에 의해 좌우됩니다. 투자자는 이를 통해 기회와 리스크를 선별할 수 있어야 합니다.</span>
           <b>가격/수급 팩터 (5개):</b><br>
           <span class="principle-bullet">• 이동평균선 크로스오버 (20/60일선, 50/200일선)</span>
           <span class="principle-bullet">• 단기/중기 수익률 (20/60일)</span>
@@ -319,6 +319,7 @@ h1 {
   line-height: 2.0;
   font-weight: 700;
   min-height: 3.4em;
+  text-align: center;
 }
 .info-icon {
   display: inline-flex;
@@ -358,6 +359,9 @@ h1 {
   text-align: left;
   line-height: 1.7;
   animation: fadeInUp 0.3s;
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.5s cubic-bezier(.4,0,.2,1), transform 0.5s cubic-bezier(.4,0,.2,1);
 }
 .principle-bullet {
   color: #666a73;
@@ -587,17 +591,18 @@ html {
 .info-icon-absolute {
   position: absolute;
   top: 0;
-  right: -30px;
+  right: -10px; /* 더 왼쪽으로 */
   z-index: 20;
   box-shadow: 0 2px 8px rgba(0,0,0,0.08);
   font-size: 1.05em;
   background: #fff;
 }
 .fade-enter-active, .fade-leave-active {
-  transition: opacity 0.3s;
+  transition: opacity 0.5s cubic-bezier(.4,0,.2,1), transform 0.5s cubic-bezier(.4,0,.2,1);
 }
 .fade-enter-from, .fade-leave-to {
   opacity: 0;
+  transform: translateY(20px);
 }
 /* 기존 .info-icon, .principle-popup, .principle-bullet 등 스타일 유지 */
 </style>

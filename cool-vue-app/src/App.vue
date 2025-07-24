@@ -22,11 +22,7 @@
             class="info-icon info-icon-absolute"
             @click="showPrinciple = !showPrinciple"
             title="투자원칙 설명"
-          ><svg width="13" height="13" viewBox="0 0 20 20" fill="none">
-    <circle cx="10" cy="10" r="9" stroke="#1976d2" stroke-width="2" fill="#fff"/>
-    <rect x="9" y="7" width="2" height="6" rx="1" fill="#1976d2"/>
-    <rect x="9" y="5" width="2" height="2" rx="1" fill="#1976d2"/>
-  </svg></span>
+          >i</span>
         </transition>
         <div v-if="showPrinciple" class="principle-popup" @click.stop>
           <strong>DeepFund는 투자 판단의 근거를 밸류에이션, 실적 모멘텀, 그리고 가격/수급이라는 세 가지 범주로 나누어 체계적으로 평가합니다.</strong><br><br>
@@ -594,30 +590,24 @@ html {
 }
 .info-icon-absolute {
   position: absolute;
-  top: -8px;
-  right: -18px; /* 더 왼쪽으로 */
+  top: 0;
+  right: -20px;
   z-index: 20;
-  width: 22px;
-  height: 22px;
+  width: 17px;         /* 동그라미 크기 줄임 */
+  height: 17px;        /* 동그라미 크기 줄임 */
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: inherit;
-  font-size: 1.08em;
-  font-weight: 700;
+  font-size: 0.92em;   /* i 글자 크기 줄임 */
+  font-weight: bold;
   border-radius: 50%;
-  background: linear-gradient(135deg, #fff 70%, #eaf3ff 100%);
-  color: #1976d2;
-  border: 1.5px solid #90caf9;
-  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.08);
+  background: #fff;
+  color: #007bff;
+  border: 1.2px solid #007bff;
   cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.07);
   user-select: none;
-  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
-}
-.info-icon-absolute:hover {
-  background: linear-gradient(135deg, #1976d2 80%, #42a5f5 100%);
-  color: #fff;
-  box-shadow: 0 4px 16px rgba(25, 118, 210, 0.18);
+  transition: background 0.2s;
 }
 .fade-enter-active, .fade-leave-active {
   transition: opacity 0.5s cubic-bezier(.4,0,.2,1), transform 0.5s cubic-bezier(.4,0,.2,1);

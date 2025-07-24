@@ -591,11 +591,11 @@ html {
 }
 .info-icon-absolute {
   position: absolute;
-  top: 0;
-  right: 35px;
+  top: 2px;
+  right: 30px;
   z-index: 20;
-  width: 17px;         /* 동그라미 크기 줄임 */
-  height: 17px;        /* 동그라미 크기 줄임 */
+  width: 15px;         /* 동그라미 크기 줄임 */
+  height: 15px;        /* 동그라미 크기 줄임 */
   display: flex;
   align-items: center;
   justify-content: center;

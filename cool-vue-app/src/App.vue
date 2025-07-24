@@ -592,14 +592,14 @@ html {
 .info-icon-absolute {
   position: absolute;
   top: 0;
-  right: 40px;
+  right: 35px;
   z-index: 20;
   width: 17px;         /* 동그라미 크기 줄임 */
   height: 17px;        /* 동그라미 크기 줄임 */
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.85em;   /* i 글자 크기 줄임 */
+  font-size: 0.75em;   /* i 글자 크기 줄임 */
   font-weight: bold;
   border-radius: 50%;
   background: #fff;

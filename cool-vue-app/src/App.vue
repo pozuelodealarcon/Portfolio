@@ -361,6 +361,7 @@ h1 {
   margin-left: 2px;
   margin-bottom: 1px;
 }
+
 @media (max-width: 480px) {
   .description {
     font-size: 1.05rem;
@@ -504,70 +505,69 @@ h1 {
 
 .subscribe-form input {
   padding: 10px 18px;
-  border: 1px solid #ccd6e0;.subscribe-form input:focus {
+  border: 1px solid #ccd6e0;
   border-radius: 20px;
   font-size: 1rem;
   width: 65%;
   max-width: 280px;
-  font-family: 'Noto Sans KR', sans-serif;.subscribe-form button {
   font-family: 'Noto Sans KR', sans-serif;
-  transition: border-color 0.25s ease;gradient(135deg, #007bff, #0056b3);
+  transition: border-color 0.25s ease;
 }
 
-.subscribe-form input:focus {: 22px;
+.subscribe-form input:focus {
   border-color: #007bff;
-  outline: none;;
+  outline: none;
 }
-ground 0.3s ease;
-.subscribe-form button {-serif;
+
+.subscribe-form button {
+  font-family: 'Noto Sans KR', sans-serif;
   padding: 10px 22px;
   background: linear-gradient(135deg, #007bff, #0056b3);
-  color: white;.subscribe-form button:hover {
-  border: none;135deg, #0056b3, #003e91);
+  color: white;
+  border: none;
   border-radius: 22px;
   cursor: pointer;
-  font-weight: 700;/* 피드백 메시지 */
+  font-weight: 700;
   font-size: 1rem;
-  transition: background 0.3s ease;p: 16px;
-  font-family: 'Noto Sans KR', sans-serif;m;
+  transition: background 0.3s ease;
 }
- 'Noto Sans KR', sans-serif;
+
 .subscribe-form button:hover {
   background: linear-gradient(135deg, #0056b3, #003e91);
-}/* 카피라이트 */
-{
-/* 피드백 메시지 */: 24px;
-.feedback {m;
+}
+
+/* 피드백 메시지 */
+.feedback {
   margin-top: 16px;
   font-size: 0.85rem;
   color: #333;
-  font-family: 'Noto Sans KR', sans-serif;.fade-in {
-} 0;
-translateY(10px);
-/* 카피라이트 */s;
+  font-family: 'Noto Sans KR', sans-serif;
+}
+
+/* 카피라이트 */
 .copyright {
   margin-top: 24px;
-  font-size: 0.75rem;: ease-out;
+  font-size: 0.75rem;
   color: #999;
 }
-@keyframes fadeInUp {
+
 .fade-in {
-  opacity: 0;acity: 1;
-  transform: translateY(10px);translateY(0);
+  opacity: 0;
+  transform: translateY(10px);
   animation-fill-mode: forwards;
   animation-name: fadeInUp;
   animation-duration: 0.6s;
-  animation-timing-function: ease-out;html {
-}ll-behavior: smooth;
+  animation-timing-function: ease-out;
+}
 
 @keyframes fadeInUp {
-  to {</style>
-    opacity: 1;    transform: translateY(0);
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
 html {
   scroll-behavior: smooth;
 }
-
 </style>

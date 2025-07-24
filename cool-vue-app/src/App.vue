@@ -483,6 +483,7 @@ h1 {
   color: #114477;
   letter-spacing: 0.01em;
   font-weight: 500;
+  text-decoration: none;
 }
 
 .change {
@@ -591,14 +592,14 @@ html {
 .info-icon-absolute {
   position: absolute;
   top: 0;
-  right: -20px;
+  right: -40px;
   z-index: 20;
   width: 17px;         /* 동그라미 크기 줄임 */
   height: 17px;        /* 동그라미 크기 줄임 */
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.92em;   /* i 글자 크기 줄임 */
+  font-size: 0.85em;   /* i 글자 크기 줄임 */
   font-weight: bold;
   border-radius: 50%;
   background: #fff;
@@ -608,6 +609,13 @@ html {
   box-shadow: 0 1px 4px rgba(0,0,0,0.07);
   user-select: none;
   transition: background 0.2s;
+}
+.ticker:hover {
+  color: #0056b3;
+  text-decoration: underline;
+  background: rgba(0,0,0,0.02);
+  border-radius: 6px;
+  transition: color 0.15s, background 0.15s;
 }
 .fade-enter-active, .fade-leave-active {
   transition: opacity 0.5s cubic-bezier(.4,0,.2,1), transform 0.5s cubic-bezier(.4,0,.2,1);

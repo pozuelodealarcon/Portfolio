@@ -25,9 +25,9 @@
           >i</span>
         </transition>
         <div v-if="showPrinciple" class="principle-popup" @click.stop>
-          <strong>우리는 투자 판단의 근거를 밸류에이션, 실적 모멘텀, 그리고 가격/수급이라는 세 가지 범주로 나누어 체계적으로 평가합니다.</strong><br>
+          <strong>DeepFund 투자 판단의 근거를 밸류에이션, 실적 모멘텀, 그리고 가격/수급이라는 세 가지 범주로 나누어 체계적으로 평가한 뒤 철저한 백테스팅 과정을 거칩니다.</strong><br><br>
           <b>🏦 밸류에이션이란?</b><br>
-          <span class="principle-bullet">기업의 내재가치는 장기적인 투자 성과의 핵심입니다. 밸류에이션 분석은 현재 주가가 그 기업의 실제 가치에 비해 과대평가되어 있는지, 혹은 저평가되어 있는지를 평가하는 과정입니다.</span>
+          <span class="principle-bullet">기업의 내재가치는 장기적인 투자 성과의 핵심입니다. 밸류에이션 분석은 현재 주가가 그 기업의 실제 가치에 비해 과대평가되어 있는지, 혹은 저평가되어 있는지를 평가하는 과정입니다.</span><br>
           <b>밸류에이션 팩터 (7개):</b><br>
           <span class="principle-bullet">• DCF(할인현금흐름)</span>
           <span class="principle-bullet">• PER(주가수익비율)</span>
@@ -36,7 +36,7 @@
           <span class="principle-bullet">• 업종 PER 비교</span>
           <span class="principle-bullet">• 부채비율(D/E), 유동비율(CR)</span><br>
           <b>📈 실적모멘텀이란?</b><br>
-          <span class="principle-bullet">가치투자의 핵심은 "훌륭한 기업을 적정한 가격에 사는 것"입니다. 실적 모멘텀은 기업이 지속적인 수익 창출 역량과 재무 건전성을 보유하고 있는지를 평가합니다.</span>
+          <span class="principle-bullet">가치투자의 핵심은 "훌륭한 기업을 적정한 가격에 사는 것"입니다. 실적 모멘텀은 기업이 지속적인 수익 창출 역량과 재무 건전성을 보유하고 있는지를 평가합니다.</span><br>
           <b>실적모멘텀 팩터 (6개):</b><br>
           <span class="principle-bullet">• ROE/ROA Z-Score</span>
           <span class="principle-bullet">• 이자보상비율(ICR)</span>
@@ -45,7 +45,7 @@
           <span class="principle-bullet">• 배당 성장률 (10년간)</span>
           <span class="principle-bullet">• 영업이익 성장률 (최근 4개 분기, 4개 년도 대비)</span><br>
           <b>💰 가격/수급이란?</b><br>
-          <span class="principle-bullet">단기적 주가 흐름은 시장의 감정과 수급에 의해 좌우됩니다. 투자자는 이를 통해 기회와 리스크를 선별할 수 있어야 합니다.</span>
+          <span class="principle-bullet">단기적 주가 흐름은 시장의 감정과 수급에 의해 좌우됩니다. 투자자는 이를 통해 기회와 리스크를 선별할 수 있어야 합니다.</span><br>
           <b>가격/수급 팩터 (5개):</b><br>
           <span class="principle-bullet">• 이동평균선 크로스오버 (20/60일선, 50/200일선)</span>
           <span class="principle-bullet">• 단기/중기 수익률 (20/60일)</span>
@@ -586,7 +586,7 @@ html {
   position: relative;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
 }
 .info-icon-absolute {
   position: absolute;

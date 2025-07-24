@@ -14,48 +14,48 @@
 />
       <p class="description">
         <span class="typewriter" v-html="typedText"></span>
-        <span class="info-icon" @click="showPrinciple = !showPrinciple" title="투자원칙 설명">
-          i
-        </span>
-        <div v-if="showPrinciple" class="principle-popup" @click.stop>
-          <strong>투자원칙</strong><br>
-          <b>🏦 밸류에이션이란?</b><br>
-          <span class="principle-bullet">기업의 내재가치와 현재 주가의 괴리를 평가</span><br>
-          <b>밸류에이션 팩터 (7개):</b><br>
-          <span class="principle-bullet">• DCF(할인현금흐름)</span><br>
-          <span class="principle-bullet">• PER(주가수익비율)</span><br>
-          <span class="principle-bullet">• PBR(주가순자산비율)</span><br>
-          <span class="principle-bullet">• FCF수익률</span><br>
-          <span class="principle-bullet">• 업종 PER 비교</span><br>
-          <span class="principle-bullet">• 부채비율(D/E), 유동비율(CR)</span><br>
-          <br>
-          <b>📈 실적모멘텀이란?</b><br>
-          <span class="principle-bullet">기업의 이익 성장성과 재무 건전성, 배당 성장 등 실적 기반의 추세 평가</span><br>
-          <b>실적모멘텀 팩터 (6개):</b><br>
-          <span class="principle-bullet">• ROE/ROA Z-Score</span><br>
-          <span class="principle-bullet">• 이자보상비율(ICR)</span><br>
-          <span class="principle-bullet">• FCF 성장률 (5년간)</span><br>
-          <span class="principle-bullet">• EPS 성장률 (5년간)</span><br>
-          <span class="principle-bullet">• 배당 성장률 (10년간)</span><br>
-          <span class="principle-bullet">• 영업이익 성장률 (최근 4개 분기, 4개 년도 대비)</span><br>
-          <br>
-          <b>💰 가격/수급이란?</b><br>
-          <span class="principle-bullet">주가의 중장기 추세, 거래량, 기술적 신호 등 시장 수급 기반 평가</span><br>
-          <b>가격/수급 팩터 (5개):</b><br>
-          <span class="principle-bullet">• 이동평균선 크로스오버 (20/60일선, 50/200일선)</span><br>
-          <span class="principle-bullet">• 단기/중기 수익률 (20/60일)</span><br>
-          <span class="principle-bullet">• MACD 골든크로스</span><br>
-          <span class="principle-bullet">• RSI 반등 신호</span><br>
-          <span class="principle-bullet">• 거래량 변화</span><br>
-        </div>
       </p>
 
       <!-- 헤더 -->
       <div class="list-header fade-in" :style="{ animationDelay: '3.1s' }">
-        <span class="rank">순위</span>
-        <span class="ticker">종목명</span>
-        <span class="change">주가 (1개월▲)</span>
-      </div>
+  <span class="rank">순위</span>
+  <span class="ticker">종목명</span>
+  <span class="change">주가 (1개월▲)</span>
+  <span class="header-info-icon-wrap">
+    <span class="info-icon" @click="showPrinciple = !showPrinciple" title="투자원칙 설명">i</span>
+    <div v-if="showPrinciple" class="principle-popup" @click.stop>
+      <strong>투자원칙</strong><br>
+      <b>🏦 밸류에이션이란?</b><br>
+      <span class="principle-bullet">"기업의 내재가치와 현재 주가의 괴리를 평가"</span><br>
+      <b>밸류에이션 팩터 (7개):</b><br>
+      <span class="principle-bullet">• DCF(할인현금흐름)</span>
+      <span class="principle-bullet">• PER(주가수익비율)</span>
+      <span class="principle-bullet">• PBR(주가순자산비율)</span>
+      <span class="principle-bullet">• FCF수익률</span>
+      <span class="principle-bullet">• 업종 PER 비교</span>
+      <span class="principle-bullet">• 부채비율(D/E), 유동비율(CR)</span>
+      <br>
+      <b>📈 실적모멘텀이란?</b><br>
+      <span class="principle-bullet">"기업의 이익 성장성과 재무 건전성, 배당 성장 등 실적 기반의 추세 평가"</span><br>
+      <b>실적모멘텀 팩터 (6개):</b><br>
+      <span class="principle-bullet">• ROE/ROA Z-Score</span>
+      <span class="principle-bullet">• 이자보상비율(ICR)</span>
+      <span class="principle-bullet">• FCF 성장률 (5년간)</span>
+      <span class="principle-bullet">• EPS 성장률 (5년간)</span>
+      <span class="principle-bullet">• 배당 성장률 (10년간)</span>
+      <span class="principle-bullet">• 영업이익 성장률 (최근 4개 분기, 4개 년도 대비)</span>
+      <br>
+      <b>💰 가격/수급이란?</b><br>
+      <span class="principle-bullet">"주가의 중단기 추세, 거래량, 기술적 신호 등 시장 수급 기반 평가"</span><br>
+      <b>가격/수급 팩터 (5개):</b><br>
+      <span class="principle-bullet">• 이동평균선 크로스오버 (20/60일선, 50/200일선)</span>
+      <span class="principle-bullet">• 단기/중기 수익률 (20/60일)</span>
+      <span class="principle-bullet">• MACD 골든크로스</span>
+      <span class="principle-bullet">• RSI 반등 신호</span>
+      <span class="principle-bullet">• 거래량 변화</span>
+    </div>
+  </span>
+</div>
       
       <!-- 종목 리스트 -->
       <ul class="ticker-list">
@@ -423,6 +423,7 @@ h1 {
   padding-bottom: 10px;
   margin-bottom: 12px;
   color: #3b3b3b;
+  position: relative;
 }
 
 .list-header span {
@@ -433,6 +434,21 @@ h1 {
   font-size: 0.9rem;
   color: #3b3b3b;
 
+}
+
+.header-info-icon-wrap {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  margin-left: 8px;
+}
+
+.header-info-icon-wrap .principle-popup {
+  top: 28px;
+  right: 0;
+  left: auto;
+  min-width: 220px;
+  z-index: 20;
 }
 
 /* 종목 리스트 */

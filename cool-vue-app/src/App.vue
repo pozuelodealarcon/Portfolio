@@ -592,7 +592,7 @@ html {
 .info-icon-absolute {
   position: absolute;
   top: 0;
-  right: -40px;
+  right: 40px;
   z-index: 20;
   width: 17px;         /* 동그라미 크기 줄임 */
   height: 17px;        /* 동그라미 크기 줄임 */

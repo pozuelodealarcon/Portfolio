@@ -21,6 +21,7 @@ from email.message import EmailMessage
 from email.headerregistry import Address
 import os
 import ta # 기술적 지표 계산 라이브러리
+import re
 import matplotlib.pyplot as plt
 from scipy.optimize import minimize
 from scipy.stats import norm
@@ -1153,16 +1154,72 @@ def analyze_moat(company_name: str) -> str:
     prompt = f"""
 당신은 기업 분석에 능숙한 전문 주식 애널리스트입니다. 반드시 한국어로 답변하십시오.
 
-{date_kr_ymd} 기준 "{company_name}"의 정보를 검색한 뒤 그 내용을 바탕으로 해당 기업의 **중장기 핵심 경쟁 우위(Moat)** 를 2~3줄 이내로 간결하게 요약해 주십시오.
+{date_kr_ymd} 기준 "{company_name}"의 정보를 검색한 뒤 그 내용을 바탕으로 해당 기업의 **중장기 핵심 경쟁 우위(Moat)** 를 분석해 주세요.
 
-- 핵심 경쟁 우위 (예: 독점 기술, 브랜드 파워, 시장 점유율, 특허, 진입 장벽 등)
-- 향후에도 경쟁 우위가 유지될 수 있는 이유
-- 투자자로서 주목할 가치가 있는 요인
+### 출력 형식은 아래와 같이 JSON 객체로 제공해 주세요:
+```json
+{{
+  "moat_analysis": "여기에 간결한 경쟁 우위 요약 문장을 2~3줄 이내로 작성하세요.",
+  "moat_score": 숫자 (0에서 5 사이의 정수값)
+}}
 
-간결하고 전문적인 문장으로 정리해 주세요.
+moat_score 기준 (정수로 판단):
+5: 매우 강력한 경쟁 우위 (지속적인 독점력 또는 강력한 진입 장벽)
+
+4: 뚜렷한 경쟁 우위 (높은 브랜드 가치, 규모의 경제 등)
+
+3: 일정 수준의 경쟁력 있으나 완전한 우위는 아님
+
+2: 경쟁력은 있으나 쉽게 대체 가능
+
+1: 경쟁 우위가 약하며 단기적일 가능성
+
+0: 경쟁 우위 없음 또는 Commoditized 산업
+
+모호하게 답변하지 말고 반드시 위의 JSON 형식과 기준을 따르세요.
 """
-
     return prompt.strip()
+
+
+def parse_moat_response(response_text: str) -> dict:
+    """
+    LLM 응답에서 moat_analysis와 moat_score를 안전하게 추출합니다.
+    JSON이 혼합되어 있거나 형식이 불완전할 경우에도 처리합니다.
+    """
+    # 기본값
+    result = {
+        "moat_analysis": response_text.strip(),
+        "moat_score": None
+    }
+
+    # JSON 형식 추출 시도
+    try:
+        # 중괄호로 된 JSON 블럭 추출
+        match = re.search(r'\{.*?\}', response_text, re.DOTALL)
+        if match:
+            json_block = match.group(0)
+            parsed = json.loads(json_block)
+            result["moat_analysis"] = parsed.get("moat_analysis", result["moat_analysis"]).strip()
+            result["moat_score"] = int(parsed.get("moat_score")) if parsed.get("moat_score") is not None else None
+            return result
+    except (json.JSONDecodeError, ValueError, TypeError):
+        pass  # continue to fallback logic
+
+    # fallback 점수 추정 로직 (텍스트 기반 추론)
+    lower_text = response_text.lower()
+    if "매우 강력" in lower_text or "독점" in lower_text or "지속적" in lower_text:
+        result["moat_score"] = 5
+    elif "뚜렷한 경쟁 우위" in lower_text or "브랜드" in lower_text or "진입 장벽" in lower_text:
+        result["moat_score"] = 4
+    elif "일정 수준" in lower_text or "경쟁력 있으나" in lower_text:
+        result["moat_score"] = 3
+    elif "쉽게 대체" in lower_text or "약함" in lower_text:
+        result["moat_score"] = 1
+    elif "없음" in lower_text or "commoditized" in lower_text:
+        result["moat_score"] = 0
+
+    return result
+
 
 def query_gemini(prompt: str) -> str:
     response = client.models.generate_content(
@@ -1489,10 +1546,13 @@ def generate_moat_summary(df: pd.DataFrame, moat_limit: int) -> pd.DataFrame:
             # 프롬프트 생성 및 Gemini 질의
             prompt = analyze_moat(ticker)
             moat_text = query_gemini(prompt)
+            parsed_response = parse_moat_response(moat_text)
+            
 
             moat_data.append({
                 '기업명': ticker,
-                '경쟁 우위 분석': moat_text
+                '경쟁 우위 분석': parsed_response["moat_analysis"],
+                'Moat 점수': parsed_response["moat_score"],
             })
 
             # 요청 사이 딜레이 (선택적: Gemini 또는 API 제한 회피용)
@@ -1501,12 +1561,51 @@ def generate_moat_summary(df: pd.DataFrame, moat_limit: int) -> pd.DataFrame:
         except Exception as e:
             moat_data.append({
                 '기업명': f"❌ 오류: {str(e)}",
-                '경쟁 우위 분석': "분석 실패"
+                '경쟁 우위 분석': "분석 실패",
+                'Moat 점수': "분석 실패",
             })
 
     return pd.DataFrame(moat_data)
 
 moat_df = generate_moat_summary(df, moat_limit)
+
+#################################################################
+# 1. ticker / 기업명 기준으로 moat_df를 df에 merge
+df = df.merge(
+    moat_df[['기업명', 'Moat 점수']],
+    left_on='종목',    # final_df / df에서 기업명을 나타내는 컬럼
+    right_on='기업명', # moat_df에서 기업명 컬럼
+    how='left'
+)
+
+# 2. Moat 점수 결측값은 0으로 채움
+df['Moat 점수'] = df['Moat 점수'].fillna(0).astype(float)
+
+
+df['moat_score_norm'] = normalize_series(df['Moat 점수'])
+
+
+# 4. 기존 가중치 설정 (예: Buffett 스타일에 Moat 포함)
+valuation_weight = 0.5
+momentum_weight = 0.2
+price_flow_weight = 0.1
+moat_weight = 0.2  # Moat 가중치 (조절 가능)
+
+# 5. 새 total_score 계산
+df['총점수'] = (
+    df['밸류에이션'] * valuation_weight +
+    df['실적모멘텀'] * momentum_weight +
+    df['가격/수급'] * price_flow_weight +
+    df['moat_score_norm'] * moat_weight
+)
+
+
+score_cols = ['밸류에이션', '실적모멘텀', '가격/수급', 'moat_score_norm', '총점수']
+df[score_cols] = df[score_cols].round()
+
+# 7. 필요하면 정렬
+df = df.sort_values(by='총점수', ascending=False).reset_index(drop=True)
+
 #################################################################
 def get_news_for_tickers(tickers, api_token):
     all_news = []

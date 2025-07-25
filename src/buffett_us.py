@@ -63,17 +63,17 @@ marketaux_api = os.environ['MARKETAUX_API']
 NUM_THREADS = 2 #multithreading 
 
 country = 'US'
-limit=10 # max 250 requests/day #
+limit=200 # max 250 requests/day #
 sp500 = True
 
 # top X tickers to optimize
-opt = 2 
+opt = 10 
 
 #for news
-news_lookup = 2 #
+news_lookup = 100 #
 
 #for moat
-moat_limit = 2
+moat_limit = 50
 #########################################################
 
 
@@ -1605,6 +1605,7 @@ df[score_cols] = df[score_cols].round()
 
 # 7. 필요하면 정렬
 df = df.sort_values(by='총점수', ascending=False).reset_index(drop=True)
+df = df.drop(columns=['기업명', 'moat_score_norm']) 
 
 #################################################################
 def get_news_for_tickers(tickers, api_token):

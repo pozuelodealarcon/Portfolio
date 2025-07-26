@@ -59,7 +59,7 @@
       <div class="list-header fade-in" :style="{ animationDelay: '3.1s' }">
         <span class="rank">순위</span>
         <span class="ticker">종목명</span>
-        <span class="change">주가 (1개월▲)</span>
+        <span class="change">선정 후 주가 (1개월▲)</span>
       </div>
       
       <!-- 종목 리스트 -->

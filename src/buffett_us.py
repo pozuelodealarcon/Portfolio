@@ -1522,10 +1522,10 @@ df['moat_score_norm'] = normalize_series(df['Moat 점수'])
 
 
 # 4. 기존 가중치 설정 (예: Buffett 스타일에 Moat 포함)
-valuation_weight = 0.3
+valuation_weight = 0.45
 momentum_weight = 0.25
-price_flow_weight = 0.15
-moat_weight = 0.3  # Moat 가중치 (조절 가능)
+price_flow_weight = 0.10
+moat_weight = 0.20  # Moat 가중치 (조절 가능)
 
 # 5. 새 total_score 계산
 df['총점수'] = (

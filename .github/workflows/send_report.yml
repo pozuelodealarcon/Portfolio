@@ -48,41 +48,5 @@ jobs:
 
           git pull --rebase origin main || (git rebase --abort && echo "Rebase conflict, aborting." && exit 0)
           git push origin main || echo "Push failed"
-  update-cache:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'schedule' && startsWith(github.event.schedule, '0 23 * * 6'))
-
-    steps:
-      - name: Checkout repo with write access
-        uses: actions/checkout@v3
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 0  
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.12.1'
-
-      - name: Install dependencies
-        run: |
-          pip install -r requirements2.txt
-
-      - name: Run cache update script
-        env:
-          FMP_API_KEY: ${{ secrets.FMP_API_KEY }}
-        run: python src/yf_cache_downloader.py
-
-      - name: Commit and push updated cache
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          # 1. 변경사항 먼저 커밋
-          git add yf_cache_multi.csv
-          git commit -m "Update cache file at $(date +'%Y-%m-%d %H:%M:%S')" || echo "No changes to commit"
-
-          git pull --rebase origin main || (git rebase --abort && echo "Rebase conflict, aborting." && exit 0)
-          git push origin main || echo "Push failed"
-
+  
 

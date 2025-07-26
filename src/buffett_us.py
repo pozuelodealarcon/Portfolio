@@ -726,22 +726,31 @@ def keep_ticker(t):
     return t not in prohibited
 tickers = list(filter(keep_ticker, raw_tickers))
 ################################################################################
-from yf_cache_downloader import get_tickers_by_country, update_cache
+from yf_cache_downloader import get_tickers_by_country_cache, update_cache
 
 # 예) 티커 리스트 받아오기 (limit, api_key는 yf_cache_downloader.py 내부 또는 외부에서 설정 가능)
-tickers = get_tickers_by_country('US', limit=300, apikey= fmp_key)
+tickers_for_cache = get_tickers_by_country_cache('US', limit=300, apikey= fmp_key)
 
 # 필요 없는 티커 제외하기 (옵션)
 tickers_to_remove = {'NVL', 'SOJE', 'RY-PT', 'CEO', 'DUKB', 'ATVI', 'SQ', 'AED', 'BACRP', 'BDXA', 'VZA', 'AMOV', 'ANTM', 'SOJC', 'ACH', 'TBC', 'PXD', 'TBB', 'SOJD', 'AFA', 'AEH'}
 
-tickers = [t for t in tickers if t not in tickers_to_remove]
+tickers_for_cache = [t for t in tickers_for_cache if t not in tickers_to_remove]
 
 # 캐시 업데이트 (누락된 데이터만 받아서 yf_cache_multi.csv 파일 갱신)
-cache = update_cache(tickers)
+cache = update_cache(tickers_for_cache)
 
 # 이제 cache에는 최신으로 채워진 데이터가 들어있음
 print(cache.head())
 print("캐시 데이터 범위:", cache.index.min(), "~", cache.index.max())
+
+if isinstance(cache.columns, pd.MultiIndex):
+    successful_tickers = set([col[0] for col in cache.columns if col[1] == 'Close'])
+else:
+    successful_tickers = set(cache.columns)
+
+# ✅ 최종 티커 리스트
+tickers = [t for t in tickers if t in successful_tickers]
+
 ################################################################################
 
 # Assume cache is already loaded and up-to-date (from yf_cache_downloader)
@@ -779,7 +788,8 @@ print("Date range in df_close:", df_close.index.min(), "to", df_close.index.max(
 print("Number of tickers with Close data:", len(df_close.columns))
 print(df_close.head())
 ###################################################################################
-
+# 예: cache에서 Close 가격만 추출한 후
+df_momentum = df_close.copy()
 
 def check_momentum_conditions(ticker: str) -> dict:
     result = {
@@ -1448,6 +1458,9 @@ df = df.drop(columns=[col for col in df.columns if col not in export_columns_kr]
 
 # 3️⃣ 컬럼 순서 맞추기 (혹시 순서 틀어졌을 수도 있으니)
 df = df[export_columns_kr]
+# 티커 기준으로 중복 제거 (첫 번째 항목만 남김)
+df = df.drop_duplicates(subset='티커', keep='first')
+
 
 # 그리고 그대로 저장
 df.to_excel("deep_fund.xlsx", index=False)

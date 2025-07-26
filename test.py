@@ -1,45 +1,21 @@
 import pandas as pd
 
-def test_close_price_extraction(cache_file="yf_cache_multi.csv", days=365):
-    print(f"Loading cache file: {cache_file}")
-    try:
-        cache = pd.read_csv(cache_file, header=[0,1], index_col=0, parse_dates=True)
-    except Exception as e:
-        print(f"❌ Failed to load cache file: {e}")
-        return
+# 1. 캐시 불러오기 (파일 경로 맞춰 주세요)
+cache = pd.read_csv('yf_cache_multi.csv', header=[0, 1], index_col=0, parse_dates=True)
 
-    print("Cache loaded. Columns:", cache.columns)
-    print("Cache index range:", cache.index.min(), "to", cache.index.max())
+# 2. 예시 ticker 리스트
+tickers = ['GOOG', 'GOOGL', 'AAPL', 'MSFT', 'FAKE1', 'FAKE2']  # FAKE1, FAKE2는 실패한 티커라고 가정
 
-    end_date = pd.Timestamp.today().normalize()
-    start_date = end_date - pd.Timedelta(days=days)
+# 3. 성공적으로 다운로드된 티커만 추출
+if isinstance(cache.columns, pd.MultiIndex):
+    successful_tickers = set([col[0] for col in cache.columns if col[1] == 'Close'])
+else:
+    successful_tickers = set(cache.columns)
 
-    # 날짜 범위를 cache index 범위 내로 맞춤
-    start_date = max(start_date, cache.index.min())
-    end_date = min(end_date, cache.index.max())
+# 4. 필터링된 티커 리스트
+filtered_tickers = [t for t in tickers if t in successful_tickers]
 
-    print(f"Slicing cache from {start_date.date()} to {end_date.date()}")
-    cache_slice = cache.loc[start_date:end_date]
-
-    if isinstance(cache_slice.columns, pd.MultiIndex):
-        close_cols = [col for col in cache_slice.columns if col[1] == 'Close']
-        df_close = cache_slice[close_cols].copy()
-        df_close.columns = [col[0] for col in df_close.columns]
-    else:
-        if 'Close' in cache_slice.columns:
-            df_close = cache_slice[['Close']].copy()
-            df_close.columns = ['Close']
-        else:
-            print("❌ 'Close' column not found in cache.")
-            return
-
-    # NaN 컬럼 제거
-    df_close.dropna(axis=1, how='all', inplace=True)
-
-    print(f"Close prices DataFrame shape: {df_close.shape}")
-    print("Columns (tickers):", df_close.columns.tolist())
-    print("Sample data:")
-    print(df_close.head())
-
-if __name__ == "__main__":
-    test_close_price_extraction()
+# 5. 결과 출력
+print("✅ Cache에 존재하는 Close 데이터 있는 티커들:", successful_tickers)
+print("🎯 원래 티커 리스트:", tickers)
+print("🎯 필터링된 최종 티커 리스트:", filtered_tickers)

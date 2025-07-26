@@ -9,7 +9,7 @@ limit = 300
 api_key = os.environ['FMP_API_KEY']
 
 #hi
-def get_tickers_by_country(country:str, limit: int, apikey: str):
+def get_tickers_by_country_cache(country:str, limit: int, apikey: str):
     url = 'https://financialmodelingprep.com/api/v3/stock-screener'
     headers = {
         'User-Agent': 'Mozilla/5.0',
@@ -134,7 +134,7 @@ def remove_empty_columns(csv_file):
 
 
 if __name__ == "__main__":
-    tickers = get_tickers_by_country('US', limit, api_key)  # Example tickers
+    tickers = get_tickers_by_country_cache('US', limit, api_key)  # Example tickers
     tickers_to_remove = ['ANTM', 'ACH', 'RY-PT', 'VZA','AED', 'AEH', 'BDXA', 'AMOV', 'PXD', 'ATVI', 'SQ', 'CEO']
     tickers = [t for t in tickers if t not in tickers_to_remove]
     print(len(tickers))

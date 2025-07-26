@@ -117,6 +117,7 @@ def remove_empty_columns(csv_file):
         return
 
     df = pd.read_csv(csv_file, header=[0, 1], index_col=0, parse_dates=True)
+    
 
     # Drop columns where all values are NaN
     df.dropna(axis=1, how='all', inplace=True)

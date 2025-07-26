@@ -799,7 +799,7 @@ else:
 end_date = pd.Timestamp((dt.datetime.today() - dt.timedelta(days = weekend)).date())
 cache = cache.loc[start_date:end_date]
 def append_missing_to_cache_up_to_today(tickers, cache_file="yf_cache_multi.csv"):
-    today = pd.Timestamp.today().normalize()
+    today = pd.Timestamp.today().normalize() - dt.timedelta(days=weekend)
 
     if os.path.exists(cache_file):
         cache = pd.read_csv(cache_file, header=[0, 1], index_col=0, parse_dates=True)

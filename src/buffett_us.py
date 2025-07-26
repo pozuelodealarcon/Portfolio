@@ -771,13 +771,23 @@ def ensure_cache_1y_for_tickers(tickers, cache_file="yf_cache_multi.csv"):
                 threads=False  # 가끔 병렬이 문제될 수 있어 옵션 조절
             )
             # level=1에 'Close'가 있는 경우에만 접근
-            if isinstance(df_new.columns, pd.MultiIndex) and 'Close' in df_new.columns.get_level_values(1):
-                if df_new.xs('Close', level=1, axis=1).isna().all().all():
-                    print(f"❌ All 'Close' values are NaN or empty for {ticker} after download.")
+            if isinstance(df_new.columns, pd.MultiIndex):
+                if 'Close' in df_new.columns.get_level_values(1):
+                    close_df = df_new.xs('Close', level=1, axis=1)
+                    if close_df.isna().all().all():
+                        print(f"❌ All 'Close' values are NaN or empty for {ticker} after download.")
+                        continue
+                else:
+                    print(f"❌ No 'Close' column in MultiIndex for {ticker}")
                     continue
             else:
-                print(f"❌ No 'Close' column found in MultiIndex for {ticker}")
-                continue
+                if 'Close' not in df_new.columns:
+                    print(f"❌ 'Close' column not found in single-level columns for {ticker}")
+                    continue
+                if df_new['Close'].isna().all():
+                    print(f"❌ All 'Close' values are NaN or empty for {ticker}")
+                    continue
+
 
             # MultiIndex 컬럼으로 변경
             if not isinstance(df_new.columns, pd.MultiIndex):

@@ -5,8 +5,8 @@ from datetime import datetime, timedelta
 import requests
 
 CACHE_FILE = "yf_cache_multi.csv"
-limit = 200
-api_key = os.environ['FMP_API_KEY']
+limit = 300
+api_key = '60ZVxqQtumzWp4LVs4PmJOjiNSnbGThu'
 
 #hi
 def get_tickers_by_country(country:str, limit: int, apikey: str):
@@ -133,4 +133,4 @@ if __name__ == "__main__":
     tickers = [t for t in tickers if t not in tickers_to_remove]
     print(len(tickers))
     update_cache(tickers)
-    remove_empty_columns(CACHE_FILE)
+    # remove_empty_columns(CACHE_FILE)

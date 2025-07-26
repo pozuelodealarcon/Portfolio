@@ -3,7 +3,7 @@
 ### A comprehensive full-stack solution integrating Warren Buffett’s timeless investment principles with cutting-edge quantitative techniques and AI-driven market sentiment analysis — delivering optimized portfolios for mid- to long-term value investing in U.S. equities.
 
 
-### 💌 [Join Our Free Stock Insights Newsletter](https://portfolio-production-54cf.up.railway.app/)
+### 💌 [DeepFund: Join Our Free Stock Insights Newsletter](https://portfolio-production-54cf.up.railway.app/)
 
 > Get Buffett-style stock picks, AI-driven market news, and optimized portfolios—delivered automatically.
 
@@ -107,7 +107,7 @@ recipients.json       # Auto-updated subscriber email list
 
 ### ✅ GitHub Actions
 
-* Configured in `.github/workflows/buffett.yml` to run **every Monday, Wednesday, and Friday at 08:00 KST**
+* Configured in `.github/workflows/buffett.yml` to run **every Mondays and Fridays at 23:00 UTC**
 * Auto-downloads prices, computes scores, optimizes weights, and sends results via email
 
 ### ✅ Railway Deployment

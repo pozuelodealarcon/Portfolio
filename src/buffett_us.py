@@ -73,7 +73,7 @@ opt = 20
 news_lookup = 100
 
 #for moat
-moat_limit = 100
+moat_limit = 50
 #########################################################
 
 
@@ -210,47 +210,47 @@ def quant_style_score(
     valuation_score = 0
     earnings_momentum_score = 0
 
-    # Valuation
+    # === Valuation (30점) ===
     if safe_check(price_vs_fair_upper) and price_vs_fair_upper > 0:
-        valuation_score += min(price_vs_fair_upper * 3, 3)
+        valuation_score += min(price_vs_fair_upper * 5, 1.5)  # DCF 5%
     if safe_check(price_vs_fair_lower) and price_vs_fair_lower > 0:
-        valuation_score += min(price_vs_fair_lower * 4, 3)
+        valuation_score += min(price_vs_fair_lower * 6, 1.5)  # 보수적 DCF
     if safe_check(fcf_vs_treasury_spread):
         if fcf_vs_treasury_spread > 0:
-            valuation_score += min(fcf_vs_treasury_spread * 10, 2)
+            valuation_score += min(fcf_vs_treasury_spread * 10, 1.5)  # FCF spread
         else:
-            valuation_score -= 1
+            valuation_score -= 0.5
     if safe_check(fcf_yield_rank):
-        valuation_score += fcf_yield_rank * 2
+        valuation_score += fcf_yield_rank * 1.5  # FCF 수익률 5%
     if safe_check(per_rank):
-        valuation_score += (1 - per_rank) * 2
+        valuation_score += (1 - per_rank) * 3.0  # PER/EY 10%
     if safe_check(per) and safe_check(industry_per):
         if per < industry_per * 0.7:
             valuation_score += 0.5
         elif per > industry_per * 1.3:
             valuation_score -= 0.5
     if safe_check(pbr_rank):
-        valuation_score += (1 - pbr_rank) * 1.5
+        valuation_score += (1 - pbr_rank) * 1.5  # PBR 5%
     if safe_check(de):
         if 0 < de <= 0.5:
-            valuation_score += 1
+            valuation_score += 0.75
         elif de > 1.0:
-            valuation_score -= 1
+            valuation_score -= 0.5
     if safe_check(cr):
         if 1.5 <= cr <= 2.5:
-            valuation_score += 1
+            valuation_score += 0.75
         elif cr < 1.0:
             valuation_score -= 0.5
 
-    # Earnings / Momentum
+    # === Fundamental Momentum (20점) ===
     if safe_check(roe_z):
-        earnings_momentum_score += min(max(roe_z, -2), 2)
+        earnings_momentum_score += min(max(roe_z, -2), 2) * 1.25  # ROE 개선
     if safe_check(roa_z):
-        earnings_momentum_score += min(max(roa_z, -2), 2)
-    if not safe_check(roe_z) and safe_check(industry_roe) and safe_check(roe):
+        earnings_momentum_score += min(max(roa_z, -2), 2) * 1.25  # ROA 개선
+    if not safe_check(roe_z) and safe_check(roe) and safe_check(industry_roe):
         if roe > industry_roe:
             earnings_momentum_score += 0.5
-    if not safe_check(roa_z) and safe_check(industry_roa) and safe_check(roa):
+    if not safe_check(roa_z) and safe_check(roa) and safe_check(industry_roa):
         if roa > industry_roa:
             earnings_momentum_score += 0.5
     if safe_check(icr):
@@ -261,49 +261,44 @@ def quant_style_score(
         elif icr < 1:
             earnings_momentum_score -= 0.5
     if safe_check(fcf_cagr_rank):
-        earnings_momentum_score += fcf_cagr_rank * 2
+        earnings_momentum_score += fcf_cagr_rank * 1.5
     if safe_check(eps_cagr_rank):
-        earnings_momentum_score += eps_cagr_rank * 2
+        earnings_momentum_score += eps_cagr_rank * 1.5
     if safe_check(div_cagr_rank):
-        earnings_momentum_score += div_cagr_rank * 1.5
+        earnings_momentum_score += div_cagr_rank * 1.0
     if safe_check(eps):
         if eps >= 0.3:
-            earnings_momentum_score += 2
+            earnings_momentum_score += 1.5
         elif eps >= 0.1:
-            earnings_momentum_score += 1
+            earnings_momentum_score += 0.75
         elif eps < 0:
             earnings_momentum_score -= 1
     if safe_check(div_yield):
         if div_yield >= 0.1:
-            earnings_momentum_score += 1.0
-        elif div_yield >= 0.08:
             earnings_momentum_score += 0.75
-        elif div_yield >= 0.06:
+        elif div_yield >= 0.08:
             earnings_momentum_score += 0.5
+        elif div_yield >= 0.06:
+            earnings_momentum_score += 0.25
         elif div_yield < 0.02:
             earnings_momentum_score -= 0.5
     if safe_check(opinc_yoy):
-    # YoY 성장률 크기에 따라 가중치 부여 (예: 0~2 범위)
         if opinc_yoy > 0.2:
-            earnings_momentum_score += 2
+            earnings_momentum_score += 1.5
         elif opinc_yoy > 0.05:
             earnings_momentum_score += 1
-        else:
-            earnings_momentum_score += 0
-
-        # 마이너스면 페널티
-        if opinc_yoy < 0:
+        elif opinc_yoy < 0:
             earnings_momentum_score -= 1
-
     if safe_check(opinc_qoq):
-        # QoQ 성장률도 강도에 따라 가중치 차등 부여
         if opinc_qoq > 0.1:
             earnings_momentum_score += 1
         elif opinc_qoq > 0:
             earnings_momentum_score += 0.5
         elif opinc_qoq < 0:
             earnings_momentum_score -= 0.5
+
     return round(valuation_score, 2), round(earnings_momentum_score, 2)
+
 
 def get_fcf_yield_and_cagr(ticker, yf_ticker, api_key="YOUR_API_KEY"):
     def try_fmp(ticker, api_key):
@@ -1217,22 +1212,22 @@ def analyze_moat(company_name: str) -> str:
 ```json
 {{
   "moat_analysis": "여기에 간결한 경쟁 우위 요약 문장을 2~3줄 이내로 작성하세요.",
-  "moat_score": 숫자 (0에서 5 사이의 정수값)
+  "moat_score": 숫자 (0에서 10 사이의 정수값)
 }}
 
-moat_score 기준:
+Moat Score 기준 (0~10):
 
-5: 독점적 기술, 특허, 진입 장벽이 극도로 높음
-
-4: 높은 브랜드 가치 또는 규모의 경제, 진입 장벽이 뚜렷함
-
-3: 일정 경쟁력 있으나 쉽게 대체 가능성 있음
-
-2: 경쟁 우위가 약하며 단기적일 가능성 있음
-
-1: 매우 약하거나 불확실한 경쟁력
-
-0: 경쟁 우위가 없음 (완전한 경쟁 시장)
+0: 완전한 Commodity. 원자재, 일반 제조업, 소매 등. 가격 경쟁 외 요소 없음.
+1: 사실상 경쟁 우위 없음. 누구나 진입 가능, 브랜드·기술·특허 없음.
+2: 미미한 경쟁 우위. 단기 유행 또는 운에 기반한 실적, 구조적 우위 없음.
+3: 경쟁 우위 낮음. 차별화 거의 없음, 경쟁 심화된 시장에서 방어력 낮음.
+4: 부분적 경쟁력. 일시적 수익성 우위, 브랜드·기술력 부족, 대체재 존재.
+5: 평균 이상의 경쟁력. 업계 평균 이상이나 차별화는 미약하거나 유지 불확실.
+6: 상당한 경쟁 우위. 구조적 우위 있으나 대체 가능성 존재, 일부 취약.
+7: 강한 경쟁력 보유. 기술력, 규모, 유통망 기반의 우위 있으나 독점은 아님.
+8: 뚜렷하고 장기적인 경쟁 우위. 브랜드, 규모의 경제, 높은 전환 비용 존재.
+9: 지속적 독점에 가까운 우위. 강력한 진입 장벽과 네트워크 효과, 규제 보호.
+10: 절대적 독점 우위. 특허·기술 기반 독점, 대체 불가능, 진입 불가 수준.
 
 ※ 경쟁 우위가 약하거나 불분명하면 낮은 점수를 꼭 주고, 과장하지 마세요.
 
@@ -1267,16 +1262,30 @@ def parse_moat_response(response_text: str) -> dict:
 
     # fallback 점수 추정 로직 (텍스트 기반 추론)
     lower_text = response_text.lower()
-    if "매우 강력" in lower_text or "독점" in lower_text or "지속적" in lower_text:
+    if any(kw in lower_text for kw in ["절대적 독점", "완전한 독점", "대체 불가", "진입 불가", "특허 보호"]):
+        result["moat_score"] = 10
+    elif any(kw in lower_text for kw in ["지속적 독점", "지속적인 독점", "강력한 진입 장벽", "규제 보호"]):
+        result["moat_score"] = 9
+    elif any(kw in lower_text for kw in ["뚜렷한 경쟁 우위", "브랜드 파워", "규모의 경제", "전환 비용"]):
+        result["moat_score"] = 8
+    elif any(kw in lower_text for kw in ["강한 경쟁력", "기술력", "유통망", "경쟁사 대비 우위"]):
+        result["moat_score"] = 7
+    elif any(kw in lower_text for kw in ["상당한 경쟁 우위", "우위 요소 존재", "대체 가능성"]):
+        result["moat_score"] = 6
+    elif any(kw in lower_text for kw in ["평균 이상의 경쟁력", "차별화 미약", "유지 불확실"]):
         result["moat_score"] = 5
-    elif "뚜렷한 경쟁 우위" in lower_text or "브랜드" in lower_text or "진입 장벽" in lower_text:
+    elif any(kw in lower_text for kw in ["부분적 경쟁력", "일시적 수익성", "대체재 존재"]):
         result["moat_score"] = 4
-    elif "일정 수준" in lower_text or "경쟁력 있으나" in lower_text:
+    elif any(kw in lower_text for kw in ["경쟁 우위 낮음", "차별화 거의 없음", "방어력 낮음"]):
         result["moat_score"] = 3
-    elif "쉽게 대체" in lower_text or "약함" in lower_text:
+    elif any(kw in lower_text for kw in ["미미한 경쟁 우위", "단기 유행", "구조적 우위 없음"]):
+        result["moat_score"] = 2
+    elif any(kw in lower_text for kw in ["경쟁 우위 없음", "진입 장벽 없음", "브랜드 없음", "기술력 없음", "commoditized"]):
         result["moat_score"] = 1
-    elif "없음" in lower_text or "commoditized" in lower_text:
+    elif any(kw in lower_text for kw in ["commodity", "완전한 commodity", "완전 경쟁 시장"]):
         result["moat_score"] = 0
+    else:
+        result["moat_score"] = -1  # 판단 불가 (예외 처리용)
 
     return result
 
@@ -1646,10 +1655,10 @@ df['moat_score_norm'] = normalize_series(df['Moat 점수'])
 
 
 # 4. 기존 가중치 설정 (예: Buffett 스타일에 Moat 포함)
-valuation_weight = 0.5
-momentum_weight = 0.2
-price_flow_weight = 0.1
-moat_weight = 0.2  # Moat 가중치 (조절 가능)
+valuation_weight = 0.3
+momentum_weight = 0.25
+price_flow_weight = 0.15
+moat_weight = 0.3  # Moat 가중치 (조절 가능)
 
 # 5. 새 total_score 계산
 df['총점수'] = (
@@ -2343,7 +2352,7 @@ html_content = f"""
     본 자료는 정보 제공 목적으로만 사용되며, 투자 손실에 대한 법적 책임은 지지 않습니다.
     </p>
 
-    <p><em>해당 메일은 매주 월,수,금 오전 8시에 자동 발송됩니다.</em></p>
+    <p><em>해당 메일은 매주 월,금 오전 8시에 자동 발송됩니다.</em></p>
   </body>
 </html>
 """

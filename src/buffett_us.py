@@ -770,9 +770,13 @@ def ensure_cache_1y_for_tickers(tickers, cache_file="yf_cache_multi.csv"):
                 progress=False,
                 threads=False  # 가끔 병렬이 문제될 수 있어 옵션 조절
             )
-            if df_new.empty or df_new['Close'].isna().all():
+            if df_new.empty or (
+                isinstance(df_new.columns, pd.MultiIndex) and
+                df_new.xs('Close', level=1, axis=1).isna().all().all()
+            ):
                 print(f"❌ All 'Close' values are NaN or empty for {ticker} after download.")
                 continue
+
 
             # MultiIndex 컬럼으로 변경
             if not isinstance(df_new.columns, pd.MultiIndex):
@@ -844,9 +848,13 @@ def append_missing_to_cache_up_to_today(tickers, cache_file="yf_cache_multi.csv"
             threads=False
         )
 
-        if df_new.empty or df_new['Close'].isna().all():
+        if df_new.empty or (
+            isinstance(df_new.columns, pd.MultiIndex) and
+            df_new.xs('Close', level=1, axis=1).isna().all().all()
+        ):
             print(f"❌ All 'Close' values are NaN or empty for {ticker} after download.")
             continue
+
 
         if not isinstance(df_new.columns, pd.MultiIndex):
             df_new.columns = pd.MultiIndex.from_product([[ticker], df_new.columns])

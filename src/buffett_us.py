@@ -2135,7 +2135,7 @@ answer = main(news_df)
 #########################################################################################################
 
 msg = EmailMessage()
-msg['Subject'] = f'[{date_kr}] 美증시 퀀트 분석 리포트'
+msg['Subject'] = f'DeepFund Weekly Insights | {date_kr}'
 msg['From'] = Address(display_name='Hyungsuk Choi', addr_spec=EMAIL)
 msg['To'] = ''  # or '' or a single address to satisfy the 'To' header requirement
 
@@ -2219,7 +2219,7 @@ html_content = f"""
     본 자료는 정보 제공 목적으로만 사용되며, 투자 손실에 대한 법적 책임은 지지 않습니다.
     </p>
 
-    <p><em>해당 메일은 매주 월,금 오전 8시에 자동 발송됩니다.</em></p>
+    <p><em>해당 메일은 매주 화, 토 오전 8시에 자동 발송됩니다.</em></p>
   </body>
 </html>
 """

@@ -1706,25 +1706,33 @@ start_date = end_date - timedelta(days=365)
 start_str = start_date.strftime('%Y-%m-%d')
 end_str = end_date.strftime('%Y-%m-%d')
 
-# 'Close' 가격만 추출 (안전성 보강)
+# 1. 'Close' 컬럼만 추출 (MultiIndex 전용)
 if isinstance(cache.columns, pd.MultiIndex):
-    # 'Close'가 있는 컬럼만 추출
+    # 'Close' 컬럼만 선택
     close_columns = [col for col in cache.columns if col[1] == 'Close']
-    close_df = cache[close_columns]
-    close_df.columns = [col[0] for col in close_df.columns]  # 티커명만 남김
+    close_df = cache[close_columns].copy()
+    close_df.columns = [col[0] for col in close_columns]  # → ('AAPL', 'Close') → 'AAPL'
 else:
-    if 'Close' in cache.columns:
-        close_df = cache[['Close']]
-        close_df.columns = [tickers[0]] if 'tickers' in locals() and tickers else ['Close']
-    else:
-        raise ValueError("No 'Close' column found in single-index DataFrame.")
+    raise ValueError("Expected MultiIndex columns in cache, but got single-index DataFrame.")
 
-# 상위 티커만 선택
+# 2. 유효한 종목(symbols)만 추출
 symbols_in_data = [s for s in symbols if s in close_df.columns]
 if not symbols_in_data:
-    raise ValueError("No symbols found in cached data.")
+    raise ValueError("No valid symbols found in cached data.")
 
 data = close_df[symbols_in_data]
+
+# 3. 모두 NaN인 종목 제거
+data = data.dropna(axis=1, how='all')
+
+# 4. 제거된 티커 로깅
+removed = [s for s in symbols if s not in data.columns]
+for r in removed:
+    print(f"⚠️  Removed due to all NaN: {r}")
+
+# 5. 최종 검증
+if data.empty or data.shape[1] == 0:
+    raise ValueError("No valid data left after NaN filtering.")
 
 returns = data.pct_change(fill_method='pad').dropna()
 

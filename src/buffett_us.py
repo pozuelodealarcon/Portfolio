@@ -720,229 +720,65 @@ def get_industry_roa(ind):
 ######## LOAD TICKERS ###########
 raw_tickers = get_tickers(country, limit, sp500)
 
-prohibited = {'AFA', 'ACH', 'BACRP', 'CDVM', 'NVL', 'TBB', 'TBC', 'VZA', "ANTM","SOJD","SOJE","SOJC","RY-PT","DUKB"} # no data on yfinance or frequently cause errors
+prohibited = {'NVL', 'SOJE', 'RY-PT', 'CEO', 'DUKB', 'ATVI', 'SQ', 'AED', 'BACRP', 'BDXA', 'VZA', 'AMOV', 'ANTM', 'SOJC', 'ACH', 'TBC', 'PXD', 'TBB', 'SOJD', 'AFA', 'AEH'}
+ # no data on yfinance or frequently cause errors
 def keep_ticker(t):
     return t not in prohibited
 tickers = list(filter(keep_ticker, raw_tickers))
+################################################################################
+from yf_cache_downloader import get_tickers_by_country, update_cache
 
-def ensure_cache_1y_for_tickers(tickers, cache_file="yf_cache_multi.csv"):
-    today = pd.Timestamp((dt.datetime.today() - dt.timedelta(days=weekend)).date())
-    one_year_ago = today - pd.Timedelta(days=365)
+# 예) 티커 리스트 받아오기 (limit, api_key는 yf_cache_downloader.py 내부 또는 외부에서 설정 가능)
+tickers = get_tickers_by_country('US', limit=300, apikey= fmp_key)
 
-    # 캐시 로드
-    if os.path.exists(cache_file):
-        cache = pd.read_csv(cache_file, header=[0, 1], index_col=0, parse_dates=True)
-        # MultiIndex 컬럼인지 확인
-        if not isinstance(cache.columns, pd.MultiIndex):
-            cache.columns = pd.MultiIndex.from_tuples([tuple(col.split('_', 1)) for col in cache.columns])
-        cache.index = pd.to_datetime(cache.index)
-    else:
-        cache = pd.DataFrame()
+# 필요 없는 티커 제외하기 (옵션)
+tickers_to_remove = {'NVL', 'SOJE', 'RY-PT', 'CEO', 'DUKB', 'ATVI', 'SQ', 'AED', 'BACRP', 'BDXA', 'VZA', 'AMOV', 'ANTM', 'SOJC', 'ACH', 'TBC', 'PXD', 'TBB', 'SOJD', 'AFA', 'AEH'}
 
-    for ticker in tickers:
-        need_download = False
-        if cache.empty or (ticker, 'Close') not in cache.columns:
-            need_download = True
-        else:
-            ticker_close = cache[(ticker, 'Close')].dropna()
-            if ticker_close.empty:
-                need_download = True
-            else:
-                # 마지막 날짜 확인
-                last_date = ticker_close.index.max()
-                # 최신 날짜가 오늘 기준 1년 이내인지 확인
-                if last_date < one_year_ago:
-                    need_download = True
+tickers = [t for t in tickers if t not in tickers_to_remove]
 
-        if need_download:
-            print(f"Downloading 1y data for {ticker}...")
-            df_new = yf.download(
-                ticker,
-                start=one_year_ago.strftime("%Y-%m-%d"),
-                end=(today + pd.Timedelta(days=1)).strftime("%Y-%m-%d"),
-                interval="1d",
-                auto_adjust=True,
-                progress=False,
-                threads=False  # 가끔 병렬이 문제될 수 있어 옵션 조절
-            )
-            # level=1에 'Close'가 있는 경우에만 접근
-            # ⛑ 'Close' 컬럼 안전 확인 후 isna().all().all() 처리
-            try:
-                if isinstance(df_new.columns, pd.MultiIndex):
-                    if 'Close' in df_new.columns.get_level_values(1):
-                        close_df = df_new.xs('Close', level=1, axis=1)
-                        if close_df.isna().all().all():
-                            print(f"❌ All 'Close' values are NaN for {ticker}")
-                            continue
-                    else:
-                        print(f"❌ 'Close' not found in MultiIndex columns for {ticker}")
-                        continue
-                else:
-                    if 'Close' in df_new.columns:
-                        if df_new['Close'].isna().all():
-                            print(f"❌ All 'Close' values are NaN for {ticker}")
-                            continue
-                    else:
-                        print(f"❌ 'Close' not found in single-level columns for {ticker}")
-                        continue
-            except Exception as e:
-                print(f"❌ Error while checking 'Close' column for {ticker}: {e}")
-                continue
+# 캐시 업데이트 (누락된 데이터만 받아서 yf_cache_multi.csv 파일 갱신)
+cache = update_cache(tickers)
 
+# 이제 cache에는 최신으로 채워진 데이터가 들어있음
+print(cache.head())
+print("캐시 데이터 범위:", cache.index.min(), "~", cache.index.max())
+################################################################################
 
-            # MultiIndex 컬럼으로 변경
-            if not isinstance(df_new.columns, pd.MultiIndex):
-                df_new.columns = pd.MultiIndex.from_product([[ticker], df_new.columns])
+# Assume cache is already loaded and up-to-date (from yf_cache_downloader)
 
-            df_new.index = pd.to_datetime(df_new.index)
+# Define the date range for last 1 year up to today
+end_date = pd.Timestamp.today().normalize()
+start_date = end_date - pd.Timedelta(days=365)
 
-            if not cache.empty:
-                cache.index = pd.to_datetime(cache.index)
-            cache = pd.concat([cache, df_new])
-            cache = cache[~cache.index.duplicated(keep='last')]
-            cache = cache.sort_index()
+# Clip start_date and end_date to cache's available index range to avoid KeyErrors
+start_date = max(start_date, cache.index.min())
+end_date = min(end_date, cache.index.max())
 
-            # 캐시 저장 시 MultiIndex 컬럼을 header=[0,1]로 저장
-            cache.to_csv(cache_file)
+# Slice cache by this date range
+cache_slice = cache.loc[start_date:end_date]
 
-    return cache
-
-# Usage before slicing:
-cache = ensure_cache_1y_for_tickers(tickers, cache_file="yf_cache_multi.csv")
-
-# Now, get the first available business day >= 1y ago for slicing
-one_year_ago = pd.Timestamp(datetime.today().date()) - pd.Timedelta(days=365)
-available_dates = cache.index[cache.index >= one_year_ago]
-if len(available_dates) > 0:
-    start_date = available_dates[0]
+# Extract Close prices only
+if isinstance(cache_slice.columns, pd.MultiIndex):
+    # Select columns where second level is 'Close'
+    close_cols = [col for col in cache_slice.columns if col[1] == 'Close']
+    df_close = cache_slice[close_cols].copy()
+    # Rename columns to just ticker symbols
+    df_close.columns = [col[0] for col in df_close.columns]
 else:
-    start_date = cache.index[0]  # fallback
-
-end_date = pd.Timestamp((dt.datetime.today() - dt.timedelta(days = weekend)).date())
-cache = cache.loc[start_date:end_date]
-
-def append_missing_to_cache_up_to_today(tickers, cache_file="yf_cache_multi.csv", weekend=0):
-    today = pd.Timestamp.today().normalize() - dt.timedelta(days=weekend)
-
-    if os.path.exists(cache_file):
-        cache = pd.read_csv(cache_file, header=[0, 1], index_col=0, parse_dates=True)
-        # 컬럼이 MultiIndex가 아닐 경우 변환
-        if not isinstance(cache.columns, pd.MultiIndex):
-            cache.columns = pd.MultiIndex.from_tuples([tuple(col.split('_', 1)) for col in cache.columns])
-        cache.index = pd.to_datetime(cache.index)
-    else:
-        cache = pd.DataFrame()
-
-    updated = False
-
-    for ticker in tickers:
-        try:
-            if not cache.empty and (ticker, 'Close') in cache.columns:
-                last_date = cache[(ticker, 'Close')].dropna().index.max()
-                if pd.isna(last_date):
-                    start_date = today - pd.Timedelta(days=365)
-                else:
-                    start_date = last_date + pd.Timedelta(days=1)
-            else:
-                start_date = today - pd.Timedelta(days=365)
-
-            if start_date > today:
-                print(f"{ticker}: Already up to date.")
-                continue
-
-            print(f"{ticker}: Downloading from {start_date.date()} to {today.date()}...")
-
-            df_new = yf.download(
-                ticker,
-                start=start_date.strftime("%Y-%m-%d"),
-                end=(today + pd.Timedelta(days=1)).strftime("%Y-%m-%d"),
-                interval="1d",
-                auto_adjust=True,
-                progress=False,
-                threads=False
-            )
-
-            # 다운로드 데이터가 없으면 다음 티커로
-            if df_new.empty:
-                print(f"❌ No data downloaded for {ticker}.")
-                continue
-
-            # 멀티인덱스 컬럼이 아니면 변환
-            if not isinstance(df_new.columns, pd.MultiIndex):
-                df_new.columns = pd.MultiIndex.from_product([[ticker], df_new.columns])
-
-            df_new.index = pd.to_datetime(df_new.index)
-
-            # 'Close' 컬럼 존재 체크
-            if 'Close' not in df_new.columns.get_level_values(1):
-                print(f"❌ 'Close' column missing for {ticker} after download.")
-                continue
-
-            # 모든 'Close' 값이 NaN인지 체크
-            close_data = df_new.xs('Close', level=1, axis=1)
-            if close_data.isna().all().all():
-                print(f"❌ All 'Close' values are NaN for {ticker} after download.")
-                continue
-
-            # 기존 캐시가 있으면 인덱스 맞춤
-            if not cache.empty:
-                cache.index = pd.to_datetime(cache.index)
-
-            # 캐시에 새로운 데이터 추가
-            cache = pd.concat([cache, df_new])
-            updated = True
-
-        except Exception as e:
-            print(f"❌ Error processing {ticker}: {e}")
-            continue
-
-    if updated:
-        # 중복 인덱스 제거, 최신 데이터 유지
-        cache = cache[~cache.index.duplicated(keep='last')]
-        cache = cache.sort_index()
-        cache.to_csv(cache_file)
-        print("✅ Cache updated.")
-    else:
-        print("✅ All tickers already up to date or no new data downloaded.")
-
-    return cache
-
-append_missing_to_cache_up_to_today(tickers)
-
-# 오늘 날짜와 1년 전 날짜 계산
-end_date = dt.datetime.today() - dt.timedelta(days = weekend)
-start_date = end_date - dt.timedelta(days=365)
-start_str = start_date.strftime('%Y-%m-%d')
-end_str = end_date.strftime('%Y-%m-%d')
-# Before slicing
-print("Available date range in cache:", cache.index.min(), "to", cache.index.max())
-
-# Adjust start_date if it's too early
-start_date = max(cache.index.min(), start_date)
-end_date = min(cache.index.max(), end_date)
-
-cache = cache[(cache.index >= start_date) & (cache.index <= end_date)]
-print("Data range in cache:", cache.index.min(), "to", cache.index.max())
-print("Sliced range:", start_date, "to", end_date)
-print("Remaining rows:", len(cache))
-
-
-if isinstance(cache.columns, pd.MultiIndex):
-    # MultiIndex: 'Close' 값만 선택
-    close_columns = [col for col in cache.columns if col[1] == 'Close']
-    df_momentum = cache[close_columns].dropna(axis=1, how='all')
-
-    # 컬럼 이름을 티커명만 남기도록 단순화
-    df_momentum.columns = [col[0] for col in df_momentum.columns]
-
-else:
-    # 단일 인덱스: 'Close' 컬럼만
-    if 'Close' in cache.columns:
-        df_momentum = cache[['Close']].dropna()
-        df_momentum.columns = [tickers[0]]  # 단일 티커만 처리할 때
+    # Single-level columns (unlikely if your cache is multi-indexed)
+    if 'Close' in cache_slice.columns:
+        df_close = cache_slice[['Close']].copy()
+        df_close.columns = [tickers[0]]  # Assuming one ticker
     else:
         raise ValueError("❌ 'Close' column not found in cache.")
 
+# Drop any columns (tickers) with all NaN Close values
+df_close.dropna(axis=1, how='all', inplace=True)
+
+print("Date range in df_close:", df_close.index.min(), "to", df_close.index.max())
+print("Number of tickers with Close data:", len(df_close.columns))
+print(df_close.head())
+###################################################################################
 
 
 def check_momentum_conditions(ticker: str) -> dict:

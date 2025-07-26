@@ -60,20 +60,20 @@ EMAIL = os.environ['EMAIL_ADDRESS']
 PASSWORD = os.environ['EMAIL_PASSWORD']
 fmp_key = os.environ['FMP_API_KEY']
 marketaux_api = os.environ['MARKETAUX_API']
-NUM_THREADS = 5 #multithreading 
+NUM_THREADS = 2 #multithreading 
 
 country = 'US'
 limit=200 # max 250 requests/day #
 sp500 = True
 
 # top X tickers to optimize
-opt = 10 
+opt = 20 
 
 #for news
-news_lookup = 0 #
+news_lookup = 100
 
 #for moat
-moat_limit = 50
+moat_limit = 100
 #########################################################
 
 
@@ -1220,20 +1220,23 @@ def analyze_moat(company_name: str) -> str:
   "moat_score": 숫자 (0에서 5 사이의 정수값)
 }}
 
-moat_score 기준 (정수로 판단):
-5: 매우 강력한 경쟁 우위 (지속적인 독점력 또는 강력한 진입 장벽)
+moat_score 기준:
 
-4: 뚜렷한 경쟁 우위 (높은 브랜드 가치, 규모의 경제 등)
+5: 독점적 기술, 특허, 진입 장벽이 극도로 높음
 
-3: 일정 수준의 경쟁력 있으나 완전한 우위는 아님
+4: 높은 브랜드 가치 또는 규모의 경제, 진입 장벽이 뚜렷함
 
-2: 경쟁력은 있으나 쉽게 대체 가능
+3: 일정 경쟁력 있으나 쉽게 대체 가능성 있음
 
-1: 경쟁 우위가 약하며 단기적일 가능성
+2: 경쟁 우위가 약하며 단기적일 가능성 있음
 
-0: 경쟁 우위 없음 또는 Commoditized 산업
+1: 매우 약하거나 불확실한 경쟁력
 
-모호하게 답변하지 말고 반드시 위의 JSON 형식과 기준을 따르세요.
+0: 경쟁 우위가 없음 (완전한 경쟁 시장)
+
+※ 경쟁 우위가 약하거나 불분명하면 낮은 점수를 꼭 주고, 과장하지 마세요.
+
+반드시 위의 JSON 형식과 기준을 따르세요.
 """
     return prompt.strip()
 

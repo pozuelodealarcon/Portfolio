@@ -730,32 +730,25 @@ def keep_ticker(t):
     return t not in prohibited
 tickers = list(filter(keep_ticker, raw_tickers))
 
-
 def ensure_cache_1y_for_tickers(tickers, cache_file="yf_cache_multi.csv"):
     import pandas as pd
     import yfinance as yf
     from datetime import datetime, timedelta
 
-    today = pd.Timestamp((dt.datetime.today() - dt.timedelta(days = weekend)).date())
+    today = pd.Timestamp((dt.datetime.today() - dt.timedelta(days=weekend)).date())
     one_year_ago = today - pd.Timedelta(days=365)
 
     # Load cache or create empty DataFrame
     if os.path.exists(cache_file):
-        cache = pd.read_csv(cache_file, header=[0,1], index_col=0, parse_dates=True)
+        cache = pd.read_csv(cache_file, header=[0, 1], index_col=0, parse_dates=True)
     else:
         cache = pd.DataFrame()
 
-    # Find the first available business day >= one_year_ago
-    if not cache.empty:
-        available_dates = cache.index[cache.index >= one_year_ago]
-        if len(available_dates) > 0:
-            start_date = available_dates[0]
-        else:
-            start_date = today  # fallback, should not happen
-    else:
-        start_date = today - pd.tseries.offsets.BDay(252)  # fallback: 252 business days ago
+    # Ensure columns are MultiIndex (Ticker, Field)
+    if not cache.empty and not isinstance(cache.columns, pd.MultiIndex):
+        # Try to reconstruct MultiIndex if possible
+        cache.columns = pd.MultiIndex.from_tuples([tuple(col.split('_', 1)) for col in cache.columns])
 
-    # For each ticker, check if 1y data exists; if not, download and append
     for ticker in tickers:
         need_download = False
         if cache.empty or (ticker, 'Close') not in cache.columns:
@@ -763,17 +756,29 @@ def ensure_cache_1y_for_tickers(tickers, cache_file="yf_cache_multi.csv"):
         else:
             ticker_data = cache[(ticker, 'Close')]
             ticker_dates = ticker_data.dropna().index
-            if not any((ticker_dates <= today) & (ticker_dates >= start_date)):
+            # Check if we have at least some data in the last year
+            if not any((ticker_dates <= today) & (ticker_dates >= one_year_ago)):
                 need_download = True
-            elif (ticker_dates < start_date).all():
+            elif (ticker_dates < one_year_ago).all():
                 need_download = True
 
         if need_download:
             print(f"Downloading 1y data for {ticker}...")
-            df_new = yf.download(ticker, start=start_date.strftime("%Y-%m-%d"), end=(today + pd.Timedelta(days=1)).strftime("%Y-%m-%d"),
-                                 interval="1d", auto_adjust=True, progress=False)
+            df_new = yf.download(
+                ticker,
+                start=one_year_ago.strftime("%Y-%m-%d"),
+                end=(today + pd.Timedelta(days=1)).strftime("%Y-%m-%d"),
+                interval="1d",
+                auto_adjust=True,
+                progress=False
+            )
             if not df_new.empty:
-                df_new = pd.concat({ticker: df_new}, axis=1)
+                # Ensure MultiIndex columns: (ticker, field)
+                if not isinstance(df_new.columns, pd.MultiIndex):
+                    df_new.columns = pd.MultiIndex.from_product([[ticker], df_new.columns])
+                df_new.index = pd.to_datetime(df_new.index)
+                if not cache.empty:
+                    cache.index = pd.to_datetime(cache.index)
                 cache = pd.concat([cache, df_new])
                 cache = cache[~cache.index.duplicated(keep='last')]
                 cache = cache.sort_index()
@@ -794,7 +799,6 @@ else:
 end_date = pd.Timestamp((dt.datetime.today() - dt.timedelta(days = weekend)).date())
 cache = cache.loc[start_date:end_date]
 def append_missing_to_cache_up_to_today(tickers, cache_file="yf_cache_multi.csv"):
-
     today = pd.Timestamp.today().normalize()
 
     if os.path.exists(cache_file):
@@ -828,13 +832,14 @@ def append_missing_to_cache_up_to_today(tickers, cache_file="yf_cache_multi.csv"
         )
 
         if not df_new.empty:
-            # Wrap columns in MultiIndex only if not already
+            # Ensure MultiIndex columns: (ticker, field)
             if not isinstance(df_new.columns, pd.MultiIndex):
                 df_new.columns = pd.MultiIndex.from_product([[ticker], df_new.columns])
-            else:
-                # If it's already multi-indexed, just proceed
-                pass
-
+            # Align index type
+            df_new.index = pd.to_datetime(df_new.index)
+            if not cache.empty:
+                cache.index = pd.to_datetime(cache.index)
+            # Concat and deduplicate
             cache = pd.concat([cache, df_new])
             updated = True
         else:

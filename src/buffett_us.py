@@ -812,7 +812,11 @@ def append_missing_to_cache_up_to_today(tickers, cache_file="yf_cache_multi.csv"
         # Determine last date in cache
         if not cache.empty and (ticker, 'Close') in cache.columns:
             last_date = cache[(ticker, 'Close')].dropna().index.max()
-            start_date = last_date + pd.Timedelta(days=1)
+            # last_date가 NaT이거나 None이면 1년 전으로 초기화
+            if pd.isna(last_date):
+                start_date = today - pd.Timedelta(days=365)
+            else:
+                start_date = last_date + pd.Timedelta(days=1)
         else:
             start_date = today - pd.Timedelta(days=365)
 
@@ -854,7 +858,6 @@ def append_missing_to_cache_up_to_today(tickers, cache_file="yf_cache_multi.csv"
         print("✅ All tickers already up to date.")
 
     return cache
-
 
 append_missing_to_cache_up_to_today(tickers)
 

@@ -771,22 +771,28 @@ def ensure_cache_1y_for_tickers(tickers, cache_file="yf_cache_multi.csv"):
                 threads=False  # 가끔 병렬이 문제될 수 있어 옵션 조절
             )
             # level=1에 'Close'가 있는 경우에만 접근
-            if isinstance(df_new.columns, pd.MultiIndex):
-                if 'Close' in df_new.columns.get_level_values(1):
-                    close_df = df_new.xs('Close', level=1, axis=1)
-                    if close_df.isna().all().all():
-                        print(f"❌ All 'Close' values are NaN or empty for {ticker} after download.")
+            # ⛑ 'Close' 컬럼 안전 확인 후 isna().all().all() 처리
+            try:
+                if isinstance(df_new.columns, pd.MultiIndex):
+                    if 'Close' in df_new.columns.get_level_values(1):
+                        close_df = df_new.xs('Close', level=1, axis=1)
+                        if close_df.isna().all().all():
+                            print(f"❌ All 'Close' values are NaN for {ticker}")
+                            continue
+                    else:
+                        print(f"❌ 'Close' not found in MultiIndex columns for {ticker}")
                         continue
                 else:
-                    print(f"❌ No 'Close' column in MultiIndex for {ticker}")
-                    continue
-            else:
-                if 'Close' not in df_new.columns:
-                    print(f"❌ 'Close' column not found in single-level columns for {ticker}")
-                    continue
-                if df_new['Close'].isna().all():
-                    print(f"❌ All 'Close' values are NaN or empty for {ticker}")
-                    continue
+                    if 'Close' in df_new.columns:
+                        if df_new['Close'].isna().all():
+                            print(f"❌ All 'Close' values are NaN for {ticker}")
+                            continue
+                    else:
+                        print(f"❌ 'Close' not found in single-level columns for {ticker}")
+                        continue
+            except Exception as e:
+                print(f"❌ Error while checking 'Close' column for {ticker}: {e}")
+                continue
 
 
             # MultiIndex 컬럼으로 변경

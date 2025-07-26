@@ -5,8 +5,8 @@ from datetime import datetime, timedelta
 import requests
 
 CACHE_FILE = "yf_cache_multi.csv"
-limit = 300
-api_key = '60ZVxqQtumzWp4LVs4PmJOjiNSnbGThu'
+limit = 200
+api_key = os.environ['FMP_API_KEY']
 
 #hi
 def get_tickers_by_country(country:str, limit: int, apikey: str):
@@ -79,37 +79,43 @@ def update_cache(tickers, cache_file=CACHE_FILE):
     else:
         cache = pd.DataFrame()
 
-    # Use the first available business day as the start date
-    if len(business_days) > 0:
-        start_date = business_days[0]
-    else:
-        start_date = today  # fallback, should not happen
+    # 누락된 티커와 날짜별로 저장할 set
+    missing_tickers = set()
+    missing_dates = set()
 
-    # Find missing days for each ticker
-    missing_days = []
     for ticker in tickers:
-        if (ticker, 'Close') not in cache.columns:
-            missing_days = business_days
-            break
-        missing = [d for d in business_days if d not in cache.index or pd.isna(cache.loc[d, (ticker, 'Close')])]
-        missing_days.extend(missing)
-    missing_days = sorted(set(missing_days))
+        if cache.empty or (ticker, 'Close') not in cache.columns:
+            # 티커 자체가 없으면 전 기간 다운로드
+            missing_tickers.add(ticker)
+            missing_dates.update(business_days)
+            continue
+        # 날짜별로 결측 체크
+        for d in business_days:
+            if d not in cache.index or pd.isna(cache.loc[d, (ticker, 'Close')]):
+                missing_tickers.add(ticker)
+                missing_dates.add(d)
 
-    if missing_days:
-        start = min(missing_days).strftime("%Y-%m-%d")
-        end = (max(missing_days) + timedelta(days=1)).strftime("%Y-%m-%d")
-        new_data = download_yf_data(tickers, start, end)
+    if missing_tickers:
+        start = min(missing_dates).strftime("%Y-%m-%d")
+        end = (max(missing_dates) + timedelta(days=1)).strftime("%Y-%m-%d")
+        print(f"Downloading missing data for {len(missing_tickers)} tickers from {start} to {end}")
+        new_data = download_yf_data(list(missing_tickers), start, end)
+
+        # 합치기 전 인덱스, 컬럼 중복 문제 처리
         if cache.empty:
             cache = new_data
         else:
-            cache = pd.concat([cache, new_data[~new_data.index.isin(cache.index)]])
+            cache = pd.concat([cache, new_data])
+            cache = cache[~cache.index.duplicated(keep='last')]
             cache = cache.sort_index()
-            cache = cache.loc[~cache.index.duplicated(keep='last')]
+
         cache.to_csv(cache_file)
 
-    # Ensure all business days are present (fill missing with NaN)
+    # 모든 영업일로 인덱스 재설정 (결측치는 NaN으로)
     cache = cache.reindex(business_days)
+
     return cache
+
 
 def remove_empty_columns(csv_file):
     if not os.path.exists(csv_file):

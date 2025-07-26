@@ -821,11 +821,12 @@ else:
 end_date = pd.Timestamp((dt.datetime.today() - dt.timedelta(days = weekend)).date())
 cache = cache.loc[start_date:end_date]
 
-def append_missing_to_cache_up_to_today(tickers, cache_file="yf_cache_multi.csv"):
+def append_missing_to_cache_up_to_today(tickers, cache_file="yf_cache_multi.csv", weekend=0):
     today = pd.Timestamp.today().normalize() - dt.timedelta(days=weekend)
 
     if os.path.exists(cache_file):
         cache = pd.read_csv(cache_file, header=[0, 1], index_col=0, parse_dates=True)
+        # 컬럼이 MultiIndex가 아닐 경우 변환
         if not isinstance(cache.columns, pd.MultiIndex):
             cache.columns = pd.MultiIndex.from_tuples([tuple(col.split('_', 1)) for col in cache.columns])
         cache.index = pd.to_datetime(cache.index)
@@ -835,57 +836,74 @@ def append_missing_to_cache_up_to_today(tickers, cache_file="yf_cache_multi.csv"
     updated = False
 
     for ticker in tickers:
-        if not cache.empty and (ticker, 'Close') in cache.columns:
-            last_date = cache[(ticker, 'Close')].dropna().index.max()
-            if pd.isna(last_date):
-                start_date = today - pd.Timedelta(days=365)
+        try:
+            if not cache.empty and (ticker, 'Close') in cache.columns:
+                last_date = cache[(ticker, 'Close')].dropna().index.max()
+                if pd.isna(last_date):
+                    start_date = today - pd.Timedelta(days=365)
+                else:
+                    start_date = last_date + pd.Timedelta(days=1)
             else:
-                start_date = last_date + pd.Timedelta(days=1)
-        else:
-            start_date = today - pd.Timedelta(days=365)
+                start_date = today - pd.Timedelta(days=365)
 
-        if start_date > today:
-            print(f"{ticker}: Already up to date.")
+            if start_date > today:
+                print(f"{ticker}: Already up to date.")
+                continue
+
+            print(f"{ticker}: Downloading from {start_date.date()} to {today.date()}...")
+
+            df_new = yf.download(
+                ticker,
+                start=start_date.strftime("%Y-%m-%d"),
+                end=(today + pd.Timedelta(days=1)).strftime("%Y-%m-%d"),
+                interval="1d",
+                auto_adjust=True,
+                progress=False,
+                threads=False
+            )
+
+            # 다운로드 데이터가 없으면 다음 티커로
+            if df_new.empty:
+                print(f"❌ No data downloaded for {ticker}.")
+                continue
+
+            # 멀티인덱스 컬럼이 아니면 변환
+            if not isinstance(df_new.columns, pd.MultiIndex):
+                df_new.columns = pd.MultiIndex.from_product([[ticker], df_new.columns])
+
+            df_new.index = pd.to_datetime(df_new.index)
+
+            # 'Close' 컬럼 존재 체크
+            if 'Close' not in df_new.columns.get_level_values(1):
+                print(f"❌ 'Close' column missing for {ticker} after download.")
+                continue
+
+            # 모든 'Close' 값이 NaN인지 체크
+            close_data = df_new.xs('Close', level=1, axis=1)
+            if close_data.isna().all().all():
+                print(f"❌ All 'Close' values are NaN for {ticker} after download.")
+                continue
+
+            # 기존 캐시가 있으면 인덱스 맞춤
+            if not cache.empty:
+                cache.index = pd.to_datetime(cache.index)
+
+            # 캐시에 새로운 데이터 추가
+            cache = pd.concat([cache, df_new])
+            updated = True
+
+        except Exception as e:
+            print(f"❌ Error processing {ticker}: {e}")
             continue
-
-        print(f"{ticker}: Downloading from {start_date.date()} to {today.date()}...")
-
-        df_new = yf.download(
-            ticker,
-            start=start_date.strftime("%Y-%m-%d"),
-            end=(today + pd.Timedelta(days=1)).strftime("%Y-%m-%d"),
-            interval="1d",
-            auto_adjust=True,
-            progress=False,
-            threads=False
-        )
-
-        if df_new.empty or (
-            isinstance(df_new.columns, pd.MultiIndex) and
-            df_new.xs('Close', level=1, axis=1).isna().all().all()
-        ):
-            print(f"❌ All 'Close' values are NaN or empty for {ticker} after download.")
-            continue
-
-
-        if not isinstance(df_new.columns, pd.MultiIndex):
-            df_new.columns = pd.MultiIndex.from_product([[ticker], df_new.columns])
-
-        df_new.index = pd.to_datetime(df_new.index)
-
-        if not cache.empty:
-            cache.index = pd.to_datetime(cache.index)
-
-        cache = pd.concat([cache, df_new])
-        updated = True
 
     if updated:
+        # 중복 인덱스 제거, 최신 데이터 유지
         cache = cache[~cache.index.duplicated(keep='last')]
         cache = cache.sort_index()
         cache.to_csv(cache_file)
         print("✅ Cache updated.")
     else:
-        print("✅ All tickers already up to date.")
+        print("✅ All tickers already up to date or no new data downloaded.")
 
     return cache
 

@@ -861,22 +861,6 @@ def append_missing_to_cache_up_to_today(tickers, cache_file="yf_cache_multi.csv"
 
 append_missing_to_cache_up_to_today(tickers)
 
-def remove_empty_columns(csv_file):
-    if not os.path.exists(csv_file):
-        print("CSV file does not exist.")
-        return
-
-    df = pd.read_csv(csv_file, header=[0, 1], index_col=0, parse_dates=True)
-
-    # Drop columns where all values are NaN
-    df.dropna(axis=1, how='all', inplace=True)
-
-    # Save back to CSV
-    df.to_csv(csv_file)
-    print("Empty columns removed.")
-
-remove_empty_columns("yf_cache_multi.csv")
-
 # 캐시 파일에서 1년치 데이터 불러오기
 cache_file = "yf_cache_multi.csv"
 cache = pd.read_csv(cache_file, header=[0,1], index_col=0, parse_dates=True)

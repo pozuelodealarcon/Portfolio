@@ -111,9 +111,25 @@ def update_cache(tickers, cache_file=CACHE_FILE):
     cache = cache.reindex(business_days)
     return cache
 
+def remove_empty_columns(csv_file):
+    if not os.path.exists(csv_file):
+        print("CSV file does not exist.")
+        return
+
+    df = pd.read_csv(csv_file, header=[0, 1], index_col=0, parse_dates=True)
+
+    # Drop columns where all values are NaN
+    df.dropna(axis=1, how='all', inplace=True)
+
+    # Save back to CSV
+    df.to_csv(csv_file)
+    print("Empty columns removed.")
+
+
 if __name__ == "__main__":
     tickers = get_tickers_by_country('US', limit, api_key)  # Example tickers
     tickers_to_remove = ['ANTM', 'ACH', 'RY-PT', 'VZA','AED', 'AEH', 'BDXA', 'AMOV', 'PXD', 'ATVI', 'SQ', 'CEO']
     tickers = [t for t in tickers if t not in tickers_to_remove]
     print(len(tickers))
     update_cache(tickers)
+    remove_empty_columns(CACHE_FILE)

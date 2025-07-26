@@ -897,15 +897,22 @@ print("Sliced range:", start_date, "to", end_date)
 print("Remaining rows:", len(cache))
 
 
-# Filter out bad 'Close' columns
 if isinstance(cache.columns, pd.MultiIndex):
+    # MultiIndex: 'Close' 값만 선택
     close_columns = [col for col in cache.columns if col[1] == 'Close']
     df_momentum = cache[close_columns].dropna(axis=1, how='all')
+
+    # 컬럼 이름을 티커명만 남기도록 단순화
     df_momentum.columns = [col[0] for col in df_momentum.columns]
-    
+
 else:
-    df_momentum = cache[['Close']].dropna()
-    df_momentum.columns = [tickers[0]]
+    # 단일 인덱스: 'Close' 컬럼만
+    if 'Close' in cache.columns:
+        df_momentum = cache[['Close']].dropna()
+        df_momentum.columns = [tickers[0]]  # 단일 티커만 처리할 때
+    else:
+        raise ValueError("❌ 'Close' column not found in cache.")
+
 
 
 def check_momentum_conditions(ticker: str) -> dict:

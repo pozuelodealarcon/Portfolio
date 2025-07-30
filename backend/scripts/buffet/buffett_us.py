@@ -35,6 +35,15 @@ from google.genai import types
 import json
 import markdown
 
+from portfolio_opt import (
+    objective_sharpe,
+    objective_cvar,
+    objective_sortino,
+    objective_variance,
+    max_drawdown,
+    detailed_portfolio_statistics,
+)
+from moat_analysis import analyze_moat, parse_moat_response, query_gemini
 
 ################ DEPENDENCIES ###########################
 
@@ -1225,138 +1234,6 @@ def monte_carlo_dcf_valuation(
     return (float(conf_lower), float(conf_upper))
 
 
-def analyze_moat(company_name: str) -> str:
-    prompt = f"""
-당신은 기업 분석에 능숙한 전문 주식 애널리스트입니다. 반드시 한국어로 답변하십시오.
-
-{date_kr_ymd} 기준 "{company_name}"의 정보를 검색한 뒤 그 내용을 바탕으로 해당 기업의 **중장기 핵심 경쟁 우위(Moat)** 를 분석해 주세요.
-
-### 출력 형식은 아래와 같이 JSON 객체로 제공해 주세요:
-```json
-{{
-  "moat_analysis": "여기에 간결한 경쟁 우위 요약 문장을 2~3줄 이내로 작성하세요.",
-  "moat_score": 숫자 (0에서 10 사이의 정수값)
-}}
-
-Moat Score 기준 (0~10):
-
-0: 완전한 Commodity. 원자재, 일반 제조업, 소매 등. 가격 경쟁 외 요소 없음.
-1: 사실상 경쟁 우위 없음. 누구나 진입 가능, 브랜드·기술·특허 없음.
-2: 미미한 경쟁 우위. 단기 유행 또는 운에 기반한 실적, 구조적 우위 없음.
-3: 경쟁 우위 낮음. 차별화 거의 없음, 경쟁 심화된 시장에서 방어력 낮음.
-4: 부분적 경쟁력. 일시적 수익성 우위, 브랜드·기술력 부족, 대체재 존재.
-5: 평균 이상의 경쟁력. 업계 평균 이상이나 차별화는 미약하거나 유지 불확실.
-6: 상당한 경쟁 우위. 구조적 우위 있으나 대체 가능성 존재, 일부 취약.
-7: 강한 경쟁력 보유. 기술력, 규모, 유통망 기반의 우위 있으나 독점은 아님.
-8: 뚜렷하고 장기적인 경쟁 우위. 브랜드, 규모의 경제, 높은 전환 비용 존재.
-9: 지속적 독점에 가까운 우위. 강력한 진입 장벽과 네트워크 효과, 규제 보호.
-10: 절대적 독점 우위. 특허·기술 기반 독점, 대체 불가능, 진입 불가 수준.
-
-※ 경쟁 우위가 약하거나 불분명하면 낮은 점수를 꼭 주고, 과장하지 마세요.
-
-반드시 위의 JSON 형식과 기준을 따르세요.
-"""
-    return prompt.strip()
-
-
-def parse_moat_response(response_text: str) -> dict:
-    """
-    LLM 응답에서 moat_analysis와 moat_score를 안전하게 추출합니다.
-    JSON이 혼합되어 있거나 형식이 불완전할 경우에도 처리합니다.
-    """
-    # 기본값
-    result = {"moat_analysis": response_text.strip(), "moat_score": None}
-
-    # JSON 형식 추출 시도
-    try:
-        # 중괄호로 된 JSON 블럭 추출
-        match = re.search(r"\{.*?\}", response_text, re.DOTALL)
-        if match:
-            json_block = match.group(0)
-            parsed = json.loads(json_block)
-            result["moat_analysis"] = parsed.get(
-                "moat_analysis", result["moat_analysis"]
-            ).strip()
-            result["moat_score"] = (
-                int(parsed.get("moat_score"))
-                if parsed.get("moat_score") is not None
-                else None
-            )
-            return result
-    except (json.JSONDecodeError, ValueError, TypeError):
-        pass  # continue to fallback logic
-
-    # fallback 점수 추정 로직 (텍스트 기반 추론)
-    lower_text = response_text.lower()
-    if any(
-        kw in lower_text
-        for kw in ["절대적 독점", "완전한 독점", "대체 불가", "진입 불가", "특허 보호"]
-    ):
-        result["moat_score"] = 10
-    elif any(
-        kw in lower_text
-        for kw in ["지속적 독점", "지속적인 독점", "강력한 진입 장벽", "규제 보호"]
-    ):
-        result["moat_score"] = 9
-    elif any(
-        kw in lower_text
-        for kw in ["뚜렷한 경쟁 우위", "브랜드 파워", "규모의 경제", "전환 비용"]
-    ):
-        result["moat_score"] = 8
-    elif any(
-        kw in lower_text
-        for kw in ["강한 경쟁력", "기술력", "유통망", "경쟁사 대비 우위"]
-    ):
-        result["moat_score"] = 7
-    elif any(
-        kw in lower_text for kw in ["상당한 경쟁 우위", "우위 요소 존재", "대체 가능성"]
-    ):
-        result["moat_score"] = 6
-    elif any(
-        kw in lower_text for kw in ["평균 이상의 경쟁력", "차별화 미약", "유지 불확실"]
-    ):
-        result["moat_score"] = 5
-    elif any(
-        kw in lower_text for kw in ["부분적 경쟁력", "일시적 수익성", "대체재 존재"]
-    ):
-        result["moat_score"] = 4
-    elif any(
-        kw in lower_text for kw in ["경쟁 우위 낮음", "차별화 거의 없음", "방어력 낮음"]
-    ):
-        result["moat_score"] = 3
-    elif any(
-        kw in lower_text for kw in ["미미한 경쟁 우위", "단기 유행", "구조적 우위 없음"]
-    ):
-        result["moat_score"] = 2
-    elif any(
-        kw in lower_text
-        for kw in [
-            "경쟁 우위 없음",
-            "진입 장벽 없음",
-            "브랜드 없음",
-            "기술력 없음",
-            "commoditized",
-        ]
-    ):
-        result["moat_score"] = 1
-    elif any(
-        kw in lower_text for kw in ["commodity", "완전한 commodity", "완전 경쟁 시장"]
-    ):
-        result["moat_score"] = 0
-    else:
-        result["moat_score"] = -1  # 판단 불가 (예외 처리용)
-
-    return result
-
-
-def query_gemini(prompt: str) -> str:
-    response = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=prompt,
-    )
-    return response.text
-
-
 retried_once = set()
 q = Queue()
 for ticker in tickers:
@@ -1923,45 +1800,6 @@ if data.empty or data.shape[1] == 0:
 
 returns = data.pct_change(fill_method="pad").dropna()
 
-
-# Sharpe Ratio 최적화 함수
-def objective_sharpe(weights):
-    port_return = np.dot(weights, returns.mean()) * 252
-    port_vol = np.sqrt(np.dot(weights.T, np.dot(returns.cov() * 252, weights)))
-    return -port_return / port_vol  # 최대화 위해 음수
-
-
-# CVaR 최적화 함수 (5% VaR 기준)
-def objective_cvar(weights):
-    portfolio_returns = returns.dot(
-        weights
-    )  # 수정: np.dot(returns, weights)도 가능하지만 DataFrame이면 .dot이 더 안전
-    alpha = 0.05
-    var = np.percentile(portfolio_returns, 100 * alpha)
-    cvar = portfolio_returns[portfolio_returns <= var].mean()
-    return cvar  # minimize에서 최소화(손실 최대화) → 부호 바꿔야 함
-    # return -cvar  # CVaR 최대화하려면 음수로 반환
-
-
-# Sortino Ratio 최적화 함수
-def objective_sortino(weights):
-    portfolio_returns = returns.dot(
-        weights
-    )  # 수정: np.dot(weights) → returns.dot(weights)
-    mean_return = portfolio_returns.mean() * 252
-    downside_returns = portfolio_returns[portfolio_returns < 0]
-    downside_std = downside_returns.std() * np.sqrt(252)
-    if downside_std == 0:
-        return 0  # 또는 큰 값 반환
-    sortino_ratio = mean_return / downside_std
-    return -sortino_ratio  # 최대화 위해 음수
-
-
-# 분산 최소화 함수
-def objective_variance(weights):
-    return np.dot(weights.T, np.dot(returns.cov() * 252, weights))
-
-
 # Las restricciones
 cons = {"type": "eq", "fun": lambda x: np.sum(x) - 1}
 
@@ -2090,69 +1928,11 @@ plt.legend(loc="upper right")
 plt.show()
 
 
-# Función para calcular el drawdown máximo
-def max_drawdown(return_series):
-    comp_ret = (1 + return_series).cumprod()
-    peak = comp_ret.expanding(min_periods=1).max()
-    dd = (comp_ret / peak) - 1
-    return dd.min()
-
-
-def detailed_portfolio_statistics(weights):
-    portfolio_returns = returns.dot(weights)
-    mean_return_annualized = gmean(portfolio_returns + 1) ** 252 - 1
-    std_dev_annualized = portfolio_returns.std() * np.sqrt(252)
-    skewness = skew(portfolio_returns)
-    kurt = kurtosis(portfolio_returns)
-    max_dd = max_drawdown(portfolio_returns)
-    count = len(portfolio_returns)
-
-    # ✅ Safe TNX fetch with fallback
-    try:
-        tnx = yf.Ticker("^TNX")
-        tnx_data = tnx.history(period="1d")
-        latest_yield = tnx_data["Close"].iloc[-1]
-        risk_free_rate = round(latest_yield / 100.0, 2)
-    except Exception as e:
-        print(f"⚠️ Failed to fetch TNX: {e}")
-        risk_free_rate = 0.04  # default 4% fallback
-
-    sharpe_ratio = (mean_return_annualized - risk_free_rate) / std_dev_annualized
-
-    # CVaR 계산 (5% 수준)
-    alpha = 0.05
-    sorted_returns = np.sort(portfolio_returns)
-    var_index = int(np.floor(alpha * len(sorted_returns)))
-    var = sorted_returns[var_index]
-    cvar = sorted_returns[:var_index].mean()
-    cvar_annualized = (1 + cvar) ** 252 - 1  # 연율화
-
-    downside_returns = portfolio_returns[portfolio_returns < 0]
-    downside_std_dev = downside_returns.std() * np.sqrt(252)
-    sortino_ratio = (
-        mean_return_annualized / downside_std_dev if downside_std_dev != 0 else np.nan
-    )
-    variance = std_dev_annualized**2
-
-    return (
-        mean_return_annualized,
-        std_dev_annualized,
-        skewness,
-        kurt,
-        max_dd,
-        count,
-        sharpe_ratio,
-        cvar_annualized,
-        sortino_ratio,
-        variance,
-    )
-
-
 # Calcular estadísticas para cada portafolio
-statistics_cvar = detailed_portfolio_statistics(optimal_weights_cvar)
-statistics_sortino = detailed_portfolio_statistics(optimal_weights_sortino)
-statistics_variance = detailed_portfolio_statistics(optimal_weights_variance)
-statistics_sharpe = detailed_portfolio_statistics(optimal_weights_sharpe)
+statistics_cvar = detailed_portfolio_statistics(optimal_weights_cvar, returns)
+statistics_sortino = detailed_portfolio_statistics(optimal_weights_sortino, returns)
+statistics_variance = detailed_portfolio_statistics(optimal_weights_variance, returns)
+statistics_sharpe = detailed_portfolio_statistics(optimal_weights_sharpe, returns)
 
 # Nombres de las estadísticas
 statistics_names = [
@@ -2172,19 +1952,19 @@ statistics_names = [
 portfolio_data = {
     "CVaR": {
         "weights": optimal_weights_cvar,
-        "statistics": detailed_portfolio_statistics(optimal_weights_cvar),
+        "statistics": detailed_portfolio_statistics(optimal_weights_cvar, returns),
     },
     "Sortino": {
         "weights": optimal_weights_sortino,
-        "statistics": detailed_portfolio_statistics(optimal_weights_sortino),
+        "statistics": detailed_portfolio_statistics(optimal_weights_sortino, returns),
     },
     "Variance": {
         "weights": optimal_weights_variance,
-        "statistics": detailed_portfolio_statistics(optimal_weights_variance),
+        "statistics": detailed_portfolio_statistics(optimal_weights_variance, returns),
     },
     "Sharpe": {
         "weights": optimal_weights_sharpe,
-        "statistics": detailed_portfolio_statistics(optimal_weights_sharpe),
+        "statistics": detailed_portfolio_statistics(optimal_weights_sharpe, returns),
     },
 }
 

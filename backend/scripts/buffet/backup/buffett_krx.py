@@ -1,14 +1,15 @@
-
-# SPDX-FileCopyrightText: © 2025 Hyungsuk Choi <chs_3411@naver[dot]com>, University of Maryland 
+# SPDX-FileCopyrightText: © 2025 Hyungsuk Choi <chs_3411@naver[dot]com>, University of Maryland
 # SPDX-License-Identifier: MIT
 
 import yfinance as yf
 import pandas as pd
 from pykrx import stock
-#from dotenv import load_dotenv
+
+# from dotenv import load_dotenv
 import os
 import requests
-#from pykrx import stock
+
+# from pykrx import stock
 import datetime as dt
 import openpyxl
 import math
@@ -17,15 +18,15 @@ from queue import Queue
 import threading
 import time
 import polars as pl
-#import shelve
+
+# import shelve
 from bs4 import BeautifulSoup
 from urllib.request import urlopen
 import smtplib
 from email.message import EmailMessage
 from email.headerregistry import Address
 import re
-import ta # 기술적 지표 계산 라이브러리
-
+import ta  # 기술적 지표 계산 라이브러리
 
 
 ################ DEPENDENCIES ###########################
@@ -37,17 +38,17 @@ import ta # 기술적 지표 계산 라이브러리
 
 ################ PREDETERMINED FIELDS ###################
 
-EMAIL = os.environ['EMAIL_ADDRESS']
-PASSWORD = os.environ['EMAIL_PASSWORD']
+EMAIL = os.environ["EMAIL_ADDRESS"]
+PASSWORD = os.environ["EMAIL_PASSWORD"]
 # Get the API key
-fmp_key = os.environ['FMP_API_KEY']
-recipients = ['chs_3411@naver.com', 'eljm2080@gmail.com', 'hyungsukchoi3411@gmail.com']
+fmp_key = os.environ["FMP_API_KEY"]
+recipients = ["chs_3411@naver.com", "eljm2080@gmail.com", "hyungsukchoi3411@gmail.com"]
 
-NUM_THREADS = 2 #multithreading 
+NUM_THREADS = 2  # multithreading
 CUTOFF = 0
-lee_kw_list = [ #2025 이재명 정부 예상 수혜주 
-    "Software", #AI
-    "Information", #AI
+lee_kw_list = [  # 2025 이재명 정부 예상 수혜주
+    "Software",  # AI
+    "Information",  # AI
     "Resorts",
     "Casinos",
     "Energy",
@@ -58,22 +59,25 @@ lee_kw_list = [ #2025 이재명 정부 예상 수혜주
     "Biotechnology",
 ]
 
-country = 'KR'
-limit=200 # 250 requests/day
+country = "KR"
+limit = 200  # 250 requests/day
 sp500 = True
 
 #########################################################
 
 
-
 # print('May take up to few minutes...')
 
 today = dt.datetime.today().weekday()
-weekend = today - 4 # returns 1 for saturday, 2 for sunday
-formattedDate = (dt.datetime.today() - dt.timedelta(days = weekend)).strftime("%Y%m%d") if today >= 5 else dt.datetime.today().strftime("%Y%m%d")
+weekend = today - 4  # returns 1 for saturday, 2 for sunday
+formattedDate = (
+    (dt.datetime.today() - dt.timedelta(days=weekend)).strftime("%Y%m%d")
+    if today >= 5
+    else dt.datetime.today().strftime("%Y%m%d")
+)
 
 three_months_approx = dt.datetime.today() - dt.timedelta(days=90)
-formattedDate_3m_ago =  three_months_approx.strftime("%Y%m%d")
+formattedDate_3m_ago = three_months_approx.strftime("%Y%m%d")
 
 # dfKospi = stock.get_market_fundamental(formattedDate, market="ALL")
 
@@ -81,67 +85,87 @@ data = []
 data_lock = threading.Lock()
 
 # Load environment variables from .env file
-#load_dotenv()
+# load_dotenv()
 
 
 def get_tickers(country: str, limit: int, sp500: bool):
     if country is not None:
-        return get_tickers_by_country(country, limit, fmp_key) #US, JP, KR
+        return get_tickers_by_country(country, limit, fmp_key)  # US, JP, KR
     elif sp500:
-        return pl.read_csv("https://datahub.io/core/s-and-p-500-companies/r/constituents.csv")["Symbol"].to_list()
+        return pl.read_csv(
+            "https://datahub.io/core/s-and-p-500-companies/r/constituents.csv"
+        )["Symbol"].to_list()
     elif not sp500:
-        nasdaq100_url = 'https://en.wikipedia.org/wiki/NASDAQ-100'
-        nasdaq100 = pd.read_html(nasdaq100_url, header=0)[4] # Might need to adjust index (5th table on the page)
-        return nasdaq100['Ticker'].tolist()
+        nasdaq100_url = "https://en.wikipedia.org/wiki/NASDAQ-100"
+        nasdaq100 = pd.read_html(nasdaq100_url, header=0)[
+            4
+        ]  # Might need to adjust index (5th table on the page)
+        return nasdaq100["Ticker"].tolist()
     else:
         raise Exception("No tickers list satisfies the given parameter")
 
+
 def get_tickers_by_country(country: str, limit: int, apikey: str):
-    url = 'https://financialmodelingprep.com/api/v3/stock-screener'
+    url = "https://financialmodelingprep.com/api/v3/stock-screener"
     headers = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-                  'AppleWebKit/537.36 (KHTML, like Gecko) '
-                  'Chrome/114.0.0.0 Safari/537.36',
-    'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
-    'apikey': apikey,
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/114.0.0.0 Safari/537.36",
+        "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+        "apikey": apikey,
     }
-    
+
     params = {
-        'country': country,
-        'limit': limit,
-        'type': 'stock',
-        'sort': 'marketCap',
-        'order': 'desc',
-        'apikey': apikey,
-        'isEtf': False,
-        'isFund': False,
+        "country": country,
+        "limit": limit,
+        "type": "stock",
+        "sort": "marketCap",
+        "order": "desc",
+        "apikey": apikey,
+        "isEtf": False,
+        "isFund": False,
         # 'sector' : Consumer Cyclical | Energy | Technology | Industrials | Financial Services | Basic Materials | Communication Services | Consumer Defensive | Healthcare | Real Estate | Utilities | Industrial Goods | Financial | Services | Conglomerates
         # 'exchange' : nyse | nasdaq | amex | euronext | tsx | etf | mutual_fund
     }
     try:
         response = requests.get(url, params=params, headers=headers)
     except Exception as e:
-        print('FMP error:', e)
+        print("FMP error:", e)
         return []
     data = response.json()
-    return [item['symbol'] for item in data]
+    return [item["symbol"] for item in data]
+
 
 # buffett's philosophy & my quant ideas
-def buffett_score (de, cr, pbr, per, ind_per, roe, ind_roe, roa, ind_roa, eps, div, icr, opinc_yoy, opinc_qoq):
+def buffett_score(
+    de,
+    cr,
+    pbr,
+    per,
+    ind_per,
+    roe,
+    ind_roe,
+    roa,
+    ind_roa,
+    eps,
+    div,
+    icr,
+    opinc_yoy,
+    opinc_qoq,
+):
     score = 0
-    #basic buffett-style filtering
+    # basic buffett-style filtering
     if de is not None and de <= 0.5 and de != 0:
-        score +=1
+        score += 1
     if cr is not None and (cr >= 1.5 and cr <= 2.5):
-        score +=1
+        score += 1
 
     if pbr is not None and (pbr <= 2 and pbr != 0):
-        score +=0.5
+        score += 0.5
         if pbr <= 1.5:
-            score +=1
+            score += 1
             if pbr <= 1:
                 score += 0.5
-        
 
     # 고배당주 수혜 예상
     # if div is not None: #cagr = +4~6-10%
@@ -151,45 +175,44 @@ def buffett_score (de, cr, pbr, per, ind_per, roe, ind_roe, roa, ind_roa, eps, d
     #         score +=0.75
     #     elif div >= 0.06:
     #         score +=0.5
-    if div: #3y yoy
-        score +=1
-    
-    if opinc_yoy: #3y yoy
-        score +=1
-    if opinc_qoq: #5q qoq
-        score +=0.5
+    if div:  # 3y yoy
+        score += 1
+
+    if opinc_yoy:  # 3y yoy
+        score += 1
+    if opinc_qoq:  # 5q qoq
+        score += 0.5
 
     if eps is True:
         score += 1
     if eps is False:
         score -= 1
-    
+
     if not isinstance(eps, bool) and eps is not None:
         if eps >= 0.1:
             score += 1
         if eps < 0:
             score -= 1
         if eps > 0 and per is not None:
-            peg = per / (eps * 100) #peg ratio, underv if less than 1
+            peg = per / (eps * 100)  # peg ratio, underv if less than 1
             if peg <= 1:
                 score += 1
 
-    if icr is not None and icr >= 5: #x5
-        score +=1
+    if icr is not None and icr >= 5:  # x5
+        score += 1
 
-    #my quant ideas 
+    # my quant ideas
     if eps is not None:
         #  3. 고배당 + 고EPS 성장률 전략 (배당 성장주 전략)
         # 아이디어: 고배당이면서 실적 성장세가 뚜렷한 기업
         if div and eps >= 0.3:
-            score +=1
-
+            score += 1
 
     if None not in {roe, ind_roe, per, ind_per}:
         if per > ind_per and roe < ind_roe:
-            score -=2 # hard pass
-            if roe < 0:  #EVEN WORSE
-                score -=1
+            score -= 2  # hard pass
+            if roe < 0:  # EVEN WORSE
+                score -= 1
 
     if None not in {roe, ind_roe, per, ind_per, roa, ind_roa}:
         # 1. 저PER + 고ROE 전략 (가치 + 질적 우량주)
@@ -203,18 +226,21 @@ def buffett_score (de, cr, pbr, per, ind_per, roe, ind_roe, roa, ind_roa, eps, d
                 score += 1  # great business, slightly overvalued (still reasonable)
                 # if roa > ind_roa:
                 #     score += 0.25
-         
+
     return score
-    
+
+
 def get_trading_volume(ticker):
     # 1) 데이터 가져오기
-    df = stock.get_market_trading_volume_by_date(formattedDate_3m_ago, formattedDate, ticker[:6])
+    df = stock.get_market_trading_volume_by_date(
+        formattedDate_3m_ago, formattedDate, ticker[:6]
+    )
 
     # 2) 외국인·기관 동시 순매수일 수 계산
-    df['기관_순매수_양수'] = df['기관합계'] > 0
-    df['외국인_순매수_양수'] = df['외국인합계'] > 0
-    df['동시_순매수'] = df['기관_순매수_양수'] & df['외국인_순매수_양수']
-    simultaneous_buy_days = df['동시_순매수'].sum()
+    df["기관_순매수_양수"] = df["기관합계"] > 0
+    df["외국인_순매수_양수"] = df["외국인합계"] > 0
+    df["동시_순매수"] = df["기관_순매수_양수"] & df["외국인_순매수_양수"]
+    simultaneous_buy_days = df["동시_순매수"].sum()
 
     return simultaneous_buy_days
 
@@ -226,17 +252,16 @@ def get_per_krx(ticker):
         "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
         "Referer": "https://finance.naver.com/",
-        "Connection": "keep-alive"
+        "Connection": "keep-alive",
     }
     session = requests.Session()
     session.headers.update(headers)
 
-    
     try:
         # 첫 요청으로 쿠키 확보 (홈페이지 접속)
         session.get("https://finance.naver.com/", timeout=3)
         res = session.get(url, timeout=3)
-        time.sleep(random.uniform(0.7, 1.8)) # 딜레이 필수
+        time.sleep(random.uniform(0.7, 1.8))  # 딜레이 필수
         # Sleep for a random time to mimic human behavior
         res.raise_for_status()  # Optional: raises an error for HTTP issues
     except requests.exceptions.HTTPError as e:
@@ -247,9 +272,19 @@ def get_per_krx(ticker):
     except requests.RequestException as e:
         print(f"Request failed: {e}")
 
-    soup = BeautifulSoup(res.text, 'html.parser')
+    soup = BeautifulSoup(res.text, "html.parser")
 
-    data = {'name':(None, None), 'PBR': None, 'IND_PER': None, 'PER': None, 'DPS YoY': None, 'ROE': None, "IND_ROE": None, "OpIncY": None, "OpIncQ": None}
+    data = {
+        "name": (None, None),
+        "PBR": None,
+        "IND_PER": None,
+        "PER": None,
+        "DPS YoY": None,
+        "ROE": None,
+        "IND_ROE": None,
+        "OpIncY": None,
+        "OpIncQ": None,
+    }
 
     # 종목명
     name_tag = soup.select_one("div.wrap_company h2")
@@ -269,43 +304,55 @@ def get_per_krx(ticker):
             # 만약 구분자 '｜'가 없으면 '업종명 :' 뒤부터 끝까지 가져오기
             sector = sector_text.split("업종명 :")[-1].strip()
 
-    data['name'] = (name, sector)
+    data["name"] = (name, sector)
     ####
-    aside = soup.select_one('div.aside_invest_info')
+    aside = soup.select_one("div.aside_invest_info")
     if aside:
-        rows = aside.select('table tr')
+        rows = aside.select("table tr")
         if rows:
             for row in rows:
                 text = row.text
-                em = row.select_one('td em')
+                em = row.select_one("td em")
                 if not em:
                     continue
                 per_text = em.text.strip()
 
-                if 'PBR' in text:
-                    data['PBR'] = float(per_text.replace(',', '')) if 'N/A' not in per_text else None
+                if "PBR" in text:
+                    data["PBR"] = (
+                        float(per_text.replace(",", ""))
+                        if "N/A" not in per_text
+                        else None
+                    )
 
-                elif '동일업종 PER' in text:
-                    data['IND_PER'] = float(per_text.replace(',', '')) if 'N/A' not in per_text else None
+                elif "동일업종 PER" in text:
+                    data["IND_PER"] = (
+                        float(per_text.replace(",", ""))
+                        if "N/A" not in per_text
+                        else None
+                    )
 
-                elif 'PER' in text and 'EPS' in text and '추정PER' not in text:
-                    data['PER'] = float(per_text.replace(',', '')) if 'N/A' not in per_text else None
-    
+                elif "PER" in text and "EPS" in text and "추정PER" not in text:
+                    data["PER"] = (
+                        float(per_text.replace(",", ""))
+                        if "N/A" not in per_text
+                        else None
+                    )
+
     # DPS 계산
     ##############################################################
-    table = soup.select_one('div.section.cop_analysis table')
+    table = soup.select_one("div.section.cop_analysis table")
     if table:
         dividend = []
-        rows = table.select('tbody tr')
+        rows = table.select("tbody tr")
         if rows:
             for row in rows:
-                th = row.find('th')
-                if th and '주당배당금' in th.text:
-                    tds = row.select('td')
+                th = row.find("th")
+                if th and "주당배당금" in th.text:
+                    tds = row.select("td")
                     if not tds:
                         continue
                     for td in tds:
-                        val = td.text.strip().replace(',', '').replace('원', '')
+                        val = td.text.strip().replace(",", "").replace("원", "")
                         try:
                             dividend.append(float(val))
                         except (ValueError, TypeError):
@@ -318,24 +365,24 @@ def get_per_krx(ticker):
 
         # Only compare if we have at least 2 values
         if len(first_three) >= 2:
-            data['DPS YoY'] = all(
+            data["DPS YoY"] = all(
                 earlier <= later for earlier, later in zip(first_three, first_three[1:])
             )
-    #Operating Income YoY
+    # Operating Income YoY
     ##############################################################
-    table = soup.select_one('div.section.cop_analysis table')
+    table = soup.select_one("div.section.cop_analysis table")
     if table:
         opinc = []
-        rows = table.select('tbody tr')
+        rows = table.select("tbody tr")
         if rows:
             for row in rows:
-                th = row.find('th')
-                if th and '영업이익률' in th.text:
-                    tds = row.select('td')
+                th = row.find("th")
+                if th and "영업이익률" in th.text:
+                    tds = row.select("td")
                     if not tds:
                         continue
                     for td in tds:
-                        val = td.text.strip().replace(',', '').replace('원', '')
+                        val = td.text.strip().replace(",", "").replace("원", "")
                         try:
                             opinc.append(float(val))
                         except (ValueError, TypeError):
@@ -351,37 +398,37 @@ def get_per_krx(ticker):
 
         # Only compare if we have at least 2 values
         if len(yoy) >= 2:
-            data['OpIncY'] = all(
+            data["OpIncY"] = all(
                 earlier <= later for earlier, later in zip(yoy, yoy[1:])
             )
         if len(qoq) >= 2:
-            data['OpIncQ'] = all(
+            data["OpIncQ"] = all(
                 earlier <= later for earlier, later in zip(qoq, qoq[1:])
             )
     ########################
 
     # 동일업종 비교 테이블은 div.section.inner_sub > table.class="compare" 내부에 위치
-    compare_table = soup.select_one('div.section.trade_compare table')
+    compare_table = soup.select_one("div.section.trade_compare table")
 
     if compare_table:
-        rows = compare_table.select('tr')
+        rows = compare_table.select("tr")
         if rows:
             for row in rows:
-                th = row.find('th')
-                if th and 'ROE' in th.text:
-                    tds = row.find_all('td')
+                th = row.find("th")
+                if th and "ROE" in th.text:
+                    tds = row.find_all("td")
                     if not tds:
                         continue  # No data to process
 
                     # Extract text and clean %
-                    result = [td.text.strip().replace('%', '') for td in tds]
+                    result = [td.text.strip().replace("%", "") for td in tds]
 
                     # Parse company ROE
                     try:
-                        if result and result[0] != '':
-                            data['ROE'] = float(result[0])
+                        if result and result[0] != "":
+                            data["ROE"] = float(result[0])
                     except (ValueError, IndexError):
-                        data['ROE'] = None  # Redundant due to default, but explicit
+                        data["ROE"] = None  # Redundant due to default, but explicit
 
                     # Parse industry ROE values
                     raw_industry_values = result[1:] if len(result) > 1 else []
@@ -389,19 +436,22 @@ def get_per_krx(ticker):
 
                     for item in raw_industry_values:
                         try:
-                            if item != '':
+                            if item != "":
                                 cleaned_values.append(float(item))
                         except ValueError:
                             continue
 
-                    cleaned_values = list(filter(lambda x: x >= -20, cleaned_values)) #clean outliers
+                    cleaned_values = list(
+                        filter(lambda x: x >= -20, cleaned_values)
+                    )  # clean outliers
 
                     if cleaned_values:
-                        data['IND_ROE'] = sum(cleaned_values) / len(cleaned_values)
+                        data["IND_ROE"] = sum(cleaned_values) / len(cleaned_values)
 
                     break  # Only process the first ROE row
 
     return data
+
 
 # def has_stable_dividend_growth(ticker):
 #     stock = yf.Ticker(ticker)
@@ -414,7 +464,7 @@ def get_per_krx(ticker):
 #     annual_divs = divs.groupby(divs.index.year).sum()
 #     if len(annual_divs) < 10:
 #         return False
-    
+
 #     recent_years = sorted(annual_divs.index)[-11:-1] # returns [last year - 9 = 2015, 2016, ..., last year = 2024], # use -11 to start around 10 years ago from now
 
 #     if recent_years[0] < dt.datetime.today().year - 12: # sift out old data
@@ -426,8 +476,8 @@ def get_per_krx(ticker):
 #     # Check for stable or increasing dividends
 #     tolerance = 0.85 # tolerance band to account for crises and minor dividend cuts
 #     return all(earlier * tolerance <= later for earlier, later in zip(last_10_divs, last_10_divs[1:])) # zip returns [(2015div, 2016div), (2016div, 2017div), ..., (2024div, 2025div)]
-    
-'''
+
+"""
 def has_stable_dividend_growth_cagr(ticker):
 
     stock = yf.Ticker(ticker)
@@ -455,7 +505,7 @@ def has_stable_dividend_growth_cagr(ticker):
     else:
         cagr = ((div_end / div_start) ** (1/len(last_10_divs))) - 1
         return cagr
-'''
+"""
 
 # def has_stable_eps_growth(ticker):
 #     ticker = yf.Ticker(ticker)
@@ -496,11 +546,12 @@ def has_stable_dividend_growth_cagr(ticker):
 #     # Check stable growth: every EPS >= 90% of previous EPS
 #     return all(earlier * tolerance <= later for earlier, later in zip(eps_list, eps_list[1:]))
 
+
 def has_stable_eps_growth_cagr(ticker):
     ticker = yf.Ticker(ticker)
 
     # Get annual income statement
-    income_stmt = ticker.financials # Annual by default
+    income_stmt = ticker.financials  # Annual by default
 
     # Make sure EPS is in the statement
 
@@ -509,15 +560,19 @@ def has_stable_eps_growth_cagr(ticker):
             eps_series = income_stmt.loc["Diluted EPS"]
             if dt.datetime.today().year - 1 not in eps_series.index.year:
                 return None
-            eps_list = eps_series.sort_index().dropna().tolist() # Sorted from oldest to newest
+            eps_list = (
+                eps_series.sort_index().dropna().tolist()
+            )  # Sorted from oldest to newest
             eps_start = eps_list[0]
             eps_end = eps_list[-1]
             if len(eps_list) == 0:
                 return None
             if eps_start <= 0 or eps_end < 0:
-                return all(earlier <= later for earlier, later in zip(eps_list, eps_list[1:]))
+                return all(
+                    earlier <= later for earlier, later in zip(eps_list, eps_list[1:])
+                )
             else:
-                cagr = ((eps_end / eps_start) ** (1/len(eps_list))) - 1
+                cagr = ((eps_end / eps_start) ** (1 / len(eps_list))) - 1
                 return cagr
         else:
             return None
@@ -527,18 +582,26 @@ def has_stable_eps_growth_cagr(ticker):
 
 # gets the most recent interest coverage ratio available
 def get_interest_coverage_ratio(ticker):
-    financials = yf.Ticker(ticker).financials # Annual financials, columns = dates (most recent first)
+    financials = yf.Ticker(
+        ticker
+    ).financials  # Annual financials, columns = dates (most recent first)
     ratio = None
     if not financials.columns.empty:
         for date in financials.columns:
-            if date.year < dt.datetime.today().year - 5: # sift out old data
+            if date.year < dt.datetime.today().year - 5:  # sift out old data
                 return None
 
             try:
                 ebit = financials.loc["Operating Income", date]
                 interest_expense = financials.loc["Interest Expense", date]
-                if math.isnan(interest_expense) or math.isnan(ebit) or not interest_expense or ebit is None or interest_expense is None:
-                    continue # Avoid division by zero
+                if (
+                    math.isnan(interest_expense)
+                    or math.isnan(ebit)
+                    or not interest_expense
+                    or ebit is None
+                    or interest_expense is None
+                ):
+                    continue  # Avoid division by zero
                 else:
                     ratio = round((ebit / abs(interest_expense)), 2)
                     break
@@ -547,6 +610,7 @@ def get_interest_coverage_ratio(ticker):
         return ratio
     else:
         return None
+
 
 # def bvps_undervalued(bvps, current):
 #     if not bvps:
@@ -569,21 +633,21 @@ def get_interest_coverage_ratio(ticker):
 #     for date in balance_sheet.columns:
 #         if date.year < dt.datetime.today().year - 6: # sift out old data
 #             return False
-        
+
 #         try:
 #             book_value = balance_sheet.loc["Common Stock Equity", date]
 #             outstanding_shares = balance_sheet.loc["Ordinary Shares Number", date]
 #             if math.isnan(book_value) or math.isnan(outstanding_shares) or not outstanding_shares:
 #                 continue
 #             else:
-#                 bvps = book_value / outstanding_shares 
+#                 bvps = book_value / outstanding_shares
 #                 book_values.append(round(bvps, 2))
 #         except Exception as e:
 #             continue
-            
+
 #     if len(book_values) < 2:
 #         return False
-    
+
 #     tolerance = 0.85 if sector in {'Industrials', 'Technology', 'Energy', 'Consumer Cyclical', 'Basic Materials'} else 0.9 #set is faster than list in checking O(1) avg
 #     return all(earlier * tolerance <= later for earlier, later in zip(book_values, book_values[1:]))
 
@@ -600,6 +664,7 @@ def get_interest_coverage_ratio(ticker):
 #     finally:
 #         return ans
 
+
 def get_percentage_change(ticker):
     ticker = yf.Ticker(ticker)
 
@@ -608,8 +673,8 @@ def get_percentage_change(ticker):
 
     # Check if we have at least 2 days and prev_close is not zero
     if len(data) >= 2:
-        prev_close = data['Close'].iloc[-2]
-        last_close = data['Close'].iloc[-1]
+        prev_close = data["Close"].iloc[-2]
+        last_close = data["Close"].iloc[-1]
 
         if prev_close != 0:
             percent_change = ((last_close - prev_close) / prev_close) * 100
@@ -617,13 +682,14 @@ def get_percentage_change(ticker):
                 return None
             else:
                 if percent_change >= 0:
-                    return (f" (+{percent_change:.2f}%)")  # e.g., (-6.20%)
+                    return f" (+{percent_change:.2f}%)"  # e.g., (-6.20%)
                 else:
-                    return (f" ({percent_change:.2f}%)")  # e.g., (-6.20%)
+                    return f" ({percent_change:.2f}%)"  # e.g., (-6.20%)
         else:
-            return ' ()'
+            return " ()"
     else:
-        return ' ()'
+        return " ()"
+
 
 # # FullRatio의 산업별 PER 페이지 URL
 # url = 'https://fullratio.com/pe-ratio-by-industry'
@@ -717,6 +783,7 @@ def get_percentage_change(ticker):
 # df_roa = pl.DataFrame(roa_data)
 # #
 
+
 def get_industry_roe(ind):
     return 0.1
     # if country is None:
@@ -727,12 +794,13 @@ def get_industry_roe(ind):
     #         else:
     #             return 0.08
     #     except Exception:
-    #         return 0.08 
+    #         return 0.08
     # else:
     #     return 0.1
 
+
 def get_industry_roa(ind):
-    if any(kw in ind for kw in ['Insurance', 'Bank']):
+    if any(kw in ind for kw in ["Insurance", "Bank"]):
         return 0.01
     else:
         return 0.05
@@ -749,14 +817,13 @@ def get_industry_roa(ind):
     # else:
     #     return 0.05
 
-    
 
 # def get_industry_per(ind, ticker):
 #     if country is None: #country == US
 #         spy = yf.Ticker('SPY')
 #         spy_info = spy.info
 #         per = spy_info.get('trailingPE')
-#         try: 
+#         try:
 #             if ind is not None:
 #                 ans = float(df_per.filter(pl.col('Industry') == ind).select("P/E Ratio").item())
 #                 return ans
@@ -801,9 +868,25 @@ filtered = list(filter(lambda x: isinstance(x, str), raw_tickers))
 
 
 # block of code that gets rid of preferred stocks
-prohibited = {'008560.KS', '003550.KS', '048260.KQ', '000060.KS', '091990.KQ', '066970.KQ', '022100.KQ', '010145.KS', '003410.KS', '086520.KQ', '087010.KQ', '000250.KQ'}
+prohibited = {
+    "008560.KS",
+    "003550.KS",
+    "048260.KQ",
+    "000060.KS",
+    "091990.KQ",
+    "066970.KQ",
+    "022100.KQ",
+    "010145.KS",
+    "003410.KS",
+    "086520.KQ",
+    "087010.KQ",
+    "000250.KQ",
+}
+
+
 def keep_ticker(t):
-    return len(t) > 5 and t[5] == '0' and t not in prohibited
+    return len(t) > 5 and t[5] == "0" and t not in prohibited
+
 
 tickers = list(filter(keep_ticker, filtered))
 
@@ -845,17 +928,19 @@ tickers = list(filter(keep_ticker, filtered))
 ###################################################################
 def check_momentum_conditions(ticker: str) -> dict:
     result = {
-        'ma_crossover': False,
-        'ma_crossover_lt': False,
-        'return_20d': False,
-        'return_60d': False,
-        'rsi_rebound': False,
-        'macd_golden_cross': False
+        "ma_crossover": False,
+        "ma_crossover_lt": False,
+        "return_20d": False,
+        "return_60d": False,
+        "rsi_rebound": False,
+        "macd_golden_cross": False,
     }
 
     try:
         # 데이터 다운로드 (auto_adjust=True 유지)
-        df_momentum = yf.download(ticker, period='1y', interval='1d', progress=False, auto_adjust=True)
+        df_momentum = yf.download(
+            ticker, period="1y", interval="1d", progress=False, auto_adjust=True
+        )
 
         # 멀티인덱스 컬럼일 경우 첫 번째 레벨로 컬럼명 변경
         if isinstance(df_momentum.columns, pd.MultiIndex):
@@ -865,100 +950,122 @@ def check_momentum_conditions(ticker: str) -> dict:
             print(f"[Error] Empty DataFrame for ticker {ticker}")
             return result
 
-        if 'Close' not in df_momentum.columns:
-            print(f"[Error] 'Close' column missing for {ticker}. Columns: {df_momentum.columns.tolist()}")
+        if "Close" not in df_momentum.columns:
+            print(
+                f"[Error] 'Close' column missing for {ticker}. Columns: {df_momentum.columns.tolist()}"
+            )
             return result
 
         # 결측치 처리 (전일 종가로 보간)
-        df_momentum['Close'] = df_momentum['Close'].ffill()
+        df_momentum["Close"] = df_momentum["Close"].ffill()
 
-        if df_momentum['Close'].isna().all():
+        if df_momentum["Close"].isna().all():
             print(f"[Error] All 'Close' values are NaN for {ticker}")
             return result
 
         if len(df_momentum) < 22:
-            print(f"[Warning] Not enough data rows for 20-day return calculation for {ticker} (rows={len(df_momentum)})")
+            print(
+                f"[Warning] Not enough data rows for 20-day return calculation for {ticker} (rows={len(df_momentum)})"
+            )
             return result
 
         # 이동평균선 계산
-        df_momentum['MA5'] = df_momentum['Close'].rolling(window=5).mean()
-        df_momentum['MA20'] = df_momentum['Close'].rolling(window=20).mean()
+        df_momentum["MA5"] = df_momentum["Close"].rolling(window=5).mean()
+        df_momentum["MA20"] = df_momentum["Close"].rolling(window=20).mean()
 
+        if pd.notna(df_momentum["MA5"].iloc[-1]) and pd.notna(
+            df_momentum["MA20"].iloc[-1]
+        ):
+            if df_momentum["MA5"].iloc[-1] > df_momentum["MA20"].iloc[-1]:
+                result["ma_crossover"] = True
 
-        if pd.notna(df_momentum['MA5'].iloc[-1]) and pd.notna(df_momentum['MA20'].iloc[-1]):
-            if df_momentum['MA5'].iloc[-1] > df_momentum['MA20'].iloc[-1]:
-                result['ma_crossover'] = True
+        df_momentum["MA50"] = df_momentum["Close"].rolling(window=50).mean()
+        df_momentum["MA200"] = df_momentum["Close"].rolling(window=200).mean()
 
-        df_momentum['MA50'] = df_momentum['Close'].rolling(window=50).mean()
-        df_momentum['MA200'] = df_momentum['Close'].rolling(window=200).mean()
-
-        if pd.notna(df_momentum['MA50'].iloc[-1]) and pd.notna(df_momentum['MA200'].iloc[-1]):
-            if df_momentum['MA50'].iloc[-1] > df_momentum['MA200'].iloc[-1]:
-                result['ma_crossover_lt'] = True
-
+        if pd.notna(df_momentum["MA50"].iloc[-1]) and pd.notna(
+            df_momentum["MA200"].iloc[-1]
+        ):
+            if df_momentum["MA50"].iloc[-1] > df_momentum["MA200"].iloc[-1]:
+                result["ma_crossover_lt"] = True
 
         # 20일 수익률 계산
         try:
-            return_20d = (df_momentum['Close'].iloc[-1] / df_momentum['Close'].iloc[-21] - 1) * 100
+            return_20d = (
+                df_momentum["Close"].iloc[-1] / df_momentum["Close"].iloc[-21] - 1
+            ) * 100
             if return_20d >= 10:
-                result['return_20d'] = True
+                result["return_20d"] = True
         except IndexError:
-            print(f"[Warning] Not enough data for 20-day return calculation for {ticker}")
+            print(
+                f"[Warning] Not enough data for 20-day return calculation for {ticker}"
+            )
 
         # 60일 수익률 계산
         try:
-            return_60d = (df_momentum['Close'].iloc[-1] / df_momentum['Close'].iloc[-61] - 1) * 100
+            return_60d = (
+                df_momentum["Close"].iloc[-1] / df_momentum["Close"].iloc[-61] - 1
+            ) * 100
             if return_60d >= 10:
-                result['return_60d'] = True  # 필요하면 키 이름도 'return_60d'로 변경 가능
+                result["return_60d"] = (
+                    True  # 필요하면 키 이름도 'return_60d'로 변경 가능
+                )
         except IndexError:
-            print(f"[Warning] Not enough data for 60-day return calculation for {ticker}")
-
+            print(
+                f"[Warning] Not enough data for 60-day return calculation for {ticker}"
+            )
 
         try:
-            rsi = ta.momentum.RSIIndicator(df_momentum['Close'], window=14).rsi()
+            rsi = ta.momentum.RSIIndicator(df_momentum["Close"], window=14).rsi()
             # print("RSI tail:\n", rsi.tail(5))  # 값 확인용 출력
 
             if len(rsi) >= 2 and pd.notna(rsi.iloc[-2]) and pd.notna(rsi.iloc[-1]):
                 if (
-    (rsi.iloc[-2] < 40 and rsi.iloc[-1] > rsi.iloc[-2]) or
-    (30 <= rsi.iloc[-1] <= 60 and rsi.iloc[-1] > rsi.iloc[-2]) or
-    (rsi.iloc[-2] < 50 and rsi.iloc[-1] >= 50)):
-                    result['rsi_rebound'] = True
+                    (rsi.iloc[-2] < 40 and rsi.iloc[-1] > rsi.iloc[-2])
+                    or (30 <= rsi.iloc[-1] <= 60 and rsi.iloc[-1] > rsi.iloc[-2])
+                    or (rsi.iloc[-2] < 50 and rsi.iloc[-1] >= 50)
+                ):
+                    result["rsi_rebound"] = True
 
         except Exception as e:
             print(f"[RSI Error] {ticker}: {e}")
 
-
         # MACD 골든크로스 체크
         try:
-            macd_obj = ta.trend.MACD(df_momentum['Close'])
+            macd_obj = ta.trend.MACD(df_momentum["Close"])
             macd_line = macd_obj.macd()
             signal_line = macd_obj.macd_signal()
 
-            if len(macd_line) >= 2 and pd.notna(macd_line.iloc[-1]) and pd.notna(signal_line.iloc[-1]):
-                cross = (macd_line > signal_line) & (macd_line.shift(1) <= signal_line.shift(1))
+            if (
+                len(macd_line) >= 2
+                and pd.notna(macd_line.iloc[-1])
+                and pd.notna(signal_line.iloc[-1])
+            ):
+                cross = (macd_line > signal_line) & (
+                    macd_line.shift(1) <= signal_line.shift(1)
+                )
                 if cross.iloc[-5:].any():  # 최근 5일 내 골든크로스 발생 여부 확인
-                    result['macd_golden_cross'] = True
+                    result["macd_golden_cross"] = True
         except Exception as e:
             print(f"[MACD Error] {ticker}: {e}")
-
 
     except Exception as e:
         print(f"[Download Error] Ticker {ticker}: {e}")
 
     return result
 
+
 def check_momentum_conditions_batch(tickers: list) -> pd.DataFrame:
     results = []
     for ticker in tickers:
         res = check_momentum_conditions(ticker)
-        res['Ticker'] = ticker
+        res["Ticker"] = ticker
         results.append(res)
     # 결과 리스트를 DataFrame으로 변환 (Ticker 컬럼 첫 칼럼으로 이동)
     df_results = pd.DataFrame(results)
-    cols = ['Ticker'] + [c for c in df_results.columns if c != 'Ticker']
+    cols = ["Ticker"] + [c for c in df_results.columns if c != "Ticker"]
     df_results = df_results[cols]
     return df_results
+
 
 df_batch_result = check_momentum_conditions_batch(tickers)
 ###################################################################
@@ -989,7 +1096,7 @@ df_batch_result = check_momentum_conditions_batch(tickers)
 # momentum_3y = get_momentum_batch(tickers, 36)
 
 # def momentum_score(short, mid, long):
-   
+
 #     def score_momentum(mom, good_thresh, bad_thresh):
 #         if mom is None:
 #             return 0
@@ -999,7 +1106,7 @@ df_batch_result = check_momentum_conditions_batch(tickers)
 #             return -1
 #         else:
 #             return 0
-    
+
 #     weights = {
 #     'short': 0.15,
 #     'mid': 0.35,
@@ -1012,13 +1119,14 @@ df_batch_result = check_momentum_conditions_batch(tickers)
 #     'long': (0.6, 0.0)       # +20% / 0% over 3 years
 # }
 
-    
+
 #     total_score = 0
 #     total_score += score_momentum(short, *thresholds['short']) * weights['short']
 #     total_score += score_momentum(mid, *thresholds['mid']) * weights['mid']
 #     total_score += score_momentum(long, *thresholds['long']) * weights['long']
-    
+
 #     return round(total_score,2)
+
 
 def score_momentum(ma, ma_lt, ret, ret60, rsi, macd):
     score = 0
@@ -1049,22 +1157,79 @@ def classify_cyclicality(industry):
     """
 
     cyclical_keywords = [
-    "auto", "apparel", "footwear", "home improvement", "internet retail", "leisure", "lodging",
-    "restaurant", "specialty retail", "textile", "travel", "coal", "oil", "gas", "renewable",
-    "asset management", "bank", "capital markets", "credit services", "insurance",
-    "mortgage", "real estate", "aerospace", "defense", "air freight", "airline",
-    "building", "conglomerate", "construction", "electrical equipment", "engineering",
-    "industrial", "machinery", "marine", "railroad", "waste", "chemical", "container",
-    "metal", "paper", "advertising", "broadcasting", "cable", "casino", "communication",
-    "gaming", "interactive media", "movies", "publishing", "radio", "recreational",
-    "software", "semiconductor", "information technology", "it services"
+        "auto",
+        "apparel",
+        "footwear",
+        "home improvement",
+        "internet retail",
+        "leisure",
+        "lodging",
+        "restaurant",
+        "specialty retail",
+        "textile",
+        "travel",
+        "coal",
+        "oil",
+        "gas",
+        "renewable",
+        "asset management",
+        "bank",
+        "capital markets",
+        "credit services",
+        "insurance",
+        "mortgage",
+        "real estate",
+        "aerospace",
+        "defense",
+        "air freight",
+        "airline",
+        "building",
+        "conglomerate",
+        "construction",
+        "electrical equipment",
+        "engineering",
+        "industrial",
+        "machinery",
+        "marine",
+        "railroad",
+        "waste",
+        "chemical",
+        "container",
+        "metal",
+        "paper",
+        "advertising",
+        "broadcasting",
+        "cable",
+        "casino",
+        "communication",
+        "gaming",
+        "interactive media",
+        "movies",
+        "publishing",
+        "radio",
+        "recreational",
+        "software",
+        "semiconductor",
+        "information technology",
+        "it services",
     ]
 
-
     defensive_keywords = [
-    "beverages", "confectioner", "food", "household", "packaged", "personal product",
-    "tobacco", "biotech", "healthcare", "health", "medical device", "pharma",
-    "utility", "power producer", "utilities", 
+        "beverages",
+        "confectioner",
+        "food",
+        "household",
+        "packaged",
+        "personal product",
+        "tobacco",
+        "biotech",
+        "healthcare",
+        "health",
+        "medical device",
+        "pharma",
+        "utility",
+        "power producer",
+        "utilities",
     ]
 
     try:
@@ -1088,7 +1253,8 @@ def classify_cyclicality(industry):
 
     except Exception as e:
         return None
-    
+
+
 retried_once = set()
 q = Queue()
 for ticker in tickers:
@@ -1098,6 +1264,7 @@ for ticker in tickers:
 #     # Clear all the cache entries by deleting the keys
 #     cache.clear()
 
+
 def process_ticker_quantitatives():
     while not q.empty():
         ticker = q.get()
@@ -1105,47 +1272,63 @@ def process_ticker_quantitatives():
             krx_per = get_per_krx(ticker[:6])
 
             info = yf.Ticker(ticker).info
-            name = krx_per['name'][0]
-            industry = krx_per['name'][1]
+            name = krx_per["name"][0]
+            industry = krx_per["name"][1]
             currentPrice = info.get("currentPrice", None)
             percentage_change = get_percentage_change(ticker)
             # target_mean = info.get('targetMeanPrice', 0)
             # if target_mean != 0 and currentPrice != 0 and currentPrice is not None and target_mean is not None:
             #     target_incr = ((target_mean - currentPrice) / currentPrice) * 100
             #     upside = str(round(target_incr)) + '%' if target_incr < 0 else '+' + str(round(target_incr)) + '%'
-            # else: 
+            # else:
             #     upside = 'N/A'
-            
-            debtToEquity = info.get('debtToEquity', None) # < 0.5
-            debtToEquity = debtToEquity/100 if debtToEquity is not None else None
-            currentRatio = info.get('currentRatio', None) # 초점: 회사의 단기 유동성, > 1.5 && < 2.5
 
-            pbr = krx_per['PBR'] # 주가가 그 기업의 자산가치에 비해 과대/과소평가되어 있다는 의미. 낮으면 자산활용력 부족
-            per = krx_per['PER'] # high per expects future growth but could be overvalued(=버블). 
-                                                                       # low per could be undervalued or company in trouble, IT, 바이오 등 성장산업은 자연스레 per이 높게 형성
+            debtToEquity = info.get("debtToEquity", None)  # < 0.5
+            debtToEquity = debtToEquity / 100 if debtToEquity is not None else None
+            currentRatio = info.get(
+                "currentRatio", None
+            )  # 초점: 회사의 단기 유동성, > 1.5 && < 2.5
+
+            pbr = krx_per[
+                "PBR"
+            ]  # 주가가 그 기업의 자산가치에 비해 과대/과소평가되어 있다는 의미. 낮으면 자산활용력 부족
+            per = krx_per[
+                "PER"
+            ]  # high per expects future growth but could be overvalued(=버블).
+            # low per could be undervalued or company in trouble, IT, 바이오 등 성장산업은 자연스레 per이 높게 형성
             if per is None:
-                per = info.get('trailingPE', None)                                                           # 저per -> 수익성 높거나 주가가 싸다 고pbr -> 자산은 적은데 시장에서 비싸게 봐준다
-            industry_per = krx_per['IND_PER'] 
-            industry_per = round(industry_per) if industry_per is not None else industry_per
+                per = info.get(
+                    "trailingPE", None
+                )  # 저per -> 수익성 높거나 주가가 싸다 고pbr -> 자산은 적은데 시장에서 비싸게 봐준다
+            industry_per = krx_per["IND_PER"]
+            industry_per = (
+                round(industry_per) if industry_per is not None else industry_per
+            )
 
-            industry_roe = krx_per['IND_ROE']
+            industry_roe = krx_per["IND_ROE"]
             industry_roa = get_industry_roa(industry)
 
-            roe = krx_per['ROE'] # 수익성 높은 기업 선별. 고roe + 저pbr 조합은 가장 유명한 퀀트 전략. > 8% (0.08) 주주 입장에서 수익성
+            roe = krx_per[
+                "ROE"
+            ]  # 수익성 높은 기업 선별. 고roe + 저pbr 조합은 가장 유명한 퀀트 전략. > 8% (0.08) 주주 입장에서 수익성
             if roe is None:
-                roe = info.get('returnOnEquity', None)
-            roa = info.get('returnOnAssets', None) # > 6% (0.06), 기업 전체 효율성
-            #ROE가 높고 ROA는 낮다면? → 부채를 많이 이용해 수익을 낸 기업일 수 있음. ROE와 ROA 모두 높다면? → 자산과 자본 모두 효율적으로 잘 운용하고 있다는 의미.
-            #A = L + E
-            
-            eps_growth = has_stable_eps_growth_cagr(ticker) # earnings per share, the higher the better, buffett looks for stable EPS growth
-            # eps_growth_quart = has_stable_eps_growth_quarterly(ticker) 
-            div_growth = krx_per['DPS YoY'] # buffett looks for stable dividend growth for at least 10 years
+                roe = info.get("returnOnEquity", None)
+            roa = info.get("returnOnAssets", None)  # > 6% (0.06), 기업 전체 효율성
+            # ROE가 높고 ROA는 낮다면? → 부채를 많이 이용해 수익을 낸 기업일 수 있음. ROE와 ROA 모두 높다면? → 자산과 자본 모두 효율적으로 잘 운용하고 있다는 의미.
+            # A = L + E
+
+            eps_growth = has_stable_eps_growth_cagr(
+                ticker
+            )  # earnings per share, the higher the better, buffett looks for stable EPS growth
+            # eps_growth_quart = has_stable_eps_growth_quarterly(ticker)
+            div_growth = krx_per[
+                "DPS YoY"
+            ]  # buffett looks for stable dividend growth for at least 10 years
             # bvps_growth = bvps_undervalued(info.get('bookValue', None), currentPrice)
-            operating_income_yoy = krx_per['OpIncY']
-            operating_income_qoq = krx_per['OpIncQ']
+            operating_income_yoy = krx_per["OpIncY"]
+            operating_income_qoq = krx_per["OpIncQ"]
             icr = get_interest_coverage_ratio(ticker)
-            
+
             # try:
             #     short_momentum = momentum_6m[ticker]
             # except KeyError:
@@ -1160,13 +1343,25 @@ def process_ticker_quantitatives():
             #     long_momentum = momentum_3y[ticker]
             # except KeyError:
             #     long_momentum = None
-            
-            ma = df_batch_result.loc[df_batch_result['Ticker'] == ticker, 'ma_crossover'].values[0]
-            ma_lt = df_batch_result.loc[df_batch_result['Ticker'] == ticker, 'ma_crossover_lt'].values[0]
-            ret20 = df_batch_result.loc[df_batch_result['Ticker'] == ticker, 'return_20d'].values[0]
-            ret60 = df_batch_result.loc[df_batch_result['Ticker'] == ticker, 'return_60d'].values[0]
-            rsi = df_batch_result.loc[df_batch_result['Ticker'] == ticker, 'rsi_rebound'].values[0]
-            macd = df_batch_result.loc[df_batch_result['Ticker'] == ticker, 'macd_golden_cross'].values[0]
+
+            ma = df_batch_result.loc[
+                df_batch_result["Ticker"] == ticker, "ma_crossover"
+            ].values[0]
+            ma_lt = df_batch_result.loc[
+                df_batch_result["Ticker"] == ticker, "ma_crossover_lt"
+            ].values[0]
+            ret20 = df_batch_result.loc[
+                df_batch_result["Ticker"] == ticker, "return_20d"
+            ].values[0]
+            ret60 = df_batch_result.loc[
+                df_batch_result["Ticker"] == ticker, "return_60d"
+            ].values[0]
+            rsi = df_batch_result.loc[
+                df_batch_result["Ticker"] == ticker, "rsi_rebound"
+            ].values[0]
+            macd = df_batch_result.loc[
+                df_batch_result["Ticker"] == ticker, "macd_golden_cross"
+            ].values[0]
 
             momentum_score = score_momentum(ma, ma_lt, ret20, ret60, rsi, macd)
             vol = get_trading_volume(ticker)
@@ -1177,15 +1372,32 @@ def process_ticker_quantitatives():
             #     cyclicality +=1
             # elif classification == 'cyclical':
             #     cyclicality -=0.
-            
-            '''
+
+            """
             if industry is not None:
                 if any(kw in industry for kw in lee_kw_list):
                     cyclicality += 1
-            '''
+            """
 
-
-            quantitative_buffett_score = buffett_score(debtToEquity, currentRatio, pbr, per, industry_per, roe, industry_roe, roa, industry_roa, eps_growth, div_growth, icr, operating_income_yoy, operating_income_qoq) + cyclicality
+            quantitative_buffett_score = (
+                buffett_score(
+                    debtToEquity,
+                    currentRatio,
+                    pbr,
+                    per,
+                    industry_per,
+                    roe,
+                    industry_roe,
+                    roa,
+                    industry_roa,
+                    eps_growth,
+                    div_growth,
+                    icr,
+                    operating_income_yoy,
+                    operating_income_qoq,
+                )
+                + cyclicality
+            )
             # quantitative_buffett_score = buffett_score(debtToEquity, currentRatio, pbr, per, industry_per, roe, industry_roe, roa, industry_roa, eps_growth, div_growth, icr) + cyclicality
 
             # rec = info.get('recommendationKey', None)
@@ -1195,38 +1407,52 @@ def process_ticker_quantitatives():
             #     esg = ''
 
             ## FOR extra 10 score:::
-            # MOAT -> sustainable competitive advantage that protects a company from its competitors, little to no competition, dominant market share, customer loyalty 
+            # MOAT -> sustainable competitive advantage that protects a company from its competitors, little to no competition, dominant market share, customer loyalty
             # KEY: sustainable && long-term durability
             # ex) brand power(Coca-Cola), network effect(Facebook, Visa), cost advantage(Walmart, Costco), high switching costs(Adobe),
             # regulatory advantage(gov protection), patients(Pfizer, Intel)
-            
-            roe_print = f'{round(roe,1)}%' if roe is not None else 'N/A'
-            roe_print += f'({round(industry_roe)})' if industry_roe is not None else ''
 
-            per_print = f'{round(per,2)}' if per is not None else 'N/A'
-            per_print += f'({industry_per})' if industry_per is not None else ''
+            roe_print = f"{round(roe,1)}%" if roe is not None else "N/A"
+            roe_print += f"({round(industry_roe)})" if industry_roe is not None else ""
+
+            per_print = f"{round(per,2)}" if per is not None else "N/A"
+            per_print += f"({industry_per})" if industry_per is not None else ""
 
             result = {
-                "티커": ticker[:6] if country == 'KR' else ticker,
+                "티커": ticker[:6] if country == "KR" else ticker,
                 "종목": name,
                 "B-Score": round(quantitative_buffett_score, 1),
                 "업종": industry,
-                "주가(전날대비)": f"{currentPrice:,.0f}" + percentage_change if country == 'KR' or country == 'JP' else f"{currentPrice:,.2f}" + percentage_change,
-                "부채비율": round(debtToEquity, 2) if debtToEquity is not None else 'N/A',
-                "유동비율": round(currentRatio, 2) if currentRatio is not None else 'N/A',
-                "PBR": round(pbr,2) if pbr is not None else None,
+                "주가(전날대비)": (
+                    f"{currentPrice:,.0f}" + percentage_change
+                    if country == "KR" or country == "JP"
+                    else f"{currentPrice:,.2f}" + percentage_change
+                ),
+                "부채비율": (
+                    round(debtToEquity, 2) if debtToEquity is not None else "N/A"
+                ),
+                "유동비율": (
+                    round(currentRatio, 2) if currentRatio is not None else "N/A"
+                ),
+                "PBR": round(pbr, 2) if pbr is not None else None,
                 "PER(업종)": per_print,
                 "ROE(업종)": roe_print,
-                "ROA": str(round(roa*100,1)) + '%' if roa is not None else 'N/A',
-                "ICR": round(icr,1) if icr is not None else 'N/A',
-                "EPS성장률": eps_growth if isinstance(eps_growth, bool) else (f"{eps_growth:.2%}" if eps_growth is not None else 'N/A'), #use this instead of operating income incrs for quart/annual 
+                "ROA": str(round(roa * 100, 1)) + "%" if roa is not None else "N/A",
+                "ICR": round(icr, 1) if icr is not None else "N/A",
+                "EPS성장률": (
+                    eps_growth
+                    if isinstance(eps_growth, bool)
+                    else (f"{eps_growth:.2%}" if eps_growth is not None else "N/A")
+                ),  # use this instead of operating income incrs for quart/annual
                 # "배당 성장률": f"{div_growth:.2%}" if div_growth is not None else None,
-                "배당안정성": div_growth if div_growth is not None else 'N/A',
-                "영업이익률": operating_income_yoy if operating_income_yoy is not None else 'N/A',
-                '모멘텀': momentum_score,
-                '거래량': vol,
+                "배당안정성": div_growth if div_growth is not None else "N/A",
+                "영업이익률": (
+                    operating_income_yoy if operating_income_yoy is not None else "N/A"
+                ),
+                "모멘텀": momentum_score,
+                "거래량": vol,
                 # 'Analyst Forecast': rec + '(' + upside + ')',
-                #모멘텀(6m/1y/3y)': "/".join(f"{m:.1%}" if m is not None else "None" for m in (short_momentum, mid_momentum, long_momentum)),
+                # 모멘텀(6m/1y/3y)': "/".join(f"{m:.1%}" if m is not None else "None" for m in (short_momentum, mid_momentum, long_momentum)),
                 # 'ESG': esg, #works only for US stocks
             }
 
@@ -1265,8 +1491,8 @@ def process_ticker_quantitatives():
 
         finally:
             q.task_done()
-            #time.sleep(2)
-    
+            # time.sleep(2)
+
 
 threads = []
 
@@ -1301,26 +1527,26 @@ df["모멘텀"] = df["모멘텀"].round(0)
 
 df["합계점수"] = df["B-Score"] + df["거래량"] + df["모멘텀"]
 
-df = df.sort_values(by='B-Score', ascending=False)
+df = df.sort_values(by="B-Score", ascending=False)
 
-if country: 
+if country:
 
     filename = f"result_{country}_{formattedDate}.xlsx"
 
-    with pd.ExcelWriter(filename, engine='xlsxwriter') as writer:
-        df.to_excel(writer, index=False, sheet_name='Sheet1')
-        
-        workbook  = writer.book
-        worksheet = writer.sheets['Sheet1']
+    with pd.ExcelWriter(filename, engine="xlsxwriter") as writer:
+        df.to_excel(writer, index=False, sheet_name="Sheet1")
+
+        workbook = writer.book
+        worksheet = writer.sheets["Sheet1"]
 
         # Define column widths you want (by column name)
         col_widths = {
-            '종목': 25,
-            '업종': 20,
-            '주가(전날대비)': 15,
-            'EPS성장률': 10,
-            '배당안정성': 10,
-            '영업이익률': 10,
+            "종목": 25,
+            "업종": 20,
+            "주가(전날대비)": 15,
+            "EPS성장률": 10,
+            "배당안정성": 10,
+            "영업이익률": 10,
             #'모멘텀(6m/1y/3y)': 21,
         }
 
@@ -1330,14 +1556,13 @@ if country:
                 col_idx = df.columns.get_loc(col_name)
                 worksheet.set_column(col_idx, col_idx, width)
 
-        
-        bscore_col_idx = df.columns.get_loc('B-Score')
-        
+        bscore_col_idx = df.columns.get_loc("B-Score")
+
         start_row = 0  # data starts after header row 1
         end_row = len(df)
         start_col = 0
         end_col = len(df.columns) - 1
-        
+
         def xl_col(col_idx):
             div = col_idx + 1
             string = ""
@@ -1348,35 +1573,43 @@ if country:
                     div -= 1
                 string = chr(64 + mod) + string
             return string
-        
+
         first_cell = f"{xl_col(start_col)}{start_row + 1}"
         last_cell = f"{xl_col(end_col)}{end_row + 1}"
         data_range = f"{first_cell}:{last_cell}"
-        
+
         bscore_col_letter = xl_col(bscore_col_idx)
-        
+
         # 1) Add Excel table for the data
-        worksheet.add_table(data_range, {
-            'columns': [{'header': col} for col in df.columns],
-            'style': 'Table Style Medium 9'  # You can choose different table styles
-        })
-        
+        worksheet.add_table(
+            data_range,
+            {
+                "columns": [{"header": col} for col in df.columns],
+                "style": "Table Style Medium 9",  # You can choose different table styles
+            },
+        )
+
         # 2) Gradient on B-Score column (dynamic min/max)
-        bscore_range = f"{bscore_col_letter}{start_row + 1}:{bscore_col_letter}{end_row + 1}"
-        
-        worksheet.conditional_format(bscore_range, {
-            'type': '3_color_scale',
-            'min_type': 'min',
-            'mid_type': 'percentile',
-            'mid_value': 50,
-            'max_type': 'max',
-            'min_color': "#FF0000",
-            'mid_color': "#FFFF00",
-            'max_color': "#00FF00"
-        })
+        bscore_range = (
+            f"{bscore_col_letter}{start_row + 1}:{bscore_col_letter}{end_row + 1}"
+        )
+
+        worksheet.conditional_format(
+            bscore_range,
+            {
+                "type": "3_color_scale",
+                "min_type": "min",
+                "mid_type": "percentile",
+                "mid_value": 50,
+                "max_type": "max",
+                "min_color": "#FF0000",
+                "mid_color": "#FFFF00",
+                "max_color": "#00FF00",
+            },
+        )
         #############
         # Get the column index for '합계점수'
-        total_score_col_idx = df.columns.get_loc('합계점수')
+        total_score_col_idx = df.columns.get_loc("합계점수")
 
         # Column letter for '합계점수'
         total_score_col_letter = xl_col(total_score_col_idx)
@@ -1384,45 +1617,47 @@ if country:
         # 2) Add gradient formatting on '합계점수' column
         total_score_range = f"{total_score_col_letter}{start_row + 1}:{total_score_col_letter}{end_row + 1}"
 
-        worksheet.conditional_format(total_score_range, {
-            'type': '3_color_scale',
-            'min_type': 'min',
-            'mid_type': 'percentile',
-            'mid_value': 50,
-            'max_type': 'max',
-            'min_color': "#FF0000",
-            'mid_color': "#FFFF00",
-            'max_color': "#00FF00"
-        })
+        worksheet.conditional_format(
+            total_score_range,
+            {
+                "type": "3_color_scale",
+                "min_type": "min",
+                "mid_type": "percentile",
+                "mid_value": 50,
+                "max_type": "max",
+                "min_color": "#FF0000",
+                "mid_color": "#FFFF00",
+                "max_color": "#00FF00",
+            },
+        )
 
         #############
-        pbr_col_idx = df.columns.get_loc('PBR')
+        pbr_col_idx = df.columns.get_loc("PBR")
         pbr_col_letter = xl_col(pbr_col_idx)
         pbr_range = f"{pbr_col_letter}{start_row + 2}:{pbr_col_letter}{end_row + 1}"
 
-        yellow_format = workbook.add_format({'bg_color': '#FFFF00', 'font_color': '#000000'})
-        orange_format = workbook.add_format({'bg_color': '#FFA500', 'font_color': '#000000'})  # 오렌지색
+        yellow_format = workbook.add_format(
+            {"bg_color": "#FFFF00", "font_color": "#000000"}
+        )
+        orange_format = workbook.add_format(
+            {"bg_color": "#FFA500", "font_color": "#000000"}
+        )  # 오렌지색
 
-
-                # 주황색 조건 (PBR > 10)
-        worksheet.conditional_format(pbr_range, {
-            'type': 'cell',
-            'criteria': '>',
-            'value': 10,
-            'format': orange_format
-        })
+        # 주황색 조건 (PBR > 10)
+        worksheet.conditional_format(
+            pbr_range,
+            {"type": "cell", "criteria": ">", "value": 10, "format": orange_format},
+        )
 
         # 노란색 조건 (PBR > 3)
-        worksheet.conditional_format(pbr_range, {
-            'type': 'cell',
-            'criteria': '>',
-            'value': 3,
-            'format': yellow_format
-        })
+        worksheet.conditional_format(
+            pbr_range,
+            {"type": "cell", "criteria": ">", "value": 3, "format": yellow_format},
+        )
 
         # Create formats
-        right_align_format = workbook.add_format({'align': 'right'})
-        center_align_format = workbook.add_format({'align': 'center'})
+        right_align_format = workbook.add_format({"align": "right"})
+        center_align_format = workbook.add_format({"align": "center"})
 
         # Write header (row 0) without formatting
         for col_num, value in enumerate(df.columns.values):
@@ -1432,16 +1667,22 @@ if country:
         for row_num, row_data in enumerate(df.values, start=1):
             for col_num, cell_value in enumerate(row_data):
                 col_name = df.columns[col_num]
-                
-                if col_name in ['PER(업종)', 'ROE(업종)', 'ROA', '부채비율', '유동비율', 'ICR']:
+
+                if col_name in [
+                    "PER(업종)",
+                    "ROE(업종)",
+                    "ROA",
+                    "부채비율",
+                    "유동비율",
+                    "ICR",
+                ]:
                     fmt = right_align_format
-                elif col_name in ['EPS성장률', '배당안정성', '영업이익률']:
+                elif col_name in ["EPS성장률", "배당안정성", "영업이익률"]:
                     fmt = center_align_format
                 else:
                     fmt = None
 
                 worksheet.write(row_num, col_num, cell_value, fmt)
-
 
 
 elif sp500:
@@ -1452,14 +1693,14 @@ else:
 ##########################################################################################################
 time.sleep(3)
 
-excel_path = f'result_KR_{formattedDate}.xlsx'
+excel_path = f"result_KR_{formattedDate}.xlsx"
 
-date_kr = dt.datetime.strptime(formattedDate, '%Y%m%d').strftime('%Y년 %m월 %d일')
+date_kr = dt.datetime.strptime(formattedDate, "%Y%m%d").strftime("%Y년 %m월 %d일")
 
 msg = EmailMessage()
-msg['Subject'] = f'재무 퀀트 리포트 | {date_kr}'
-msg['From'] = Address(display_name='Hyungsuk Choi', addr_spec=EMAIL)
-msg['To'] = ''  # or '' or a single address to satisfy the 'To' header requirement
+msg["Subject"] = f"재무 퀀트 리포트 | {date_kr}"
+msg["From"] = Address(display_name="Hyungsuk Choi", addr_spec=EMAIL)
+msg["To"] = ""  # or '' or a single address to satisfy the 'To' header requirement
 
 content = (
     f"귀하의 투자 참고를 위해 {date_kr} 기준, "
@@ -1531,14 +1772,18 @@ html_content = f"""
 </html>
 """
 
-msg.add_alternative(html_content, subtype='html')
+msg.add_alternative(html_content, subtype="html")
 
-with open(excel_path, 'rb') as f:
-    msg.add_attachment(f.read(), maintype='application',
-                       subtype='vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                       filename=excel_path)
+with open(excel_path, "rb") as f:
+    msg.add_attachment(
+        f.read(),
+        maintype="application",
+        subtype="vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        filename=excel_path,
+    )
 
-with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
+with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
     smtp.login(EMAIL, PASSWORD)
-    smtp.send_message(msg, to_addrs=recipients)  # send_message's to_addrs param controls actual recipients
-
+    smtp.send_message(
+        msg, to_addrs=recipients
+    )  # send_message's to_addrs param controls actual recipients

@@ -5,22 +5,22 @@ from datetime import datetime, timedelta
 
 # --- CONFIGURATION ---
 CACHE_FILE = "yf_cache_multi.csv"  # Path to your cached price data
-BENCHMARK = "^GSPC"                # S&P 500
-REBALANCE_FREQ = "M"               # Monthly rebalancing
-TOP_N = 5           # Number of top stocks to hold
-START_DATE = "2025-01-01"          # Backtest start
+BENCHMARK = "^GSPC"  # S&P 500
+REBALANCE_FREQ = "M"  # Monthly rebalancing
+TOP_N = 5  # Number of top stocks to hold
+START_DATE = "2025-01-01"  # Backtest start
 END_DATE = datetime.today().strftime("%Y-%m-%d")  # Backtest end
 
 # --- LOAD PRICE DATA ---
-cache = pd.read_csv(CACHE_FILE, header=[0,1], index_col=0, parse_dates=True)
+cache = pd.read_csv(CACHE_FILE, header=[0, 1], index_col=0, parse_dates=True)
 # Only keep 'Close' prices
 if isinstance(cache.columns, pd.MultiIndex):
-    close_columns = [col for col in cache.columns if col[1] == 'Close']
+    close_columns = [col for col in cache.columns if col[1] == "Close"]
     price_df = cache[close_columns]
     price_df.columns = [col[0] for col in price_df.columns]
 else:
-    price_df = cache[['Close']]
-    price_df.columns = ['Close']
+    price_df = cache[["Close"]]
+    price_df.columns = ["Close"]
 
 # Filter by date
 price_df = price_df[(price_df.index >= START_DATE) & (price_df.index <= END_DATE)]
@@ -33,17 +33,20 @@ score_df = pd.read_excel("deep_fund.xlsx", sheet_name="종목분석")
 score_df = score_df.rename(columns={"티커": "Ticker"})
 
 # --- BENCHMARK DATA ---
-benchmark = yf.download(BENCHMARK, start=START_DATE, end=END_DATE, progress=False, auto_adjust=True)["Close"]
+benchmark = yf.download(
+    BENCHMARK, start=START_DATE, end=END_DATE, progress=False, auto_adjust=True
+)["Close"]
 
 # --- LOAD WEIGHTS FROM '포트비중_Sortino' SHEET ---
 sortino_df = pd.read_excel("deep_fund.xlsx", sheet_name="포트비중_Sortino")
 # 예시: 'Ticker', 'Weight' 컬럼이 있다고 가정
-sortino_weights = dict(zip(sortino_df['티커'], sortino_df['비중(%)']))
+sortino_weights = dict(zip(sortino_df["티커"], sortino_df["비중(%)"]))
+
 
 # --- BACKTEST FUNCTION ---
 def backtest(price_df, score_df, benchmark, top_n=TOP_N, rebalance_freq=REBALANCE_FREQ):
     price_df = price_df.ffill().dropna()
-    rebal_dates = price_df.resample('ME').last().index
+    rebal_dates = price_df.resample("ME").last().index
 
     portfolio_value = [1.0]
     dates = [price_df.index[0]]
@@ -52,14 +55,14 @@ def backtest(price_df, score_df, benchmark, top_n=TOP_N, rebalance_freq=REBALANC
 
     for i in range(1, len(rebal_dates)):
         date = rebal_dates[i]
-        prev_date = rebal_dates[i-1]
+        prev_date = rebal_dates[i - 1]
         if date not in price_df.index:
-            date_idx = price_df.index.searchsorted(date, side='right') - 1
+            date_idx = price_df.index.searchsorted(date, side="right") - 1
             if date_idx < 0:
                 continue
             date = price_df.index[date_idx]
         if prev_date not in price_df.index:
-            prev_idx = price_df.index.searchsorted(prev_date, side='right') - 1
+            prev_idx = price_df.index.searchsorted(prev_date, side="right") - 1
             if prev_idx < 0:
                 continue
             prev_date = price_df.index[prev_idx]
@@ -85,16 +88,22 @@ def backtest(price_df, score_df, benchmark, top_n=TOP_N, rebalance_freq=REBALANC
     bench_value = (1 + bench_returns).cumprod().values
 
     min_len = min(len(dates), len(portfolio_value), len(bench_value))
-    results = pd.DataFrame({
-        "Date": np.array(dates[:min_len]).ravel(),
-        "Portfolio": np.array(portfolio_value[:min_len]).ravel(),
-        "Benchmark": np.array(bench_value[:min_len]).ravel()
-    }).set_index("Date")
+    results = pd.DataFrame(
+        {
+            "Date": np.array(dates[:min_len]).ravel(),
+            "Portfolio": np.array(portfolio_value[:min_len]).ravel(),
+            "Benchmark": np.array(bench_value[:min_len]).ravel(),
+        }
+    ).set_index("Date")
 
     return results, weights_history, tickers_history
 
+
 # --- RUN BACKTEST ---
-results, weights_history, tickers_history = backtest(price_df, score_df, benchmark, top_n=TOP_N)
+results, weights_history, tickers_history = backtest(
+    price_df, score_df, benchmark, top_n=TOP_N
+)
+
 
 # --- PERFORMANCE METRICS ---
 def max_drawdown(series):
@@ -102,23 +111,29 @@ def max_drawdown(series):
     drawdown = (series - roll_max) / roll_max
     return drawdown.min()
 
+
 def annualized_return(series):
     total_return = series.iloc[-1] / series.iloc[0] - 1
     years = (series.index[-1] - series.index[0]).days / 365.25
     return (1 + total_return) ** (1 / years) - 1
 
+
 def annualized_volatility(series):
     returns = series.pct_change().dropna()
     return returns.std() * np.sqrt(12)
+
 
 def sharpe_ratio(series, risk_free=0.02):
     ann_ret = annualized_return(series)
     ann_vol = annualized_volatility(series)
     return (ann_ret - risk_free) / ann_vol if ann_vol > 0 else np.nan
 
+
 print("=== Backtest Results ===")
 print(f"Portfolio Annualized Return: {annualized_return(results['Portfolio']):.2%}")
-print(f"Portfolio Annualized Volatility: {annualized_volatility(results['Portfolio']):.2%}")
+print(
+    f"Portfolio Annualized Volatility: {annualized_volatility(results['Portfolio']):.2%}"
+)
 print(f"Portfolio Max Drawdown: {max_drawdown(results['Portfolio']):.2%}")
 print(f"Portfolio Sharpe Ratio: {sharpe_ratio(results['Portfolio']):.2f}")
 print(f"Benchmark Annualized Return: {annualized_return(results['Benchmark']):.2%}")
@@ -126,7 +141,8 @@ print(f"Benchmark Max Drawdown: {max_drawdown(results['Benchmark']):.2%}")
 
 # --- PLOT ---
 import matplotlib.pyplot as plt
-plt.figure(figsize=(12,6))
+
+plt.figure(figsize=(12, 6))
 plt.plot(results.index, results["Portfolio"], label="Buffett US Portfolio")
 plt.plot(results.index, results["Benchmark"], label="S&P 500")
 plt.title("Portfolio vs Benchmark")
